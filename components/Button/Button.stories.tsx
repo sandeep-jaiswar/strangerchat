@@ -6,7 +6,6 @@ const meta: Meta<typeof Button> = {
   component: Button,
   args: {
     intent: "primary",
-    underline: false,
     children: "Button",
     size: "lg",
   },
