@@ -1,4 +1,4 @@
-import { AdsenseBanner } from "../components/AdsenseBanner"
+import { AdsenseBanner } from "components/AdsenseBanner";
 import { env } from "../env.mjs"
 import { LP_GRID_ITEMS } from "../lp-items"
 

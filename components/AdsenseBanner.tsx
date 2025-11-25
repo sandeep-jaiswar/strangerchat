@@ -1,32 +1,28 @@
 "use client"
 
 import Script from "next/script"
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 
 type AdsenseBannerProps = {
   adClient: string
 }
 
 export const AdsenseBanner: React.FC<AdsenseBannerProps> = ({ adClient }) => {
+  const initialized = useRef(false)
+
   useEffect(() => {
-    // Only run on client
-    if (typeof window === "undefined") return
-    // Wait for adsbygoogle script to be loaded
-    const interval = setInterval(() => {
-      const ins = document.querySelector(".adsbygoogle")
-      // @ts-expect-error - window.adsbygoogle may not be defined yet
-      if (window.adsbygoogle && ins) {
-        try {
-          // @ts-expect-error - window.adsbygoogle may not be defined yet
-          window.adsbygoogle.push({})
-          clearInterval(interval)
-        } catch (e) {
-          console.error("Adsense error:", e)
-          clearInterval(interval)
-        }
+    if (typeof window === "undefined" || initialized.current) return
+    const ins = document.querySelector(".adsbygoogle")
+    // @ts-expect-error known issue
+    if (window.adsbygoogle && ins) {
+      try {
+        // @ts-expect-error known issue
+        window.adsbygoogle.push({})
+        initialized.current = true
+      } catch (e) {
+        console.error("Adsense error:", e)
       }
-    }, 300)
-    return () => clearInterval(interval)
+    }
   }, [])
 
   return (
