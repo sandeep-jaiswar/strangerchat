@@ -10,7 +10,7 @@ describe("MessageComposer", () => {
   })
 
   it("calls onSend with message", () => {
-    const onSend = jest.fn()
+  const onSend = vi.fn()
     render(<MessageComposer onSend={onSend} />)
     fireEvent.change(screen.getByPlaceholderText("Type a message..."), { target: { value: "hi" } })
     fireEvent.click(screen.getByText("Send"))
@@ -29,7 +29,7 @@ describe("MessageComposer", () => {
   })
 
   it("calls onSend", () => {
-    const onSend = jest.fn()
+  const onSend = vi.fn()
     const { getByPlaceholderText, getByText } = render(<MessageComposer onSend={onSend} />)
     fireEvent.change(getByPlaceholderText("Type a message..."), { target: { value: "hi" } })
     fireEvent.click(getByText("Send"))

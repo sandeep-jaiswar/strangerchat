@@ -21,7 +21,7 @@ describe("DropdownMenu", () => {
   })
 
   it("calls onSelect when option clicked", () => {
-    const onSelect = jest.fn()
+  const onSelect = vi.fn()
     render(<DropdownMenu options={options} onSelect={onSelect} />)
     fireEvent.click(screen.getByText("Select"))
     fireEvent.click(screen.getByText("Profile"))
@@ -35,7 +35,7 @@ describe("DropdownMenu", () => {
   })
 
   it("calls onSelect with correct value for single option", () => {
-    const onSelect = jest.fn()
+  const onSelect = vi.fn()
     const { getByText } = render(<DropdownMenu options={[{ label: "A", value: "a" }]} onSelect={onSelect} />)
     fireEvent.click(getByText("Select"))
     fireEvent.click(getByText("A"))

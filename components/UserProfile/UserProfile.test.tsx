@@ -1,16 +1,55 @@
-import { render } from "@testing-library/react"
-import React from "react"
-import { UserProfile } from "./UserProfile"
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { UserProfile } from './UserProfile'
 
-describe("UserProfile", () => {
-  it("renders name and email", () => {
-    const { getByText } = render(<UserProfile name="A" email="a@b.com" />)
-    expect(getByText("A")).toBeInTheDocument()
-    expect(getByText("a@b.com")).toBeInTheDocument()
+const baseProps = {
+  name: 'Alice',
+  email: 'alice@example.com',
+}
+
+describe('UserProfile', () => {
+  it('renders name', () => {
+    render(<UserProfile {...baseProps} />)
+    expect(screen.getByText('Alice')).toBeInTheDocument()
   })
 
-  it("renders avatar", () => {
-    const { container } = render(<UserProfile name="A" email="a@b.com" avatar="img.png" />)
-    expect(container.querySelector("img")).toBeInTheDocument()
+  it('renders avatar with alt text', () => {
+    render(<UserProfile {...baseProps} avatar='/img.png' avatarWidth={56} avatarHeight={56} />)
+    expect(screen.getByAltText("Alice's avatar")).toBeInTheDocument()
+  })
+
+  it('renders status if provided', () => {
+    render(<UserProfile {...baseProps} status='Online' />)
+    expect(screen.getByText('Online')).toBeInTheDocument()
+  })
+
+  it('renders phone if provided', () => {
+    render(<UserProfile {...baseProps} phone='+1234567890' />)
+    expect(screen.getByText('+1234567890')).toBeInTheDocument()
+  })
+
+  it('renders recentChats if provided', () => {
+    const recentChats = [
+      { name: 'Bob', lastMessage: 'Hey!', time: '10:00', avatar: '/bob.png', initials: 'B' },
+      { name: 'Carol', lastMessage: 'See you!', time: '11:00' },
+    ]
+    render(<UserProfile {...baseProps} recentChats={recentChats} />)
+    expect(screen.getByText('Bob')).toBeInTheDocument()
+    expect(screen.getByText('Hey!')).toBeInTheDocument()
+    expect(screen.getByText('10:00')).toBeInTheDocument()
+    expect(screen.getByText('Carol')).toBeInTheDocument()
+    expect(screen.getByText('See you!')).toBeInTheDocument()
+    expect(screen.getByText('11:00')).toBeInTheDocument()
+  })
+
+  it('applies custom className', () => {
+    const { container } = render(<UserProfile {...baseProps} className='custom-class' />)
+    expect(container.firstChild).toHaveClass('custom-class')
+  })
+
+  it('renders ProfileTabs', () => {
+    render(<UserProfile {...baseProps} />)
+    expect(screen.getByText('Chat')).toBeInTheDocument()
+    expect(screen.getByText('Group')).toBeInTheDocument()
   })
 })

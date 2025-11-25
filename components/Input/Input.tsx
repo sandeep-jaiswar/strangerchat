@@ -39,21 +39,29 @@ const input = cva(
   }
 )
 
-type InputBaseProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">;
+type InputBaseProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">
 export interface InputProps extends InputBaseProps, VariantProps<typeof input> {
-  label?: string;
-  error?: string;
-  size?: "sm" | "md" | "lg";
+  label?: string
+  error?: string
+  size?: "sm" | "md" | "lg"
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, size, intent, className, ...props }) => (
-  <div>
-    {label && <label className="mb-1 block text-sm font-medium text-neutral-700">{label}</label>}
-    <input
-      className={cn(input({ size, intent: error ? "error" : intent, className }))}
-      aria-invalid={!!error}
-      {...props}
-    />
-    {error && <span className="text-error mt-1 block text-xs">{error}</span>}
-  </div>
-)
+export const Input: React.FC<InputProps> = ({ label, error, size, intent, className, id, ...props }) => {
+  const inputId = id || (label ? `input-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined)
+  return (
+    <div>
+      {label && (
+        <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-neutral-700">
+          {label}
+        </label>
+      )}
+      <input
+        id={inputId}
+        className={cn(input({ size, intent: error ? "error" : intent, className }))}
+        aria-invalid={!!error}
+        {...props}
+      />
+      {error && <span className="text-error mt-1 block text-xs">{error}</span>}
+    </div>
+  )
+}

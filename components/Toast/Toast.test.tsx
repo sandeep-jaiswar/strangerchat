@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import React from "react"
 import { Toast } from "./Toast"
+import { vi } from "vitest"
 
 describe("Toast", () => {
   it("renders message", () => {
@@ -9,18 +10,34 @@ describe("Toast", () => {
   })
 
   it("calls onClose when button clicked", () => {
-    const onClose = jest.fn()
+  const onClose = vi.fn()
     render(<Toast message="Msg" onClose={onClose} />)
     fireEvent.click(screen.getByText("Close"))
     expect(onClose).toHaveBeenCalled()
   })
 
   it("renders correct background for type", () => {
-    const { rerender } = render(<Toast message="Msg" type="success" onClose={() => {}} />)
-    expect(screen.getByText("Msg").parentElement).toHaveStyle("background: #dfd")
+    const { rerender, container } = render(<Toast message="Msg" type="success" onClose={() => {}} />)
+    expect(container.firstChild).toHaveClass("bg-success")
     rerender(<Toast message="Msg" type="error" onClose={() => {}} />)
-    expect(screen.getByText("Msg").parentElement).toHaveStyle("background: #fdd")
+    expect(container.firstChild).toHaveClass("bg-error")
     rerender(<Toast message="Msg" type="info" onClose={() => {}} />)
-    expect(screen.getByText("Msg").parentElement).toHaveStyle("background: #eee")
+    expect(container.firstChild).toHaveClass("bg-neutral-800")
+  })
+
+  it("applies custom className", () => {
+    const { container } = render(<Toast message="Msg" onClose={() => {}} className="custom-toast" />)
+    expect(container.firstChild).toHaveClass("custom-toast")
+  })
+
+  it("renders default type as info", () => {
+    const { container } = render(<Toast message="Msg" onClose={() => {}} />)
+    expect(container.firstChild).toHaveClass("bg-neutral-800")
+  })
+
+  it("handles empty message", () => {
+    render(<Toast message="" onClose={() => {}} />)
+    const emptySpans = screen.getAllByText("")
+    expect(emptySpans.length).toBeGreaterThan(0)
   })
 })
