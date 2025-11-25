@@ -34,7 +34,7 @@ export const Default: Story = {
 
 export const WithLabels: Story = {
   render: () => (
-    <div className="flex flex-col gap-4 w-64">
+    <div className="flex w-64 flex-col gap-4">
       <div className="flex items-center gap-2">
         <ProgressBar value={50} max={100} showLabel labelPosition="left" />
       </div>
@@ -53,7 +53,7 @@ export const WithLabels: Story = {
 
 export const Intents: Story = {
   render: () => (
-    <div className="flex flex-col gap-4 w-64">
+    <div className="flex w-64 flex-col gap-4">
       <ProgressBar value={50} intent="primary" />
       <ProgressBar value={100} intent="success" />
       <ProgressBar value={75} intent="warning" />
@@ -64,7 +64,7 @@ export const Intents: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <div className="flex flex-col gap-4 w-64">
+    <div className="flex w-64 flex-col gap-4">
       <ProgressBar value={50} size="sm" />
       <ProgressBar value={50} size="md" />
       <ProgressBar value={50} size="lg" />
@@ -74,7 +74,7 @@ export const Sizes: Story = {
 
 export const DesignExample: Story = {
   render: () => (
-    <div className="flex flex-col gap-4 w-48">
+    <div className="flex w-48 flex-col gap-4">
       <ProgressBar value={50} max={100} showLabel labelPosition="left" />
       <ProgressBar value={100} max={100} intent="primary" showLabel labelPosition="left" />
       <ProgressBar value={25} max={100} intent="error" showLabel labelPosition="left" />

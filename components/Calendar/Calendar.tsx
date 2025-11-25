@@ -70,11 +70,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
 
   const isSelected = (day: number) => {
     if (!selectedDate) return false
-    return (
-      selectedDate.getDate() === day &&
-      selectedDate.getMonth() === month &&
-      selectedDate.getFullYear() === year
-    )
+    return selectedDate.getDate() === day && selectedDate.getMonth() === month && selectedDate.getFullYear() === year
   }
 
   const isToday = (day: number) => {
@@ -82,10 +78,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
     return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year
   }
 
-  const prevMonthDaysArray = Array.from(
-    { length: firstDayOfMonth },
-    (_, i) => prevMonthDays - firstDayOfMonth + i + 1
-  )
+  const prevMonthDaysArray = Array.from({ length: firstDayOfMonth }, (_, i) => prevMonthDays - firstDayOfMonth + i + 1)
   const currentMonthDaysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const totalCells = prevMonthDaysArray.length + currentMonthDaysArray.length
   const nextMonthDays = totalCells > 35 ? 42 - totalCells : 35 - totalCells
@@ -94,11 +87,11 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
   return (
     <div className={cn("w-64 rounded-lg border border-neutral-200 bg-white p-4", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="p-1 rounded hover:bg-neutral-100 transition-colors"
+          className="rounded p-1 transition-colors hover:bg-neutral-100"
           aria-label="Previous month"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -111,7 +104,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
         <button
           type="button"
           onClick={handleNextMonth}
-          className="p-1 rounded hover:bg-neutral-100 transition-colors"
+          className="rounded p-1 transition-colors hover:bg-neutral-100"
           aria-label="Next month"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -121,9 +114,9 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
       </div>
 
       {/* Days header */}
-      <div className="grid grid-cols-7 mb-2">
+      <div className="mb-2 grid grid-cols-7">
         {DAYS.map((day) => (
-          <div key={day} className="text-center text-xs font-medium text-neutral-500 py-1">
+          <div key={day} className="py-1 text-center text-xs font-medium text-neutral-500">
             {day}
           </div>
         ))}
@@ -133,10 +126,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
       <div className="grid grid-cols-7 gap-1">
         {/* Previous month days */}
         {prevMonthDaysArray.map((day) => (
-          <div
-            key={`prev-${day}`}
-            className="h-8 w-8 flex items-center justify-center text-sm text-neutral-300"
-          >
+          <div key={`prev-${day}`} className="flex h-8 w-8 items-center justify-center text-sm text-neutral-300">
             {day}
           </div>
         ))}
@@ -148,11 +138,11 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
             type="button"
             onClick={() => handleDateClick(day)}
             className={cn(
-              "h-8 w-8 flex items-center justify-center text-sm rounded-md transition-colors",
+              "flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors",
               isSelected(day)
                 ? "bg-primary text-primary-foreground"
                 : isToday(day)
-                ? "border border-primary text-primary"
+                ? "border-primary text-primary border"
                 : "text-neutral-900 hover:bg-neutral-100"
             )}
           >
@@ -162,10 +152,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
 
         {/* Next month days */}
         {nextMonthDaysArray.map((day) => (
-          <div
-            key={`next-${day}`}
-            className="h-8 w-8 flex items-center justify-center text-sm text-neutral-300"
-          >
+          <div key={`next-${day}`} className="flex h-8 w-8 items-center justify-center text-sm text-neutral-300">
             {day}
           </div>
         ))}
@@ -175,7 +162,7 @@ export function Calendar({ value, defaultValue, onChange, onClear, className }: 
       <button
         type="button"
         onClick={handleClear}
-        className="w-full mt-4 text-center text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+        className="mt-4 w-full text-center text-sm text-neutral-500 transition-colors hover:text-neutral-700"
       >
         Clear
       </button>

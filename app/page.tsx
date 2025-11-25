@@ -1,4 +1,5 @@
-import { AdsenseBanner } from "components/AdsenseBanner";
+import { AdsenseBanner } from "components/AdsenseBanner"
+import LoginButton from "components/LoginButton/LoginButton"
 import { env } from "../env.mjs"
 import { LP_GRID_ITEMS } from "../lp-items"
 
@@ -6,6 +7,7 @@ export default function Web() {
   return (
     <>
       <AdsenseBanner adClient={env.ADSENSE_CLIENT} />
+      <LoginButton />
       <section className="bg-white dark:bg-gray-900">
         <div className="mx-auto grid max-w-(--breakpoint-xl) px-4 py-8 text-center lg:py-16">
           <div className="mx-auto place-self-center">

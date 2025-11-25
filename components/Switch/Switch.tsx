@@ -41,31 +41,20 @@ const switchRoot = cva(
   }
 )
 
-const switchThumb = cva(
-  [
-    "block",
-    "rounded-full",
-    "bg-white",
-    "shadow-md",
-    "transition-transform",
-  ],
-  {
-    variants: {
-      size: {
-        sm: ["h-4", "w-4", "data-[state=checked]:translate-x-4", "data-[state=unchecked]:translate-x-0.5"],
-        md: ["h-5", "w-5", "data-[state=checked]:translate-x-5", "data-[state=unchecked]:translate-x-0.5"],
-        lg: ["h-6", "w-6", "data-[state=checked]:translate-x-7", "data-[state=unchecked]:translate-x-0.5"],
-      },
+const switchThumb = cva(["block", "rounded-full", "bg-white", "shadow-md", "transition-transform"], {
+  variants: {
+    size: {
+      sm: ["h-4", "w-4", "data-[state=checked]:translate-x-4", "data-[state=unchecked]:translate-x-0.5"],
+      md: ["h-5", "w-5", "data-[state=checked]:translate-x-5", "data-[state=unchecked]:translate-x-0.5"],
+      lg: ["h-6", "w-6", "data-[state=checked]:translate-x-7", "data-[state=unchecked]:translate-x-0.5"],
     },
-    defaultVariants: {
-      size: "md",
-    },
-  }
-)
+  },
+  defaultVariants: {
+    size: "md",
+  },
+})
 
-export interface SwitchProps
-  extends Omit<RadixSwitch.SwitchProps, "size">,
-    VariantProps<typeof switchRoot> {
+export interface SwitchProps extends Omit<RadixSwitch.SwitchProps, "size">, VariantProps<typeof switchRoot> {
   label?: string
 }
 
@@ -78,7 +67,7 @@ export function Switch({ className, intent, size, label, id, ...props }: SwitchP
         <RadixSwitch.Thumb className={cn(switchThumb({ size }))} />
       </RadixSwitch.Root>
       {label && (
-        <label htmlFor={switchId} className="text-sm font-medium text-neutral-700 cursor-pointer">
+        <label htmlFor={switchId} className="cursor-pointer text-sm font-medium text-neutral-700">
           {label}
         </label>
       )}

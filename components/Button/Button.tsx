@@ -84,7 +84,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   rightIcon?: React.ReactNode
 }
 
-export function Button({ className, variant, intent, size, rounded, leftIcon, rightIcon, children, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  intent,
+  size,
+  rounded,
+  leftIcon,
+  rightIcon,
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <button className={cn(button({ variant, intent, size, rounded, className }))} {...props}>
       {leftIcon}

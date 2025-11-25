@@ -51,13 +51,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, alt, size = "md", status, i
     <div className="relative inline-flex">
       <div className={cn(avatar({ size, status, className }))}>
         {src ? (
-          <Image
-            src={src}
-            alt={alt}
-            width={numericSize}
-            height={numericSize}
-            className="h-full w-full object-cover"
-          />
+          <Image src={src} alt={alt} width={numericSize} height={numericSize} className="h-full w-full object-cover" />
         ) : (
           <span className="font-semibold text-neutral-600">{initials}</span>
         )}
@@ -65,7 +59,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, alt, size = "md", status, i
       {status && (
         <span
           className={cn(
-            "absolute bottom-0 right-0 block rounded-full ring-2 ring-white",
+            "absolute right-0 bottom-0 block rounded-full ring-2 ring-white",
             size === "xs" && "h-1.5 w-1.5",
             size === "sm" && "h-2 w-2",
             size === "md" && "h-2.5 w-2.5",

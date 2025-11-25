@@ -101,8 +101,8 @@ export function Select({
                   value={option.value}
                   disabled={option.disabled}
                   className={cn(
-                    "relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm text-neutral-900",
-                    "outline-none transition-colors",
+                    "relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-neutral-900 select-none",
+                    "transition-colors outline-none",
                     "data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground",
                     "data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                   )}

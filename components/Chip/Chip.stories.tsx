@@ -49,11 +49,21 @@ export const MultipleChips: Story = {
 export const SolidVariants: Story = {
   render: () => (
     <div className="flex gap-2">
-      <Chip variant="solid" intent="primary">Primary</Chip>
-      <Chip variant="solid" intent="secondary">Secondary</Chip>
-      <Chip variant="solid" intent="success">Success</Chip>
-      <Chip variant="solid" intent="warning">Warning</Chip>
-      <Chip variant="solid" intent="error">Error</Chip>
+      <Chip variant="solid" intent="primary">
+        Primary
+      </Chip>
+      <Chip variant="solid" intent="secondary">
+        Secondary
+      </Chip>
+      <Chip variant="solid" intent="success">
+        Success
+      </Chip>
+      <Chip variant="solid" intent="warning">
+        Warning
+      </Chip>
+      <Chip variant="solid" intent="error">
+        Error
+      </Chip>
     </div>
   ),
 }
@@ -61,8 +71,12 @@ export const SolidVariants: Story = {
 export const OutlineVariants: Story = {
   render: () => (
     <div className="flex gap-2">
-      <Chip variant="outline" intent="primary">Chat</Chip>
-      <Chip variant="outline" intent="warning">Pending</Chip>
+      <Chip variant="outline" intent="primary">
+        Chat
+      </Chip>
+      <Chip variant="outline" intent="warning">
+        Pending
+      </Chip>
     </div>
   ),
 }
@@ -70,11 +84,21 @@ export const OutlineVariants: Story = {
 export const SoftVariants: Story = {
   render: () => (
     <div className="flex gap-2">
-      <Chip variant="soft" intent="primary">Primary</Chip>
-      <Chip variant="soft" intent="secondary">Secondary</Chip>
-      <Chip variant="soft" intent="success">Success</Chip>
-      <Chip variant="soft" intent="warning">Warning</Chip>
-      <Chip variant="soft" intent="error">Error</Chip>
+      <Chip variant="soft" intent="primary">
+        Primary
+      </Chip>
+      <Chip variant="soft" intent="secondary">
+        Secondary
+      </Chip>
+      <Chip variant="soft" intent="success">
+        Success
+      </Chip>
+      <Chip variant="soft" intent="warning">
+        Warning
+      </Chip>
+      <Chip variant="soft" intent="error">
+        Error
+      </Chip>
     </div>
   ),
 }
@@ -83,7 +107,9 @@ export const NonRemovable: Story = {
   render: () => (
     <div className="flex gap-2">
       <Chip removable={false}>Read Only</Chip>
-      <Chip removable={false} variant="solid" intent="primary">Fixed</Chip>
+      <Chip removable={false} variant="solid" intent="primary">
+        Fixed
+      </Chip>
     </div>
   ),
 }

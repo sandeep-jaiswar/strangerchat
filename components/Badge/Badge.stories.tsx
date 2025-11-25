@@ -35,11 +35,21 @@ export const Default: Story = {
 export const SolidVariants: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Badge variant="solid" intent="primary">Primary</Badge>
-      <Badge variant="solid" intent="secondary">Secondary</Badge>
-      <Badge variant="solid" intent="success">Success</Badge>
-      <Badge variant="solid" intent="warning">Warning</Badge>
-      <Badge variant="solid" intent="error">Error</Badge>
+      <Badge variant="solid" intent="primary">
+        Primary
+      </Badge>
+      <Badge variant="solid" intent="secondary">
+        Secondary
+      </Badge>
+      <Badge variant="solid" intent="success">
+        Success
+      </Badge>
+      <Badge variant="solid" intent="warning">
+        Warning
+      </Badge>
+      <Badge variant="solid" intent="error">
+        Error
+      </Badge>
     </div>
   ),
 }
@@ -47,11 +57,21 @@ export const SolidVariants: Story = {
 export const OutlineVariants: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Badge variant="outline" intent="primary">Primary</Badge>
-      <Badge variant="outline" intent="secondary">Secondary</Badge>
-      <Badge variant="outline" intent="success">Success</Badge>
-      <Badge variant="outline" intent="warning">Warning</Badge>
-      <Badge variant="outline" intent="error">Error</Badge>
+      <Badge variant="outline" intent="primary">
+        Primary
+      </Badge>
+      <Badge variant="outline" intent="secondary">
+        Secondary
+      </Badge>
+      <Badge variant="outline" intent="success">
+        Success
+      </Badge>
+      <Badge variant="outline" intent="warning">
+        Warning
+      </Badge>
+      <Badge variant="outline" intent="error">
+        Error
+      </Badge>
     </div>
   ),
 }
@@ -59,11 +79,21 @@ export const OutlineVariants: Story = {
 export const SoftVariants: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Badge variant="soft" intent="primary">Primary</Badge>
-      <Badge variant="soft" intent="secondary">Secondary</Badge>
-      <Badge variant="soft" intent="success">Success</Badge>
-      <Badge variant="soft" intent="warning">Warning</Badge>
-      <Badge variant="soft" intent="error">Error</Badge>
+      <Badge variant="soft" intent="primary">
+        Primary
+      </Badge>
+      <Badge variant="soft" intent="secondary">
+        Secondary
+      </Badge>
+      <Badge variant="soft" intent="success">
+        Success
+      </Badge>
+      <Badge variant="soft" intent="warning">
+        Warning
+      </Badge>
+      <Badge variant="soft" intent="error">
+        Error
+      </Badge>
     </div>
   ),
 }

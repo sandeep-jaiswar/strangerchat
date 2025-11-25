@@ -9,14 +9,22 @@ describe("Button", () => {
   })
 
   it("applies correct solid secondary intent classes", () => {
-    const { container } = render(<Button variant="solid" intent="secondary">Secondary</Button>)
+    const { container } = render(
+      <Button variant="solid" intent="secondary">
+        Secondary
+      </Button>
+    )
     const btn = container.querySelector("button")
     expect(btn).toHaveClass("bg-secondary")
     expect(btn).toHaveClass("text-secondary-foreground")
   })
 
   it("applies solid error intent", () => {
-    const { container } = render(<Button variant="solid" intent="error">Error</Button>)
+    const { container } = render(
+      <Button variant="solid" intent="error">
+        Error
+      </Button>
+    )
     const btn = container.querySelector("button")
     expect(btn).toHaveClass("bg-error")
     expect(btn).toHaveClass("text-error-foreground")
@@ -49,7 +57,11 @@ describe("Button", () => {
   })
 
   it("applies outline variant classes", () => {
-    const { container } = render(<Button variant="outline" intent="primary">Outline</Button>)
+    const { container } = render(
+      <Button variant="outline" intent="primary">
+        Outline
+      </Button>
+    )
     const btn = container.querySelector("button")
     expect(btn).toHaveClass("border")
     expect(btn).toHaveClass("bg-transparent")
@@ -58,7 +70,11 @@ describe("Button", () => {
   })
 
   it("applies ghost variant classes", () => {
-    const { container } = render(<Button variant="ghost" intent="primary">Ghost</Button>)
+    const { container } = render(
+      <Button variant="ghost" intent="primary">
+        Ghost
+      </Button>
+    )
     const btn = container.querySelector("button")
     expect(btn).toHaveClass("bg-transparent")
     expect(btn).toHaveClass("text-primary")

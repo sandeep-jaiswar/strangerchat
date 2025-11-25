@@ -53,10 +53,18 @@ const iconButton = cva(
         intent: "secondary",
         className: "border-neutral-300 text-neutral-700 bg-transparent hover:bg-neutral-100",
       },
-      { variant: "outline", intent: "error", className: "border-error text-error bg-transparent hover:bg-error hover:text-white" },
+      {
+        variant: "outline",
+        intent: "error",
+        className: "border-error text-error bg-transparent hover:bg-error hover:text-white",
+      },
       // Ghost variants
       { variant: "ghost", intent: "primary", className: "text-primary hover:bg-primary/10" },
-      { variant: "ghost", intent: "secondary", className: "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700" },
+      {
+        variant: "ghost",
+        intent: "secondary",
+        className: "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700",
+      },
       { variant: "ghost", intent: "error", className: "text-error hover:bg-error/10" },
     ],
     defaultVariants: {

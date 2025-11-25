@@ -54,7 +54,7 @@ export function ProgressBar({
   return (
     <div className={cn("flex items-center gap-3", className)} {...props}>
       {showLabel && labelPosition === "left" && (
-        <span className="text-sm font-medium text-neutral-700 whitespace-nowrap">
+        <span className="text-sm font-medium whitespace-nowrap text-neutral-700">
           {value}/{max}
         </span>
       )}
@@ -62,7 +62,7 @@ export function ProgressBar({
         <div className={cn(progressIndicator({ intent }))} style={{ width: `${percentage}%` }} />
       </div>
       {showLabel && labelPosition === "right" && (
-        <span className="text-sm text-neutral-500 whitespace-nowrap">in total</span>
+        <span className="text-sm whitespace-nowrap text-neutral-500">in total</span>
       )}
     </div>
   )

@@ -32,7 +32,11 @@ describe("Chip", () => {
   })
 
   it("applies solid variant", () => {
-    const { container } = render(<Chip variant="solid" intent="primary">Solid</Chip>)
+    const { container } = render(
+      <Chip variant="solid" intent="primary">
+        Solid
+      </Chip>
+    )
     const chip = container.querySelector("span")
     expect(chip).toHaveClass("bg-primary")
     expect(chip).toHaveClass("text-primary-foreground")

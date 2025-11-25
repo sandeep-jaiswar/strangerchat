@@ -10,9 +10,13 @@ export const env = createEnv({
   },
   client: {
     ADSENSE_CLIENT: z.string(),
+    GOOGLE_CLIENT_ID: z.string(),
+    GOOGLE_CLIENT_SECRET: z.string(),
   },
   runtimeEnv: {
     ANALYZE: process.env.ANALYZE,
     ADSENSE_CLIENT: process.env.ADSENSE_CLIENT,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   },
 })

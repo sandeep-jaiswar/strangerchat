@@ -14,22 +14,10 @@ type UserProfileProps = {
 
 import { ProfileTabs } from "../ProfileTabs"
 
-export const UserProfile: React.FC<UserProfileProps> = ({
-  name,
-  avatar,
-  phone,
-  status,
-  recentChats,
-  className,
-}) => (
+export const UserProfile: React.FC<UserProfileProps> = ({ name, avatar, phone, status, recentChats, className }) => (
   <div className={cn("p-4", className)}>
     <div className="mb-4 flex items-center gap-4">
-      <Avatar
-        src={avatar}
-        alt={name + "'s avatar"}
-        initials={name[0]}
-        size="xl"
-      />
+      <Avatar src={avatar} alt={name + "'s avatar"} initials={name[0]} size="xl" />
       <div>
         <div className="text-lg font-bold text-neutral-900">{name}</div>
         {status && <div className="text-xs text-neutral-500">{status}</div>}

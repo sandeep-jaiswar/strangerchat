@@ -3,15 +3,7 @@ import React from "react"
 import { cn } from "utils/cn"
 
 const badge = cva(
-  [
-    "inline-flex",
-    "items-center",
-    "justify-center",
-    "gap-1.5",
-    "font-medium",
-    "transition-colors",
-    "whitespace-nowrap",
-  ],
+  ["inline-flex", "items-center", "justify-center", "gap-1.5", "font-medium", "transition-colors", "whitespace-nowrap"],
   {
     variants: {
       variant: {

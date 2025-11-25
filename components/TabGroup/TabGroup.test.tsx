@@ -33,9 +33,7 @@ describe("TabGroup", () => {
   })
 
   it("renders tabs with icons", () => {
-    const tabsWithIcons = [
-      { value: "visitors", label: "Visitors", icon: <span data-testid="icon">📊</span> },
-    ]
+    const tabsWithIcons = [{ value: "visitors", label: "Visitors", icon: <span data-testid="icon">📊</span> }]
     render(<TabGroup tabs={tabsWithIcons} />)
     expect(screen.getByTestId("icon")).toBeInTheDocument()
   })

@@ -16,7 +16,11 @@ describe("Badge", () => {
   })
 
   it("applies outline variant", () => {
-    const { container } = render(<Badge variant="outline" intent="primary">Outline</Badge>)
+    const { container } = render(
+      <Badge variant="outline" intent="primary">
+        Outline
+      </Badge>
+    )
     const badge = container.querySelector("span")
     expect(badge).toHaveClass("border")
     expect(badge).toHaveClass("bg-transparent")
@@ -24,7 +28,11 @@ describe("Badge", () => {
   })
 
   it("applies soft variant", () => {
-    const { container } = render(<Badge variant="soft" intent="success">Soft</Badge>)
+    const { container } = render(
+      <Badge variant="soft" intent="success">
+        Soft
+      </Badge>
+    )
     const badge = container.querySelector("span")
     expect(badge).toHaveClass("text-success")
   })

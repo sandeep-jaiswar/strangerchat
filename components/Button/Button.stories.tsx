@@ -40,9 +40,15 @@ export const Default: Story = {
 export const Solid: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Button variant="solid" intent="primary">Primary</Button>
-      <Button variant="solid" intent="secondary">Secondary</Button>
-      <Button variant="solid" intent="error">Error</Button>
+      <Button variant="solid" intent="primary">
+        Primary
+      </Button>
+      <Button variant="solid" intent="secondary">
+        Secondary
+      </Button>
+      <Button variant="solid" intent="error">
+        Error
+      </Button>
     </div>
   ),
 }
@@ -50,9 +56,15 @@ export const Solid: Story = {
 export const Outline: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Button variant="outline" intent="primary">Primary</Button>
-      <Button variant="outline" intent="secondary">Secondary</Button>
-      <Button variant="outline" intent="error">Error</Button>
+      <Button variant="outline" intent="primary">
+        Primary
+      </Button>
+      <Button variant="outline" intent="secondary">
+        Secondary
+      </Button>
+      <Button variant="outline" intent="error">
+        Error
+      </Button>
     </div>
   ),
 }
@@ -60,9 +72,15 @@ export const Outline: Story = {
 export const Ghost: Story = {
   render: () => (
     <div className="flex gap-4">
-      <Button variant="ghost" intent="primary">Primary</Button>
-      <Button variant="ghost" intent="secondary">Secondary</Button>
-      <Button variant="ghost" intent="error">Error</Button>
+      <Button variant="ghost" intent="primary">
+        Primary
+      </Button>
+      <Button variant="ghost" intent="secondary">
+        Secondary
+      </Button>
+      <Button variant="ghost" intent="error">
+        Error
+      </Button>
     </div>
   ),
 }
@@ -146,8 +164,12 @@ export const Disabled: Story = {
   render: () => (
     <div className="flex gap-4">
       <Button disabled>Disabled Solid</Button>
-      <Button variant="outline" disabled>Disabled Outline</Button>
-      <Button variant="ghost" disabled>Disabled Ghost</Button>
+      <Button variant="outline" disabled>
+        Disabled Outline
+      </Button>
+      <Button variant="ghost" disabled>
+        Disabled Ghost
+      </Button>
     </div>
   ),
 }
