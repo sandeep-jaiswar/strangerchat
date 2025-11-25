@@ -2,25 +2,23 @@ import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 import { cn } from "utils/cn"
 
-const button = cva(
+const iconButton = cva(
   [
     "inline-flex",
     "items-center",
     "justify-center",
-    "font-medium",
     "transition-colors",
     "focus:outline-none",
     "focus:ring-2",
     "focus:ring-primary",
     "disabled:opacity-50",
     "disabled:pointer-events-none",
-    "gap-2",
   ],
   {
     variants: {
       variant: {
         solid: [],
-        outline: ["border", "bg-transparent"],
+        outline: ["border"],
         ghost: ["bg-transparent"],
       },
       intent: {
@@ -29,77 +27,65 @@ const button = cva(
         error: [],
       },
       size: {
-        sm: ["h-8", "px-3", "text-sm"],
-        md: ["h-10", "px-4", "text-base"],
-        lg: ["h-12", "px-6", "text-lg"],
-        icon: ["h-10", "w-10", "p-0"],
-        "icon-sm": ["h-8", "w-8", "p-0"],
-        "icon-lg": ["h-12", "w-12", "p-0"],
+        sm: ["h-8", "w-8"],
+        md: ["h-10", "w-10"],
+        lg: ["h-12", "w-12"],
       },
       rounded: {
-        sm: ["rounded-sm"],
         md: ["rounded-md"],
         lg: ["rounded-lg"],
-        xl: ["rounded-xl"],
         full: ["rounded-full"],
       },
     },
     compoundVariants: [
       // Solid variants
       { variant: "solid", intent: "primary", className: "bg-primary text-primary-foreground hover:bg-primary-hover" },
-      {
-        variant: "solid",
-        intent: "secondary",
-        className: "bg-secondary text-secondary-foreground hover:bg-secondary-hover",
-      },
+      { variant: "solid", intent: "secondary", className: "bg-neutral-100 text-neutral-700 hover:bg-neutral-200" },
       { variant: "solid", intent: "error", className: "bg-error text-error-foreground hover:opacity-90" },
       // Outline variants
       {
         variant: "outline",
         intent: "primary",
-        className: "border-primary text-primary hover:bg-primary hover:text-primary-foreground",
+        className: "border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground",
       },
       {
         variant: "outline",
         intent: "secondary",
-        className: "border-neutral-300 text-neutral-700 hover:bg-neutral-100",
+        className: "border-neutral-300 text-neutral-700 bg-transparent hover:bg-neutral-100",
       },
-      { variant: "outline", intent: "error", className: "border-error text-error hover:bg-error hover:text-white" },
+      {
+        variant: "outline",
+        intent: "error",
+        className: "border-error text-error bg-transparent hover:bg-error hover:text-white",
+      },
       // Ghost variants
       { variant: "ghost", intent: "primary", className: "text-primary hover:bg-primary/10" },
-      { variant: "ghost", intent: "secondary", className: "text-neutral-700 hover:bg-neutral-100" },
+      {
+        variant: "ghost",
+        intent: "secondary",
+        className: "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700",
+      },
       { variant: "ghost", intent: "error", className: "text-error hover:bg-error/10" },
     ],
     defaultVariants: {
-      variant: "solid",
-      intent: "primary",
+      variant: "ghost",
+      intent: "secondary",
       size: "md",
       rounded: "md",
     },
   }
 )
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof button> {
-  leftIcon?: React.ReactNode
-  rightIcon?: React.ReactNode
+export interface IconButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof iconButton> {
+  "aria-label": string
 }
 
-export function Button({
-  className,
-  variant,
-  intent,
-  size,
-  rounded,
-  leftIcon,
-  rightIcon,
-  children,
-  ...props
-}: ButtonProps) {
+export function IconButton({ className, variant, intent, size, rounded, children, ...props }: IconButtonProps) {
   return (
-    <button className={cn(button({ variant, intent, size, rounded, className }))} {...props}>
-      {leftIcon}
+    <button className={cn(iconButton({ variant, intent, size, rounded, className }))} {...props}>
       {children}
-      {rightIcon}
     </button>
   )
 }

@@ -1,4 +1,5 @@
 import "styles/tailwind.css"
+import SessionProvider from "providers/SessionProvider"
 import { env } from "../env.mjs"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +9,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Google AdSense site verification */}
         <meta name="google-adsense-account" content={env.ADSENSE_CLIENT} />
       </head>
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }
