@@ -8,8 +8,11 @@ export const env = createEnv({
       .optional()
       .transform((value) => value === "true"),
   },
-  client: {},
+  client: {
+    ADSENSE_CLIENT: z.string(),
+  },
   runtimeEnv: {
     ANALYZE: process.env.ANALYZE,
+    ADSENSE_CLIENT: process.env.ADSENSE_CLIENT,
   },
 })

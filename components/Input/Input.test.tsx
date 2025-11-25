@@ -9,7 +9,7 @@ describe("Input", () => {
   })
 
   it("calls onChange", () => {
-  const handleChange = vi.fn()
+    const handleChange = vi.fn()
     const { getByPlaceholderText } = render(<Input value="" onChange={handleChange} placeholder="Type" />)
     fireEvent.change(getByPlaceholderText("Type"), { target: { value: "x" } })
     expect(handleChange).toHaveBeenCalled()

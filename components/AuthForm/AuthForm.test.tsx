@@ -1,8 +1,8 @@
 import { fireEvent, render } from "@testing-library/react"
 import React from "react"
+import { describe, expect, it, vi } from "vitest"
 import { AuthForm } from "./AuthForm"
 
-import { describe, it, expect, vi } from "vitest"
 describe("AuthForm", () => {
   it("renders login button", () => {
     const { getByText } = render(<AuthForm type="login" onSubmit={() => {}} />)
@@ -20,7 +20,7 @@ describe("AuthForm", () => {
   })
 
   it("calls onSubmit", () => {
-  const onSubmit = vi.fn()
+    const onSubmit = vi.fn()
     const { getByLabelText, getByText } = render(<AuthForm type="login" onSubmit={onSubmit} />)
     fireEvent.change(getByLabelText("Email"), { target: { value: "a@b.com" } })
     fireEvent.change(getByLabelText("Password"), { target: { value: "123" } })

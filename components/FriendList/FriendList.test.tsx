@@ -15,7 +15,7 @@ describe("FriendList", () => {
   })
 
   it("calls onSelect when friend clicked", () => {
-  const onSelect = vi.fn()
+    const onSelect = vi.fn()
     render(<FriendList friends={friends} onSelect={onSelect} />)
     fireEvent.click(screen.getByText("Alice"))
     expect(onSelect).toHaveBeenCalledWith("1")

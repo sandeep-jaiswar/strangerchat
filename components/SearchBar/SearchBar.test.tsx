@@ -9,7 +9,7 @@ describe("SearchBar", () => {
   })
 
   it("calls onChange when typing", () => {
-  const onChange = vi.fn()
+    const onChange = vi.fn()
     render(<SearchBar value="" onChange={onChange} />)
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "abc" } })
     expect(onChange).toHaveBeenCalledWith("abc")
@@ -26,7 +26,7 @@ describe("SearchBar", () => {
   })
 
   it("calls onChange", () => {
-  const onChange = vi.fn()
+    const onChange = vi.fn()
     const { getByPlaceholderText } = render(<SearchBar value="" onChange={onChange} />)
     fireEvent.change(getByPlaceholderText("Search..."), { target: { value: "a" } })
     expect(onChange).toHaveBeenCalledWith("a")

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import React from "react"
-import { Toast } from "./Toast"
 import { vi } from "vitest"
+import { Toast } from "./Toast"
 
 describe("Toast", () => {
   it("renders message", () => {
@@ -10,7 +10,7 @@ describe("Toast", () => {
   })
 
   it("calls onClose when button clicked", () => {
-  const onClose = vi.fn()
+    const onClose = vi.fn()
     render(<Toast message="Msg" onClose={onClose} />)
     fireEvent.click(screen.getByText("Close"))
     expect(onClose).toHaveBeenCalled()

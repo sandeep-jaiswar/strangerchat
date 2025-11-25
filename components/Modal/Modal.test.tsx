@@ -1,8 +1,8 @@
 import { fireEvent, render } from "@testing-library/react"
 import React from "react"
+import { describe, expect, it, vi } from "vitest"
 import { Modal } from "./Modal"
 
-import { describe, it, expect, vi } from "vitest"
 describe("Modal", () => {
   it("renders when open", () => {
     const { getByText } = render(
@@ -23,7 +23,7 @@ describe("Modal", () => {
   })
 
   it("calls onClose", () => {
-  const onClose = vi.fn()
+    const onClose = vi.fn()
     const { getByText } = render(
       <Modal open onClose={onClose}>
         Content

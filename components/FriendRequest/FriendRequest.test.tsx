@@ -11,8 +11,8 @@ describe("FriendRequest", () => {
   })
 
   it("calls onAccept and onDecline", () => {
-  const onAccept = vi.fn()
-  const onDecline = vi.fn()
+    const onAccept = vi.fn()
+    const onDecline = vi.fn()
     render(<FriendRequest name="Charlie" onAccept={onAccept} onDecline={onDecline} />)
     fireEvent.click(screen.getByText("Accept"))
     expect(onAccept).toHaveBeenCalled()
@@ -31,14 +31,14 @@ describe("FriendRequest", () => {
   })
 
   it("calls onAccept", () => {
-  const onAccept = vi.fn()
+    const onAccept = vi.fn()
     const { getByText } = render(<FriendRequest name="Bob" onAccept={onAccept} onDecline={() => {}} />)
     fireEvent.click(getByText("Accept"))
     expect(onAccept).toHaveBeenCalled()
   })
 
   it("calls onDecline", () => {
-  const onDecline = vi.fn()
+    const onDecline = vi.fn()
     const { getByText } = render(<FriendRequest name="Bob" onAccept={() => {}} onDecline={onDecline} />)
     fireEvent.click(getByText("Decline"))
     expect(onDecline).toHaveBeenCalled()

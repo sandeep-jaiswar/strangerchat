@@ -1,8 +1,8 @@
 import { fireEvent, render } from "@testing-library/react"
 import React from "react"
+import { vi } from "vitest"
 import { Sidebar } from "./Sidebar"
 
-import { vi } from "vitest"
 const items = [{ label: "A", onClick: vi.fn() }]
 
 describe("Sidebar", () => {
