@@ -22,7 +22,7 @@ export const GroupProfile: React.FC<GroupProfileProps> = ({
 }) => (
   <div className={cn("p-4", className)}>
     <div className="mb-4 flex items-center gap-4">
-      <Avatar src={avatar} alt={name + " group avatar"} size={56} />
+      <Avatar src={avatar} alt={name + " group avatar"} size="xl" />
       <div>
         <div className="text-lg font-bold text-neutral-900">{name}</div>
         {description && <div className="text-xs text-neutral-500">{description}</div>}

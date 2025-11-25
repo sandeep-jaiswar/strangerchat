@@ -22,7 +22,7 @@ export const FriendList: React.FC<FriendListProps> = ({ friends, onSelect, class
         onClick={() => onSelect?.(f.id)}
         className="flex cursor-pointer items-center rounded-md px-2 py-1 hover:bg-neutral-100"
       >
-        <Avatar alt="avatar" src={f.avatar} initials={f.name[0]} size={32} />
+        <Avatar alt="avatar" src={f.avatar} initials={f.name[0]} size="sm" />
         <span className="ml-3 text-neutral-800">{f.name}</span>
       </li>
     ))}

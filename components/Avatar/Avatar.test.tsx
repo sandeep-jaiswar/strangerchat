@@ -4,11 +4,9 @@ import { Avatar } from "./Avatar"
 
 describe("Avatar", () => {
   it("renders image when src is provided", () => {
-    const { getByAltText } = render(<Avatar src="/img.png" alt="user" size={32} width={32} height={32} />)
+    const { getByAltText } = render(<Avatar src="/img.png" alt="user" size="sm" />)
     const img = getByAltText("user")
     expect(img).toBeInTheDocument()
-    expect(img).toHaveAttribute("width", "32")
-    expect(img).toHaveAttribute("height", "32")
   })
 
   it("renders initials when src is not provided", () => {
@@ -16,14 +14,30 @@ describe("Avatar", () => {
     expect(getByText("AB")).toBeInTheDocument()
   })
 
-  it("applies size", () => {
-    const { container } = render(<Avatar initials="A" size={50} alt="A avatar" />)
-    expect(container.firstChild).toHaveStyle("width: 50px")
-    expect(container.firstChild).toHaveStyle("height: 50px")
+  it("applies size classes", () => {
+    const { container } = render(<Avatar initials="A" size="lg" alt="A avatar" />)
+    const avatarDiv = container.querySelector(".w-12")
+    expect(avatarDiv).toBeInTheDocument()
+    expect(avatarDiv).toHaveClass("h-12")
   })
 
   it("applies custom className", () => {
     const { container } = render(<Avatar initials="A" alt="A avatar" className="custom-avatar" />)
-    expect(container.firstChild).toHaveClass("custom-avatar")
+    const avatarDiv = container.querySelector(".custom-avatar")
+    expect(avatarDiv).toBeInTheDocument()
+  })
+
+  it("renders status indicator when status is provided", () => {
+    const { container } = render(<Avatar initials="A" alt="A avatar" status="online" />)
+    const statusIndicator = container.querySelector(".bg-success")
+    expect(statusIndicator).toBeInTheDocument()
+  })
+
+  it("applies different size variants", () => {
+    const { container: xsContainer } = render(<Avatar initials="A" alt="A avatar" size="xs" />)
+    expect(xsContainer.querySelector(".w-6")).toBeInTheDocument()
+
+    const { container: xlContainer } = render(<Avatar initials="A" alt="A avatar" size="xl" />)
+    expect(xlContainer.querySelector(".w-16")).toBeInTheDocument()
   })
 })

@@ -14,7 +14,7 @@ describe("UserProfile", () => {
   })
 
   it("renders avatar with alt text", () => {
-    render(<UserProfile {...baseProps} avatar="/img.png" avatarWidth={56} avatarHeight={56} />)
+    render(<UserProfile {...baseProps} avatar="/img.png" />)
     expect(screen.getByAltText("Alice's avatar")).toBeInTheDocument()
   })
 

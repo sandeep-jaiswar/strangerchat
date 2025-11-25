@@ -13,7 +13,7 @@ type FriendRequestProps = {
 
 export const FriendRequest: React.FC<FriendRequestProps> = ({ name, avatar, onAccept, onDecline, className }) => (
   <div className={cn("flex items-center gap-3", className)}>
-    <Avatar alt="avatar" src={avatar} initials={name[0]} size={32} />
+    <Avatar alt="avatar" src={avatar} initials={name[0]} size="sm" />
     <span className="text-neutral-800">{name}</span>
     <Button intent="primary" size="sm" onClick={onAccept}>
       Accept
