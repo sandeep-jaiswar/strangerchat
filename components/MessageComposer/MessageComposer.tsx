@@ -1,25 +1,43 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { cn } from "utils/cn"
 import { Button } from "../Button"
 import { Input } from "../Input"
 
 type MessageComposerProps = {
   onSend: (message: string) => void
+  onTyping?: (isTyping: boolean) => void
   disabled?: boolean
   className?: string
+  placeholder?: string
 }
 
-export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled, className }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({
+  onSend,
+  onTyping,
+  disabled,
+  className,
+  placeholder = "Type a message...",
+}) => {
   const [msg, setMsg] = useState("")
+
+  useEffect(() => {
+    // Notify parent about typing status
+    if (onTyping) {
+      onTyping(msg.length > 0)
+    }
+  }, [msg, onTyping])
+
   return (
     <form
       className={cn("flex items-center gap-2", className)}
       onSubmit={(e) => {
         e.preventDefault()
-        onSend(msg)
-        setMsg("")
+        if (msg.trim()) {
+          onSend(msg)
+          setMsg("")
+        }
       }}
     >
       {/* Attachment icon */}
@@ -31,7 +49,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
       <Input
         value={msg}
         onChange={(e) => setMsg(e.target.value)}
-        placeholder="Type a message..."
+        placeholder={placeholder}
         disabled={disabled}
         size="md"
         className="flex-1"
