@@ -13,15 +13,15 @@ export const env = createEnv({
     EMAIL_FROM: z.string().optional(),
     GITHUB_ID: z.string().optional(),
     GITHUB_SECRET: z.string().optional(),
-  },
-  client: {
-    ADSENSE_CLIENT: z.string(),
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
   },
+  client: {
+    NEXT_PUBLIC_ADSENSE_CLIENT: z.string(),
+  },
   runtimeEnv: {
     ANALYZE: process.env.ANALYZE,
-    ADSENSE_CLIENT: process.env.ADSENSE_CLIENT,
+    NEXT_PUBLIC_ADSENSE_CLIENT: process.env.NEXT_PUBLIC_ADSENSE_CLIENT,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
