@@ -2,14 +2,14 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { useWebSocket } from "hooks/useWebSocket"
-import { Button } from "components/Button"
+import { useEffect } from "react"
+import { motion } from "framer-motion"
 import { Avatar } from "components/Avatar"
-import { MessageComposer } from "components/MessageComposer"
+import { Button } from "components/Button"
 import { ChatBubble } from "components/ChatBubble"
 import { Loader } from "components/Loader"
-import { motion } from "framer-motion"
+import { MessageComposer } from "components/MessageComposer"
+import { useWebSocket } from "hooks/useWebSocket"
 
 export default function RandomChatPage() {
   const { data: session, status } = useSession()
@@ -26,8 +26,6 @@ export default function RandomChatPage() {
     endSession,
     sendFriendRequest,
   } = useWebSocket()
-
-  const [inputValue, setInputValue] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -57,7 +55,6 @@ export default function RandomChatPage() {
   const handleSend = (message: string) => {
     if (message.trim() && partner) {
       sendMessage(message)
-      setInputValue("")
     }
   }
 
@@ -156,8 +153,8 @@ export default function RandomChatPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                      avatar={msg.isOwn ? session.user.image || undefined : partner.image || undefined}
-                      initials={msg.isOwn ? session.user.name?.[0] : partner.name?.[0]}
+                      avatar={msg.isOwn ? session.user?.image || undefined : partner.image || undefined}
+                      initials={msg.isOwn ? session.user?.name?.[0] : partner.name?.[0]}
                     />
                   ))}
                 </div>
@@ -166,14 +163,7 @@ export default function RandomChatPage() {
 
             {/* Message Input */}
             <div className="border-t p-4 dark:border-gray-700">
-              <MessageComposer
-                onSend={handleSend}
-                onChange={(value) => {
-                  setInputValue(value)
-                  sendTyping(value.length > 0)
-                }}
-                placeholder="Type your message..."
-              />
+              <MessageComposer onSend={handleSend} onTyping={sendTyping} placeholder="Type your message..." />
             </div>
           </>
         ) : (

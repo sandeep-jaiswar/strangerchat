@@ -3,11 +3,11 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
 import { Button } from "components/Button"
 import { FriendList } from "components/FriendList"
 import { FriendRequest } from "components/FriendRequest"
 import { Loader } from "components/Loader"
-import { motion } from "framer-motion"
 
 type Friend = {
   id: string
@@ -27,7 +27,7 @@ type FriendRequestType = {
 export default function FriendsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [friends, setFriends] = useState<Friend[]>([])
+  const [friends] = useState<Friend[]>([])
   const [requests, setRequests] = useState<FriendRequestType[]>([])
   const [isLoading, setIsLoading] = useState(true)
 

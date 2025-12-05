@@ -33,7 +33,7 @@ export function useWebSocket() {
   const [availableCount, setAvailableCount] = useState(0)
 
   const ws = useRef<WebSocket | null>(null)
-  const reconnectTimeout = useRef<NodeJS.Timeout>()
+  const reconnectTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const connect = useCallback(() => {
     if (!session?.user?.id || ws.current?.readyState === WebSocket.OPEN) {
@@ -50,23 +50,25 @@ export function useWebSocket() {
       setIsConnected(true)
       
       // Register user
-      ws.current?.send(
-        JSON.stringify({
-          type: "register",
-          userId: session.user.id,
-          user: {
-            id: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
-            image: session.user.image,
-          },
-        })
-      )
+      if (session?.user?.id) {
+        ws.current?.send(
+          JSON.stringify({
+            type: "register",
+            userId: session.user.id,
+            user: {
+              id: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+              image: session.user.image,
+            },
+          })
+        )
+      }
     }
 
     ws.current.onmessage = (event) => {
       try {
-        const data: WSMessage = JSON.parse(event.data)
+        const data = JSON.parse(event.data) as WSMessage
         handleMessage(data)
       } catch (error) {
         console.error("Error parsing message:", error)

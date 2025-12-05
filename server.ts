@@ -37,7 +37,7 @@ app.prepare().then(() => {
     // Handle messages from client
     ws.on("message", (data: Buffer) => {
       try {
-        const message: WSMessage = JSON.parse(data.toString())
+        const message = JSON.parse(data.toString()) as WSMessage
         handleMessage(ws, message)
       } catch (error) {
         console.error("Error parsing message:", error)

@@ -4,7 +4,6 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { AdsenseBanner } from "components/AdsenseBanner"
 import LoginButton from "components/LoginButton/LoginButton"
-import { Button } from "components/Button"
 import { env } from "../env.mjs"
 
 export default function Web() {

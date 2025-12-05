@@ -104,7 +104,8 @@ class ChatState {
   getRandomAvailableUser(excludeUserId: string): string | null {
     const available = Array.from(this.availableUsers).filter((id) => id !== excludeUserId)
     if (available.length === 0) return null
-    return available[Math.floor(Math.random() * available.length)]
+    const randomUser = available[Math.floor(Math.random() * available.length)]
+    return randomUser || null
   }
 
   // Create a chat session

@@ -1,13 +1,13 @@
 "use client"
 
-import { useSession, signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { Button } from "components/Button"
-import { useWebSocket } from "hooks/useWebSocket"
-import { Avatar } from "components/Avatar"
-import { Loader } from "components/Loader"
 import { motion } from "framer-motion"
+import { Avatar } from "components/Avatar"
+import { Button } from "components/Button"
+import { Loader } from "components/Loader"
+import { useWebSocket } from "hooks/useWebSocket"
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
@@ -44,14 +44,14 @@ export default function DashboardPage() {
         <div className="mb-8 flex items-center justify-between rounded-lg bg-white p-6 shadow-md dark:bg-gray-800">
           <div className="flex items-center gap-4">
             <Avatar
-              src={session.user.image || undefined}
-              alt={session.user.name || "User"}
-              initials={session.user.name?.[0] || "U"}
+              src={session.user?.image || undefined}
+              alt={session.user?.name || "User"}
+              initials={session.user?.name?.[0] || "U"}
               size="md"
             />
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{session.user.name || "Anonymous"}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{session.user.email}</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{session.user?.name || "Anonymous"}</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{session.user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
