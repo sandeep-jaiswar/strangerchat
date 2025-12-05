@@ -22,6 +22,20 @@ export type ChatMessage = {
   isOwn?: boolean
 }
 
+export type Friend = {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+}
+
+export type FriendRequestType = {
+  id: string
+  fromUserId: string
+  toUserId: string
+  from?: Friend
+}
+
 export function useWebSocket() {
   const { data: session } = useSession()
   const [isConnected, setIsConnected] = useState(false)
@@ -31,6 +45,8 @@ export function useWebSocket() {
   const [isPartnerTyping, setIsPartnerTyping] = useState(false)
   const [onlineCount, setOnlineCount] = useState(0)
   const [availableCount, setAvailableCount] = useState(0)
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [friendRequests, setFriendRequests] = useState<FriendRequestType[]>([])
 
   const ws = useRef<WebSocket | null>(null)
   const reconnectTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
@@ -139,6 +155,28 @@ export function useWebSocket() {
       case "error":
         console.error("WebSocket error:", data.message)
         break
+      case "friends_list":
+        setFriends(data.friends as Friend[])
+        break
+      case "friend_requests":
+        setFriendRequests(data.requests as FriendRequestType[])
+        break
+      case "friend_request_received":
+        setFriendRequests((prev) => [...prev, data.request as FriendRequestType])
+        break
+      case "friend_request_sent":
+        // Acknowledge friend request sent
+        break
+      case "friend_request_accepted":
+        setFriendRequests((prev) => prev.filter((r) => r.id !== data.requestId))
+        // Refresh friends list
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({ type: "get_friends" }))
+        }
+        break
+      case "friend_request_rejected":
+        setFriendRequests((prev) => prev.filter((r) => r.id !== data.requestId))
+        break
     }
   }
 
@@ -188,6 +226,38 @@ export function useWebSocket() {
     ws.current.send(JSON.stringify({ type: "send_friend_request", toUserId }))
   }, [])
 
+  const acceptFriendRequest = useCallback((requestId: string) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      return
+    }
+
+    ws.current.send(JSON.stringify({ type: "accept_friend_request", requestId }))
+  }, [])
+
+  const rejectFriendRequest = useCallback((requestId: string) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      return
+    }
+
+    ws.current.send(JSON.stringify({ type: "reject_friend_request", requestId }))
+  }, [])
+
+  const loadFriends = useCallback(() => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      return
+    }
+
+    ws.current.send(JSON.stringify({ type: "get_friends" }))
+  }, [])
+
+  const loadFriendRequests = useCallback(() => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      return
+    }
+
+    ws.current.send(JSON.stringify({ type: "get_friend_requests" }))
+  }, [])
+
   useEffect(() => {
     if (session?.user?.id) {
       connect()
@@ -203,6 +273,14 @@ export function useWebSocket() {
     }
   }, [connect, session?.user?.id])
 
+  // Load friends and requests when connected
+  useEffect(() => {
+    if (isConnected) {
+      loadFriends()
+      loadFriendRequests()
+    }
+  }, [isConnected, loadFriends, loadFriendRequests])
+
   return {
     isConnected,
     messages,
@@ -211,10 +289,16 @@ export function useWebSocket() {
     isPartnerTyping,
     onlineCount,
     availableCount,
+    friends,
+    friendRequests,
     findMatch,
     sendMessage,
     sendTyping,
     endSession,
     sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    loadFriends,
+    loadFriendRequests,
   }
 }

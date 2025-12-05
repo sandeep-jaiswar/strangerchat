@@ -2,7 +2,7 @@ import { createServer } from "http"
 import { parse } from "url"
 import next from "next"
 import { WebSocketServer, WebSocket } from "ws"
-import { chatState } from "./lib/chatState"
+import { chatState, type User } from "./lib/chatState"
 
 const dev = process.env.NODE_ENV !== "production"
 const hostname = process.env.HOSTNAME || "localhost"
@@ -113,7 +113,7 @@ app.prepare().then(() => {
       return
     }
 
-    chatState.registerUser(userId as string, user as any, ws)
+    chatState.registerUser(userId as string, user as User, ws)
     ws.send(
       JSON.stringify({
         type: "registered",
@@ -282,7 +282,22 @@ app.prepare().then(() => {
     const success = chatState.acceptFriendRequest(requestId as string)
     if (success) {
       ws.send(JSON.stringify({ type: "friend_request_accepted", requestId }))
-      // TODO: Notify the requester
+      
+      // Notify the requester that their request was accepted
+      const requests = chatState.getPendingFriendRequests(userId)
+      const acceptedRequest = requests.find((r) => r.id === requestId)
+      if (acceptedRequest) {
+        const requesterSocket = chatState.getUserSocket(acceptedRequest.fromUserId)
+        const accepter = chatState.getUser(userId)
+        if (requesterSocket) {
+          requesterSocket.send(
+            JSON.stringify({
+              type: "friend_request_accepted_by_user",
+              acceptedBy: accepter,
+            })
+          )
+        }
+      }
     } else {
       ws.send(JSON.stringify({ type: "error", message: "Failed to accept request" }))
     }

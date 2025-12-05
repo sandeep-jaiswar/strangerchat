@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { WebSocket } from "ws"
 import { chatState } from "./chatState"
 import type { User } from "./chatState"
 
@@ -15,7 +16,7 @@ describe("ChatState", () => {
   let mockWs3: MockWebSocket
   let user1: User
   let user2: User
-  let user3: User
+  let _user3: User
 
   beforeEach(() => {
     // Create fresh mocks and users for each test
@@ -37,7 +38,7 @@ describe("ChatState", () => {
       image: null,
     }
     
-    user3 = {
+    _user3 = {
       id: `user3-${Date.now()}-${Math.random()}`,
       name: "Test User 3",
       email: "user3@test.com",
@@ -47,38 +48,38 @@ describe("ChatState", () => {
 
   afterEach(() => {
     // Clean up registered users after each test
-    chatState.unregisterUser(mockWs1 as any)
-    chatState.unregisterUser(mockWs2 as any)
-    chatState.unregisterUser(mockWs3 as any)
+    chatState.unregisterUser(mockWs1 as unknown as WebSocket)
+    chatState.unregisterUser(mockWs2 as unknown as WebSocket)
+    chatState.unregisterUser(mockWs3 as unknown as WebSocket)
   })
 
   describe("User Registration", () => {
     it("should register a user with socket", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       
       expect(chatState.isUserOnline(user1.id)).toBe(true)
       expect(chatState.getUser(user1.id)).toEqual(user1)
       expect(chatState.getUserSocket(user1.id)).toBe(mockWs1)
-      expect(chatState.getSocketUser(mockWs1 as any)).toBe(user1.id)
+      expect(chatState.getSocketUser(mockWs1 as unknown as WebSocket)).toBe(user1.id)
     })
 
     it("should track online users count", () => {
       const initialCount = chatState.getOnlineCount()
       
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       expect(chatState.getOnlineCount()).toBe(initialCount + 1)
       
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       expect(chatState.getOnlineCount()).toBe(initialCount + 2)
     })
   })
 
   describe("User Unregistration", () => {
     it("should unregister a user on disconnect", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       expect(chatState.isUserOnline(user1.id)).toBe(true)
       
-      chatState.unregisterUser(mockWs1 as any)
+      chatState.unregisterUser(mockWs1 as unknown as WebSocket)
       expect(chatState.isUserOnline(user1.id)).toBe(false)
       expect(chatState.getUserSocket(user1.id)).toBe(null)
     })
@@ -86,7 +87,7 @@ describe("ChatState", () => {
 
   describe("Matching Logic", () => {
     it("should mark user as available", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       
       const initialAvailable = chatState.getAvailableCount()
       chatState.markAvailable(user1.id)
@@ -94,7 +95,7 @@ describe("ChatState", () => {
     })
 
     it("should mark user as unavailable", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       chatState.markAvailable(user1.id)
       
       const availableCount = chatState.getAvailableCount()
@@ -103,8 +104,8 @@ describe("ChatState", () => {
     })
 
     it("should get random available user excluding requester", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       chatState.markAvailable(user1.id)
       chatState.markAvailable(user2.id)
@@ -114,7 +115,7 @@ describe("ChatState", () => {
     })
 
     it("should return null when no available users except requester", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
       chatState.markAvailable(user1.id)
       
       const match = chatState.getRandomAvailableUser(user1.id)
@@ -124,8 +125,8 @@ describe("ChatState", () => {
 
   describe("Chat Sessions", () => {
     it("should create a chat session", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       const session = chatState.createSession(user1.id, user2.id)
       
@@ -136,8 +137,8 @@ describe("ChatState", () => {
     })
 
     it("should mark users as unavailable when session created", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       chatState.markAvailable(user1.id)
       chatState.markAvailable(user2.id)
       
@@ -149,8 +150,8 @@ describe("ChatState", () => {
     })
 
     it("should get user session", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       const session = chatState.createSession(user1.id, user2.id)
       
@@ -159,8 +160,8 @@ describe("ChatState", () => {
     })
 
     it("should end a session", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       const session = chatState.createSession(user1.id, user2.id)
       chatState.endSession(session.id)
@@ -189,8 +190,8 @@ describe("ChatState", () => {
     })
 
     it("should accept friend request", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       const request = chatState.createFriendRequest(user1.id, user2.id)
       const success = chatState.acceptFriendRequest(request.id)
@@ -208,8 +209,8 @@ describe("ChatState", () => {
     })
 
     it("should get friends list", () => {
-      chatState.registerUser(user1.id, user1, mockWs1 as any)
-      chatState.registerUser(user2.id, user2, mockWs2 as any)
+      chatState.registerUser(user1.id, user1, mockWs1 as unknown as WebSocket)
+      chatState.registerUser(user2.id, user2, mockWs2 as unknown as WebSocket)
       
       const request = chatState.createFriendRequest(user1.id, user2.id)
       chatState.acceptFriendRequest(request.id)
