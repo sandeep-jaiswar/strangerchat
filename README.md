@@ -70,15 +70,7 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Required - AdSense (or use placeholder)
-ADSENSE_CLIENT=ca-pub-placeholder
-
-# Optional - Email Provider (requires SMTP server)
-EMAIL_SERVER=smtp://user:pass@smtp.example.com:587
-EMAIL_FROM=noreply@strangerchat.com
-
-# Optional - GitHub OAuth (Get from GitHub Developer Settings)
-GITHUB_ID=your-github-client-id
-GITHUB_SECRET=your-github-client-secret
+NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-placeholder
 ```
 
 #### Generating NextAuth Secret
@@ -87,7 +79,7 @@ GITHUB_SECRET=your-github-client-secret
 openssl rand -base64 32
 ```
 
-#### Setting up OAuth Providers
+#### Setting up Google OAuth
 
 **Google OAuth**:
 
