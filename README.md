@@ -1,4 +1,3 @@
-
 # StrangerChat — Anonymous Random Chat Application
 
 A world-class, professional anonymous chat application built with Next.js, NextAuth, and WebSocket for real-time communication. Connect with random strangers around the world instantly!
@@ -16,12 +15,14 @@ A world-class, professional anonymous chat application built with Next.js, NextA
 ## ⚠️ Important Notes
 
 **In-Memory State**: All data (messages, friend lists, sessions) is stored in server memory only:
+
 - Messages are **not persisted** to any database
 - **Message history is lost** when either user disconnects
 - **Friend lists are cleared** on server restart
 - **Not suitable for production** without adding persistence layer
 
 This architecture is designed for:
+
 - Demonstration and learning purposes
 - Low-latency ephemeral conversations
 - Privacy-focused temporary chats
@@ -36,18 +37,21 @@ This architecture is designed for:
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/sandeep-jaiswar/strangerchat.git
 cd strangerchat
 ```
 
 2. Enable Corepack (ships with Node.js):
+
 ```bash
 corepack enable
 corepack prepare pnpm@10.0.0 --activate
 ```
 
 3. Install dependencies:
+
 ```bash
 pnpm install
 ```
@@ -86,6 +90,7 @@ openssl rand -base64 32
 #### Setting up OAuth Providers
 
 **Google OAuth**:
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
 3. Enable Google+ API
@@ -93,6 +98,7 @@ openssl rand -base64 32
 5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
 
 **GitHub OAuth**:
+
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Create a new OAuth App
 3. Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
@@ -106,6 +112,7 @@ pnpm dev
 ```
 
 The application will start on `http://localhost:3000` with:
+
 - Next.js app
 - WebSocket server on `/api/ws`
 - Hot module replacement
@@ -159,6 +166,7 @@ strangerchat/
 ### WebSocket Message Types
 
 **Client → Server**:
+
 - `register`: Register user connection
 - `find_match`: Request random match
 - `send_message`: Send chat message
@@ -169,6 +177,7 @@ strangerchat/
 - `reject_friend_request`: Reject friend request
 
 **Server → Client**:
+
 - `registered`: Confirmation with online/available counts
 - `waiting`: No match available yet
 - `match_found`: Matched with partner
@@ -183,21 +192,25 @@ strangerchat/
 ## 🧪 Testing
 
 Run all tests:
+
 ```bash
 pnpm test
 ```
 
 Run tests in watch mode:
+
 ```bash
 pnpm test:watch
 ```
 
 Run tests with coverage:
+
 ```bash
 pnpm test:coverage
 ```
 
 Run end-to-end tests:
+
 ```bash
 pnpm e2e:headless
 ```
@@ -209,6 +222,7 @@ pnpm e2e:headless
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sandeep-jaiswar/strangerchat)
 
 **Important**: Vercel's serverless architecture may not be ideal for WebSocket. Consider:
+
 - Using Vercel for the frontend only
 - Deploying WebSocket server separately on a platform that supports long-running connections
 
@@ -240,6 +254,7 @@ CMD ["pnpm", "start"]
 ```
 
 Build and run:
+
 ```bash
 docker build -t strangerchat .
 docker run -p 3000:3000 --env-file .env.local strangerchat
@@ -277,6 +292,7 @@ pm2 startup
 ### To Scale Horizontally:
 
 1. **Use Sticky Sessions**: Configure your load balancer to route users to the same server:
+
    ```nginx
    upstream strangerchat {
        ip_hash;
@@ -286,6 +302,7 @@ pm2 startup
    ```
 
 2. **Implement Redis for State**: Replace in-memory state with Redis:
+
    - Use Redis Pub/Sub for WebSocket messages
    - Store sessions, friend lists in Redis
    - Use Redis Sets for available users pool
@@ -299,7 +316,7 @@ pm2 startup
 ### Example Redis Integration (Pseudocode)
 
 ```typescript
-import Redis from 'ioredis'
+import Redis from "ioredis"
 
 const redis = new Redis(process.env.REDIS_URL)
 const pub = new Redis(process.env.REDIS_URL)
@@ -313,7 +330,7 @@ await pub.publish(`chat:${sessionId}`, JSON.stringify(message))
 
 // Subscribe to messages
 sub.subscribe(`chat:${sessionId}`)
-sub.on('message', (channel, message) => {
+sub.on("message", (channel, message) => {
   // Forward to WebSocket client
 })
 ```
@@ -321,6 +338,7 @@ sub.on('message', (channel, message) => {
 ## 🔒 Security Considerations
 
 1. **Rate Limiting**: Implement rate limiting for:
+
    - Authentication attempts
    - Message sending
    - Friend requests
@@ -344,7 +362,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#your-color',
+        primary: "#your-color",
       },
     },
   },
@@ -366,6 +384,7 @@ MIT
 ## 🙏 Acknowledgments
 
 Built with:
+
 - [Next.js](https://nextjs.org/)
 - [NextAuth.js](https://next-auth.js.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
@@ -375,13 +394,13 @@ Built with:
 ---
 
 **Note**: This is a demonstration project. For production use, implement:
+
 - Database persistence
 - Message history
 - Moderation tools
 - Analytics
 - Error tracking (Sentry)
 - Monitoring (Datadog, New Relic)
-
 
 A production-ready template for building enterprise applications with Next.js. This boilerplate provides a solid foundation with carefully selected technologies and ready-to-go infrastructure to help you develop high-quality applications efficiently.
 
@@ -397,10 +416,7 @@ While most Next.js boilerplates focus on individual developer needs with excessi
 </picture>
 </a>
 
-> [!NOTE]
-> **Blazity** is a group of Next.js architects. We help organizations architect, optimize, and deploy high-performance Next.js applications at scale. Contact us at [contact@blazity.com](https://blazity.com) if you’d like to talk about your project.
-
-
+> [!NOTE] > **Blazity** is a group of Next.js architects. We help organizations architect, optimize, and deploy high-performance Next.js applications at scale. Contact us at [contact@blazity.com](https://blazity.com) if you’d like to talk about your project.
 
 ## Documentation
 
@@ -411,30 +427,31 @@ We encourage you to [visit our docs (docs.blazity.com)](https://docs.blazity.com
 ## Integrated features
 
 ### Boilerplate
+
 With this template you will get all the boilerplate features included:
 
-* [Next.js 15](https://nextjs.org/) - Performance-optimized configuration using App Directory
-* [Tailwind CSS v4](https://tailwindcss.com/) - Utility-first CSS framework for efficient UI development
-* [ESlint 9](https://eslint.org/) and [Prettier](https://prettier.io/) - Code consistency and error prevention
-* [Corepack](https://github.com/nodejs/corepack) & [pnpm](https://pnpm.io/) as the package manager - For project management without compromises 
-* [Strict TypeScript](https://www.typescriptlang.org/) - Enhanced type safety with carefully crafted config and [ts-reset](https://github.com/total-typescript/ts-reset) library
-* [GitHub Actions](https://github.com/features/actions) - Pre-configured workflows including bundle size and performance tracking
-* Perfect Lighthouse score - Optimized performance metrics
-* [Bundle analyzer](https://www.npmjs.com/package/@next/bundle-analyzer) - Monitor and manage bundle size during development
-* Testing suite - [Vitest](https://vitest.dev), [React Testing Library](https://testing-library.com/react), and [Playwright](https://playwright.dev/) for comprehensive testing
-* [Storybook](https://storybook.js.org/) - Component development and documentation
-* Advanced testing - Smoke and acceptance testing capabilities
-* [Conventional commits](https://www.conventionalcommits.org/) - Standardized commit history management
-* [Observability](https://opentelemetry.io/) - Open Telemetry integration
-* [Absolute imports](https://nextjs.org/docs/advanced-features/module-path-aliases) - Simplified import structure
-* [Health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) - Kubernetes-compatible monitoring
-* [Radix UI](https://www.radix-ui.com/) - Headless components for customization
-* [CVA](http://cva.style/) (Class Variance Authority) - Consistent design system creation
-* [Renovate BOT](https://www.whitesourcesoftware.com/free-developer-tools/renovate) - Automated dependency and security updates
-* [Patch-package](https://www.npmjs.com/package/patch-package) - External dependency fixes without compromises
-* Component relationship tools - Graph for managing coupling and cohesion
-* [Semantic Release](https://github.com/semantic-release/semantic-release) - Automated changelog generation
-* [T3 Env](https://env.t3.gg/) - Streamlined environment variable management
+- [Next.js 15](https://nextjs.org/) - Performance-optimized configuration using App Directory
+- [Tailwind CSS v4](https://tailwindcss.com/) - Utility-first CSS framework for efficient UI development
+- [ESlint 9](https://eslint.org/) and [Prettier](https://prettier.io/) - Code consistency and error prevention
+- [Corepack](https://github.com/nodejs/corepack) & [pnpm](https://pnpm.io/) as the package manager - For project management without compromises
+- [Strict TypeScript](https://www.typescriptlang.org/) - Enhanced type safety with carefully crafted config and [ts-reset](https://github.com/total-typescript/ts-reset) library
+- [GitHub Actions](https://github.com/features/actions) - Pre-configured workflows including bundle size and performance tracking
+- Perfect Lighthouse score - Optimized performance metrics
+- [Bundle analyzer](https://www.npmjs.com/package/@next/bundle-analyzer) - Monitor and manage bundle size during development
+- Testing suite - [Vitest](https://vitest.dev), [React Testing Library](https://testing-library.com/react), and [Playwright](https://playwright.dev/) for comprehensive testing
+- [Storybook](https://storybook.js.org/) - Component development and documentation
+- Advanced testing - Smoke and acceptance testing capabilities
+- [Conventional commits](https://www.conventionalcommits.org/) - Standardized commit history management
+- [Observability](https://opentelemetry.io/) - Open Telemetry integration
+- [Absolute imports](https://nextjs.org/docs/advanced-features/module-path-aliases) - Simplified import structure
+- [Health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) - Kubernetes-compatible monitoring
+- [Radix UI](https://www.radix-ui.com/) - Headless components for customization
+- [CVA](http://cva.style/) (Class Variance Authority) - Consistent design system creation
+- [Renovate BOT](https://www.whitesourcesoftware.com/free-developer-tools/renovate) - Automated dependency and security updates
+- [Patch-package](https://www.npmjs.com/package/patch-package) - External dependency fixes without compromises
+- Component relationship tools - Graph for managing coupling and cohesion
+- [Semantic Release](https://github.com/semantic-release/semantic-release) - Automated changelog generation
+- [T3 Env](https://env.t3.gg/) - Streamlined environment variable management
 
 ### Infrastructure & deployments
 
@@ -452,19 +469,19 @@ Learn more in our [documentation (docs.blazity.com)][docs] how to quickstart wit
 
 #### Available cloud providers and theirs features:
 
-* **AWS (Amazon Web Services)**
-  * Automated provisioning of AWS infrastructure
-  * Scalable & secure setup using:
-     * VPC - Isolated network infrastructure
-     * Elastic Container Service (ECS) - Container orchestration
-     * Elastic Container Registry (ECR) - Container image storage
-     * Application Load Balancer - Traffic distribution
-     * S3 + CloudFront - Static asset delivery and caching
-     * AWS WAF - Web Application Firewall protection
-     * Redis Cluster - Caching
-  * CI/CD ready - Continuous integration and deployment pipeline
+- **AWS (Amazon Web Services)**
+  - Automated provisioning of AWS infrastructure
+  - Scalable & secure setup using:
+    - VPC - Isolated network infrastructure
+    - Elastic Container Service (ECS) - Container orchestration
+    - Elastic Container Registry (ECR) - Container image storage
+    - Application Load Balancer - Traffic distribution
+    - S3 + CloudFront - Static asset delivery and caching
+    - AWS WAF - Web Application Firewall protection
+    - Redis Cluster - Caching
+  - CI/CD ready - Continuous integration and deployment pipeline
 
-*... more coming soon*
+_... more coming soon_
 
 ### Team & maintenance
 
@@ -477,11 +494,11 @@ Learn more in our [documentation (docs.blazity.com)][docs] how to quickstart wit
 - Jakub Jabłoński ([jjablonski-it](https://github.com/jjablonski-it)) - Head of Integrations
 
 #### All-time contributors
+
 [bmstefanski](https://github.com/bmstefanski)
 
 ## License
 
 MIT
-
 
 [docs]: https://docs.blazity.com/next-enterprise/deployments/enterprise-cli

@@ -49,7 +49,7 @@ app.prepare().then(() => {
     ws.on("close", () => {
       const userId = chatState.getSocketUser(ws)
       console.log("WebSocket client disconnected", userId)
-      
+
       // Notify partner if in a session
       const session = userId ? chatState.getUserSession(userId) : null
       if (session) {
@@ -60,7 +60,7 @@ app.prepare().then(() => {
         }
         chatState.endSession(session.id)
       }
-      
+
       chatState.unregisterUser(ws)
     })
 
@@ -282,7 +282,7 @@ app.prepare().then(() => {
     const success = chatState.acceptFriendRequest(requestId as string)
     if (success) {
       ws.send(JSON.stringify({ type: "friend_request_accepted", requestId }))
-      
+
       // Notify the requester that their request was accepted
       const requests = chatState.getPendingFriendRequests(userId)
       const acceptedRequest = requests.find((r) => r.id === requestId)

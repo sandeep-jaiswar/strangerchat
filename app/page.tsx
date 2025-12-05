@@ -1,7 +1,7 @@
 "use client"
 
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { AdsenseBanner } from "components/AdsenseBanner"
 import LoginButton from "components/LoginButton/LoginButton"
 import { env } from "../env.mjs"
@@ -61,9 +61,7 @@ export default function Web() {
                 ⚡
               </div>
               <h3 className="mb-2 text-xl font-bold dark:text-white">Real-time Chat</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Low-latency messaging powered by WebSocket technology
-              </p>
+              <p className="text-gray-500 dark:text-gray-400">Low-latency messaging powered by WebSocket technology</p>
             </div>
             <div className="flex flex-col items-center justify-center text-center">
               <div className="bg-primary-100 dark:bg-primary-900 mb-4 flex size-10 items-center justify-center rounded-full p-1.5 text-blue-700 lg:size-12">
@@ -97,9 +95,7 @@ export default function Web() {
                 📱
               </div>
               <h3 className="mb-2 text-xl font-bold dark:text-white">Mobile Friendly</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Responsive design works seamlessly on all devices
-              </p>
+              <p className="text-gray-500 dark:text-gray-400">Responsive design works seamlessly on all devices</p>
             </div>
           </div>
         </div>

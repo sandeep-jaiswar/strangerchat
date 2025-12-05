@@ -1,9 +1,9 @@
 "use client"
 
-import { signOut, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
+import { useEffect } from "react"
 import { Avatar } from "components/Avatar"
 import { Button } from "components/Button"
 import { Loader } from "components/Loader"
@@ -105,9 +105,7 @@ export default function DashboardPage() {
           )}
 
           {!isConnected && (
-            <p className="mt-4 text-sm text-yellow-600 dark:text-yellow-400">
-              Connecting to server... Please wait.
-            </p>
+            <p className="mt-4 text-sm text-yellow-600 dark:text-yellow-400">Connecting to server... Please wait.</p>
           )}
         </div>
 

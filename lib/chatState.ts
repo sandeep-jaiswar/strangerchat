@@ -37,25 +37,25 @@ export type Message = {
 class ChatState {
   // Maps userId to WebSocket connection
   private userSockets = new Map<string, WebSocket>()
-  
+
   // Maps socketId to userId (for reverse lookup)
   private socketUsers = new Map<WebSocket, string>()
-  
+
   // Set of users currently available for random matching
   private availableUsers = new Set<string>()
-  
+
   // Active chat sessions (userId1 + userId2)
   private activeSessions = new Map<string, ChatSession>()
-  
+
   // Maps userId to their active session ID
   private userSessions = new Map<string, string>()
-  
+
   // Friend requests
   private friendRequests = new Map<string, FriendRequest>()
-  
+
   // Friend lists (userId -> Set of friend userIds)
   private friendLists = new Map<string, Set<string>>()
-  
+
   // Online users (for presence)
   private onlineUsers = new Set<string>()
 
@@ -78,7 +78,7 @@ class ChatState {
       this.socketUsers.delete(socket)
       this.onlineUsers.delete(userId)
       this.availableUsers.delete(userId)
-      
+
       // End active session if any
       const sessionId = this.userSessions.get(userId)
       if (sessionId) {
@@ -117,13 +117,13 @@ class ChatState {
       user2Id,
       startedAt: new Date(),
     }
-    
+
     this.activeSessions.set(sessionId, session)
     this.userSessions.set(user1Id, sessionId)
     this.userSessions.set(user2Id, sessionId)
     this.markUnavailable(user1Id)
     this.markUnavailable(user2Id)
-    
+
     return session
   }
 
@@ -190,9 +190,7 @@ class ChatState {
 
   // Get pending friend requests for a user
   getPendingFriendRequests(userId: string): FriendRequest[] {
-    return Array.from(this.friendRequests.values()).filter(
-      (req) => req.toUserId === userId && req.status === "pending"
-    )
+    return Array.from(this.friendRequests.values()).filter((req) => req.toUserId === userId && req.status === "pending")
   }
 
   // Accept friend request
@@ -201,7 +199,7 @@ class ChatState {
     if (!request || request.status !== "pending") return false
 
     request.status = "accepted"
-    
+
     // Add to friend lists
     if (!this.friendLists.has(request.fromUserId)) {
       this.friendLists.set(request.fromUserId, new Set())
@@ -209,10 +207,10 @@ class ChatState {
     if (!this.friendLists.has(request.toUserId)) {
       this.friendLists.set(request.toUserId, new Set())
     }
-    
+
     this.friendLists.get(request.fromUserId)!.add(request.toUserId)
     this.friendLists.get(request.toUserId)!.add(request.fromUserId)
-    
+
     return true
   }
 

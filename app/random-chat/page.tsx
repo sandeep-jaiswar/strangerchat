@@ -1,9 +1,9 @@
 "use client"
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { useEffect } from "react"
 import { Avatar } from "components/Avatar"
 import { Button } from "components/Button"
 import { ChatBubble } from "components/ChatBubble"
@@ -88,7 +88,7 @@ export default function RandomChatPage() {
           <Button onClick={handleEndChat} intent="secondary" size="sm">
             ← Back to Dashboard
           </Button>
-          
+
           {partner ? (
             <div className="flex items-center gap-3">
               <Avatar
@@ -103,9 +103,7 @@ export default function RandomChatPage() {
               </div>
             </div>
           ) : (
-            <div className="text-gray-600 dark:text-gray-400">
-              {isMatching ? "Finding a match..." : "No match yet"}
-            </div>
+            <div className="text-gray-600 dark:text-gray-400">{isMatching ? "Finding a match..." : "No match yet"}</div>
           )}
 
           {partner && (
@@ -127,9 +125,7 @@ export default function RandomChatPage() {
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
               <Loader />
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                Looking for someone to chat with...
-              </p>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Looking for someone to chat with...</p>
             </div>
           </div>
         ) : partner ? (
@@ -138,9 +134,7 @@ export default function RandomChatPage() {
             <div className="flex-1 overflow-y-auto p-4">
               {messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Connected! Say hello to start the conversation 👋
-                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">Connected! Say hello to start the conversation 👋</p>
                 </div>
               ) : (
                 <div className="space-y-2">

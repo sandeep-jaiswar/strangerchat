@@ -58,13 +58,13 @@ export function useWebSocket() {
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
     const wsUrl = `${protocol}//${window.location.host}/api/ws`
-    
+
     ws.current = new WebSocket(wsUrl)
 
     ws.current.onopen = () => {
       console.log("WebSocket connected")
       setIsConnected(true)
-      
+
       // Register user
       if (session?.user?.id) {
         ws.current?.send(
@@ -94,7 +94,7 @@ export function useWebSocket() {
     ws.current.onclose = () => {
       console.log("WebSocket disconnected")
       setIsConnected(false)
-      
+
       // Attempt to reconnect after 3 seconds
       reconnectTimeout.current = setTimeout(() => {
         if (session?.user?.id) {
