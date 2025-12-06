@@ -1,7 +1,7 @@
+import next from "next"
+import { WebSocket, WebSocketServer } from "ws"
 import { createServer } from "http"
 import { parse } from "url"
-import next from "next"
-import { WebSocketServer, WebSocket } from "ws"
 import { chatState, type User } from "./lib/chatState"
 
 const dev = process.env.NODE_ENV !== "production"
@@ -31,7 +31,7 @@ app.prepare().then(() => {
   // Create WebSocket server
   const wss = new WebSocketServer({ server, path: "/api/ws" })
 
-  wss.on("connection", (ws: WebSocket, req) => {
+  wss.on("connection", (ws: WebSocket, _req) => {
     console.log("WebSocket client connected")
 
     // Handle messages from client

@@ -1,0 +1,419 @@
+{
+  "app/api/health/route.ts": [],
+  "app/chat/[id]/page.tsx": [
+    "components/BottomNav/index.ts",
+    "components/ChatList/index.ts",
+    "components/MessageComposer/index.ts"
+  ],
+  "app/chats/page.tsx": [
+    "components/AvatarGroup/index.ts",
+    "components/BottomNav/index.ts",
+    "components/ChatList/index.ts"
+  ],
+  "app/contacts/page.tsx": [
+    "components/BottomNav/index.ts",
+    "components/ContactList/index.ts",
+    "components/SearchBar/index.ts"
+  ],
+  "app/dashboard/page.tsx": [],
+  "app/friends/page.tsx": [],
+  "app/group/[id]/page.tsx": [
+    "components/BottomNav/index.ts",
+    "components/GroupProfile/index.ts"
+  ],
+  "app/layout.tsx": [
+    "env.mjs"
+  ],
+  "app/page.tsx": [
+    "env.mjs"
+  ],
+  "app/profile/page.tsx": [
+    "components/BottomNav/index.ts",
+    "components/UserProfile/index.ts"
+  ],
+  "app/random-chat/page.tsx": [],
+  "components/AdsenseBanner.tsx": [],
+  "components/AuthForm/AuthForm.stories.tsx": [
+    "components/AuthForm/AuthForm.tsx"
+  ],
+  "components/AuthForm/AuthForm.test.tsx": [
+    "components/AuthForm/AuthForm.tsx"
+  ],
+  "components/AuthForm/AuthForm.tsx": [
+    "components/Button/index.ts",
+    "components/Input/index.ts"
+  ],
+  "components/AuthForm/index.ts": [
+    "components/AuthForm/AuthForm.tsx"
+  ],
+  "components/Avatar/Avatar.stories.tsx": [
+    "components/Avatar/Avatar.tsx"
+  ],
+  "components/Avatar/Avatar.test.tsx": [
+    "components/Avatar/Avatar.tsx"
+  ],
+  "components/Avatar/Avatar.tsx": [],
+  "components/Avatar/index.ts": [
+    "components/Avatar/Avatar.tsx"
+  ],
+  "components/AvatarGroup/AvatarGroup.tsx": [
+    "components/Avatar/index.ts"
+  ],
+  "components/AvatarGroup/index.ts": [
+    "components/AvatarGroup/AvatarGroup.tsx"
+  ],
+  "components/Badge/Badge.stories.tsx": [
+    "components/Badge/Badge.tsx"
+  ],
+  "components/Badge/Badge.test.tsx": [
+    "components/Badge/Badge.tsx"
+  ],
+  "components/Badge/Badge.tsx": [],
+  "components/Badge/index.ts": [
+    "components/Badge/Badge.tsx"
+  ],
+  "components/BottomNav/BottomNav.tsx": [],
+  "components/BottomNav/index.ts": [
+    "components/BottomNav/BottomNav.tsx"
+  ],
+  "components/Button/Button.stories.tsx": [
+    "components/Button/Button.tsx"
+  ],
+  "components/Button/Button.test.tsx": [
+    "components/Button/Button.tsx"
+  ],
+  "components/Button/Button.tsx": [],
+  "components/Button/index.ts": [
+    "components/Button/Button.tsx"
+  ],
+  "components/Calendar/Calendar.stories.tsx": [
+    "components/Calendar/Calendar.tsx"
+  ],
+  "components/Calendar/Calendar.test.tsx": [
+    "components/Calendar/Calendar.tsx"
+  ],
+  "components/Calendar/Calendar.tsx": [],
+  "components/Calendar/index.ts": [
+    "components/Calendar/Calendar.tsx"
+  ],
+  "components/ChatBubble/ChatBubble.stories.tsx": [
+    "components/ChatBubble/ChatBubble.tsx"
+  ],
+  "components/ChatBubble/ChatBubble.test.tsx": [
+    "components/ChatBubble/ChatBubble.tsx"
+  ],
+  "components/ChatBubble/ChatBubble.tsx": [],
+  "components/ChatBubble/index.ts": [
+    "components/ChatBubble/ChatBubble.tsx"
+  ],
+  "components/ChatList/ChatList.stories.tsx": [
+    "components/ChatList/ChatList.tsx"
+  ],
+  "components/ChatList/ChatList.test.tsx": [
+    "components/ChatList/ChatList.tsx"
+  ],
+  "components/ChatList/ChatList.tsx": [
+    "components/ChatBubble/index.ts"
+  ],
+  "components/ChatList/index.ts": [
+    "components/ChatList/ChatList.tsx"
+  ],
+  "components/Chip/Chip.stories.tsx": [
+    "components/Chip/Chip.tsx"
+  ],
+  "components/Chip/Chip.test.tsx": [
+    "components/Chip/Chip.tsx"
+  ],
+  "components/Chip/Chip.tsx": [],
+  "components/Chip/index.ts": [
+    "components/Chip/Chip.tsx"
+  ],
+  "components/ContactList/ContactList.tsx": [
+    "components/Avatar/index.ts"
+  ],
+  "components/ContactList/index.ts": [
+    "components/ContactList/ContactList.tsx"
+  ],
+  "components/DatePicker/DatePicker.stories.tsx": [
+    "components/DatePicker/DatePicker.tsx"
+  ],
+  "components/DatePicker/DatePicker.test.tsx": [
+    "components/DatePicker/DatePicker.tsx"
+  ],
+  "components/DatePicker/DatePicker.tsx": [
+    "components/Calendar/index.ts"
+  ],
+  "components/DatePicker/index.ts": [
+    "components/DatePicker/DatePicker.tsx"
+  ],
+  "components/DropdownMenu/DropdownMenu.stories.tsx": [
+    "components/DropdownMenu/DropdownMenu.tsx"
+  ],
+  "components/DropdownMenu/DropdownMenu.test.tsx": [
+    "components/DropdownMenu/DropdownMenu.tsx"
+  ],
+  "components/DropdownMenu/DropdownMenu.tsx": [],
+  "components/DropdownMenu/index.ts": [
+    "components/DropdownMenu/DropdownMenu.tsx"
+  ],
+  "components/FriendList/FriendList.stories.tsx": [
+    "components/FriendList/FriendList.tsx"
+  ],
+  "components/FriendList/FriendList.test.tsx": [
+    "components/FriendList/FriendList.tsx"
+  ],
+  "components/FriendList/FriendList.tsx": [
+    "components/Avatar/index.ts"
+  ],
+  "components/FriendList/index.ts": [
+    "components/FriendList/FriendList.tsx"
+  ],
+  "components/FriendRequest/FriendRequest.stories.tsx": [
+    "components/FriendRequest/FriendRequest.tsx"
+  ],
+  "components/FriendRequest/FriendRequest.test.tsx": [
+    "components/FriendRequest/FriendRequest.tsx"
+  ],
+  "components/FriendRequest/FriendRequest.tsx": [
+    "components/Avatar/index.ts",
+    "components/Button/index.ts"
+  ],
+  "components/FriendRequest/index.ts": [
+    "components/FriendRequest/FriendRequest.tsx"
+  ],
+  "components/GroupProfile/GroupProfile.tsx": [
+    "components/Avatar/index.ts",
+    "components/AvatarGroup/index.ts"
+  ],
+  "components/GroupProfile/index.ts": [
+    "components/GroupProfile/GroupProfile.tsx"
+  ],
+  "components/Header/Header.stories.tsx": [
+    "components/Header/Header.tsx"
+  ],
+  "components/Header/Header.test.tsx": [
+    "components/Header/Header.tsx"
+  ],
+  "components/Header/Header.tsx": [],
+  "components/Header/index.ts": [
+    "components/Header/Header.tsx"
+  ],
+  "components/IconButton/IconButton.stories.tsx": [
+    "components/IconButton/IconButton.tsx"
+  ],
+  "components/IconButton/IconButton.test.tsx": [
+    "components/IconButton/IconButton.tsx"
+  ],
+  "components/IconButton/IconButton.tsx": [],
+  "components/IconButton/index.ts": [
+    "components/IconButton/IconButton.tsx"
+  ],
+  "components/Input/Input.stories.tsx": [
+    "components/Input/Input.tsx"
+  ],
+  "components/Input/Input.test.tsx": [
+    "components/Input/Input.tsx"
+  ],
+  "components/Input/Input.tsx": [],
+  "components/Input/index.ts": [
+    "components/Input/Input.tsx"
+  ],
+  "components/Loader/Loader.stories.tsx": [
+    "components/Loader/Loader.tsx"
+  ],
+  "components/Loader/Loader.test.tsx": [
+    "components/Loader/Loader.tsx"
+  ],
+  "components/Loader/Loader.tsx": [],
+  "components/Loader/index.ts": [
+    "components/Loader/Loader.tsx"
+  ],
+  "components/LoginButton/LoginButton.tsx": [],
+  "components/MessageActions/MessageActions.tsx": [],
+  "components/MessageActions/index.ts": [
+    "components/MessageActions/MessageActions.tsx"
+  ],
+  "components/MessageComposer/MessageComposer.stories.tsx": [
+    "components/MessageComposer/MessageComposer.tsx"
+  ],
+  "components/MessageComposer/MessageComposer.test.tsx": [
+    "components/MessageComposer/MessageComposer.tsx"
+  ],
+  "components/MessageComposer/MessageComposer.tsx": [
+    "components/Button/index.ts",
+    "components/Input/index.ts"
+  ],
+  "components/MessageComposer/index.ts": [
+    "components/MessageComposer/MessageComposer.tsx"
+  ],
+  "components/Modal/Modal.stories.tsx": [
+    "components/Modal/Modal.tsx"
+  ],
+  "components/Modal/Modal.test.tsx": [
+    "components/Modal/Modal.tsx"
+  ],
+  "components/Modal/Modal.tsx": [],
+  "components/Modal/index.ts": [
+    "components/Modal/Modal.tsx"
+  ],
+  "components/ProfileTabs/ProfileTabs.tsx": [],
+  "components/ProfileTabs/index.ts": [
+    "components/ProfileTabs/ProfileTabs.tsx"
+  ],
+  "components/ProgressBar/ProgressBar.stories.tsx": [
+    "components/ProgressBar/ProgressBar.tsx"
+  ],
+  "components/ProgressBar/ProgressBar.test.tsx": [
+    "components/ProgressBar/ProgressBar.tsx"
+  ],
+  "components/ProgressBar/ProgressBar.tsx": [],
+  "components/ProgressBar/index.ts": [
+    "components/ProgressBar/ProgressBar.tsx"
+  ],
+  "components/SearchBar/SearchBar.stories.tsx": [
+    "components/SearchBar/SearchBar.tsx"
+  ],
+  "components/SearchBar/SearchBar.test.tsx": [
+    "components/SearchBar/SearchBar.tsx"
+  ],
+  "components/SearchBar/SearchBar.tsx": [
+    "components/Input/index.ts"
+  ],
+  "components/SearchBar/index.ts": [
+    "components/SearchBar/SearchBar.tsx"
+  ],
+  "components/Select/Select.stories.tsx": [
+    "components/Select/Select.tsx"
+  ],
+  "components/Select/Select.test.tsx": [
+    "components/Select/Select.tsx"
+  ],
+  "components/Select/Select.tsx": [],
+  "components/Select/index.ts": [
+    "components/Select/Select.tsx"
+  ],
+  "components/Sidebar/Sidebar.stories.tsx": [
+    "components/Sidebar/Sidebar.tsx"
+  ],
+  "components/Sidebar/Sidebar.test.tsx": [
+    "components/Sidebar/Sidebar.tsx"
+  ],
+  "components/Sidebar/Sidebar.tsx": [],
+  "components/Sidebar/index.ts": [
+    "components/Sidebar/Sidebar.tsx"
+  ],
+  "components/Switch/Switch.stories.tsx": [
+    "components/Switch/Switch.tsx"
+  ],
+  "components/Switch/Switch.test.tsx": [
+    "components/Switch/Switch.tsx"
+  ],
+  "components/Switch/Switch.tsx": [],
+  "components/Switch/index.ts": [
+    "components/Switch/Switch.tsx"
+  ],
+  "components/TabGroup/TabGroup.stories.tsx": [
+    "components/TabGroup/TabGroup.tsx"
+  ],
+  "components/TabGroup/TabGroup.test.tsx": [
+    "components/TabGroup/TabGroup.tsx"
+  ],
+  "components/TabGroup/TabGroup.tsx": [],
+  "components/TabGroup/index.ts": [
+    "components/TabGroup/TabGroup.tsx"
+  ],
+  "components/Toast/Toast.stories.tsx": [
+    "components/Toast/Toast.tsx"
+  ],
+  "components/Toast/Toast.test.tsx": [
+    "components/Toast/Toast.tsx"
+  ],
+  "components/Toast/Toast.tsx": [],
+  "components/Toast/index.ts": [
+    "components/Toast/Toast.tsx"
+  ],
+  "components/Tooltip/Tooltip.tsx": [],
+  "components/UserProfile/UserProfile.stories.tsx": [
+    "components/UserProfile/UserProfile.tsx"
+  ],
+  "components/UserProfile/UserProfile.test.tsx": [
+    "components/UserProfile/UserProfile.tsx"
+  ],
+  "components/UserProfile/UserProfile.tsx": [
+    "components/Avatar/index.ts",
+    "components/ProfileTabs/index.ts"
+  ],
+  "components/UserProfile/index.ts": [
+    "components/UserProfile/UserProfile.tsx"
+  ],
+  "coverage/base.css": [],
+  "coverage/block-navigation.js": [],
+  "coverage/prettify.css": [],
+  "coverage/prettify.js": [],
+  "coverage/sorter.js": [],
+  "env.mjs": [],
+  "hooks/useWebSocket.ts": [],
+  "lib/chatState.test.ts": [
+    "lib/chatState.ts"
+  ],
+  "lib/chatState.ts": [],
+  "lp-items.tsx": [],
+  "next.config.ts": [
+    "env.mjs"
+  ],
+  "providers/SessionProvider.tsx": [],
+  "report-bundle-size.js": [],
+  "server.ts": [
+    "lib/chatState.ts"
+  ],
+  "storybook-static/188.7093839d.iframe.bundle.js": [],
+  "storybook-static/266.ac31e0bb.iframe.bundle.js": [],
+  "storybook-static/271.7541476f.iframe.bundle.js": [],
+  "storybook-static/716.dc5ef77c.iframe.bundle.js": [],
+  "storybook-static/733.ad814888.iframe.bundle.js": [],
+  "storybook-static/835.ebb5289b.iframe.bundle.js": [],
+  "storybook-static/910.abc747c2.iframe.bundle.js": [],
+  "storybook-static/955.b1f608bc.iframe.bundle.js": [],
+  "storybook-static/98.87eb00d8.iframe.bundle.js": [],
+  "storybook-static/AuthForm-AuthForm-stories.55caf8e3.iframe.bundle.js": [],
+  "storybook-static/Avatar-Avatar-stories.21318308.iframe.bundle.js": [],
+  "storybook-static/Badge-Badge-stories.207837cf.iframe.bundle.js": [],
+  "storybook-static/Button-Button-stories.ec1736af.iframe.bundle.js": [],
+  "storybook-static/Calendar-Calendar-stories.0adcf663.iframe.bundle.js": [],
+  "storybook-static/ChatBubble-ChatBubble-stories.ccd96bb8.iframe.bundle.js": [],
+  "storybook-static/ChatList-ChatList-stories.70ccefdf.iframe.bundle.js": [],
+  "storybook-static/Chip-Chip-stories.b0bbf6cd.iframe.bundle.js": [],
+  "storybook-static/DatePicker-DatePicker-stories.051b0315.iframe.bundle.js": [],
+  "storybook-static/DropdownMenu-DropdownMenu-stories.a49f79ab.iframe.bundle.js": [],
+  "storybook-static/FriendList-FriendList-stories.93ee879b.iframe.bundle.js": [],
+  "storybook-static/FriendRequest-FriendRequest-stories.3ae242f1.iframe.bundle.js": [],
+  "storybook-static/Header-Header-stories.af0bb373.iframe.bundle.js": [],
+  "storybook-static/IconButton-IconButton-stories.cb8ba432.iframe.bundle.js": [],
+  "storybook-static/Input-Input-stories.f40d7522.iframe.bundle.js": [],
+  "storybook-static/Loader-Loader-stories.e62c19c5.iframe.bundle.js": [],
+  "storybook-static/MessageComposer-MessageComposer-stories.f12bb56f.iframe.bundle.js": [],
+  "storybook-static/Modal-Modal-stories.9bedceac.iframe.bundle.js": [],
+  "storybook-static/ProgressBar-ProgressBar-stories.8cbbda96.iframe.bundle.js": [],
+  "storybook-static/SearchBar-SearchBar-stories.b93709e6.iframe.bundle.js": [],
+  "storybook-static/Select-Select-stories.296ee591.iframe.bundle.js": [],
+  "storybook-static/Sidebar-Sidebar-stories.f0f19103.iframe.bundle.js": [],
+  "storybook-static/Switch-Switch-stories.2dd24491.iframe.bundle.js": [],
+  "storybook-static/TabGroup-TabGroup-stories.54c358cd.iframe.bundle.js": [],
+  "storybook-static/Toast-Toast-stories.46f36f1c.iframe.bundle.js": [],
+  "storybook-static/UserProfile-UserProfile-stories.a1d2b4ff.iframe.bundle.js": [],
+  "storybook-static/main.043b5be2.iframe.bundle.js": [],
+  "storybook-static/mocker-runtime-injected.js": [],
+  "storybook-static/runtime~main.f37debd2.iframe.bundle.js": [],
+  "storybook-static/sb-addons/common-manager-bundle.js": [],
+  "storybook-static/sb-manager/globals-runtime.js": [],
+  "storybook-static/sb-manager/globals.js": [],
+  "storybook-static/sb-manager/manager-stores.js": [],
+  "storybook-static/sb-manager/runtime.js": [],
+  "storybook-static/sb-preview/globals.js": [],
+  "storybook-static/sb-preview/runtime.js": [],
+  "styles/tailwind.css": [],
+  "tokens/design-tokens.ts": [],
+  "utils/cn.ts": [],
+  "vitest.config.ts": [],
+  "vitest.setup.ts": []
+}

@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
 
 // edited to work with the appdir by @raphaelbadia
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 const gzSize = require("gzip-size")
 const mkdirp = require("mkdirp")
