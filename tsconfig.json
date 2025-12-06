@@ -2,11 +2,11 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Next.js",
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES2020",
     "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
     ],
     "allowJs": true,
     "skipLibCheck": true,
@@ -15,7 +15,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -23,10 +23,15 @@
     "incremental": true,
     "baseUrl": ".",
     "types": [
-      "node",
       "vitest/globals",
-      "@testing-library/jest-dom"
+      "@testing-library/jest-dom",
+      "node"
     ],
+    "paths": {
+      "@/components/*": [
+        "./components/*"
+      ]
+    },
     "plugins": [
       {
         "name": "next"
@@ -37,13 +42,16 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "**/*.mjs",
-    "vitest.config.ts",
     ".next/types/**/*.ts",
-    "eslint.config.mjs",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "out",
+    "storybook-static",
+    "vitest.setup.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

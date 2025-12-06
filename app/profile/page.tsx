@@ -9,7 +9,8 @@ const user = {
   email: "victoria@example.com",
   avatar: "/avatar-profile.png",
   phone: "+91 99999 00000",
-  status: "A mantra goes here",
+  bio: "A mantra goes here",
+  status: "online" as const,
   recentChats: [
     { name: "Athalia Putri", lastMessage: "I want to use your yacht...", time: "15m", avatar: "/avatar1.png" },
     { name: "Midola Huera", lastMessage: "I want to use your yacht...", time: "15m", avatar: "/avatar2.png" },

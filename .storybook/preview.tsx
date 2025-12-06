@@ -1,5 +1,4 @@
 import type { Preview } from "@storybook/react"
-
 import "../styles/tailwind.css"
 
 const preview: Preview = {
@@ -10,6 +9,23 @@ const preview: Preview = {
         color: /(background|color)$/i,
         date: /Date$/,
       },
+    },
+    backgrounds: {
+      default: "light",
+      values: [
+        {
+          name: "light",
+          value: "#ffffff",
+        },
+        {
+          name: "dark",
+          value: "#1a1a1a",
+        },
+        {
+          name: "gray",
+          value: "#f5f5f5",
+        },
+      ],
     },
   },
 }

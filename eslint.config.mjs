@@ -14,6 +14,7 @@ const eslintIgnore = [
   "dist/",
   "build/",
   "coverage/",
+  "storybook-static/",
   "*.min.js",
   "*.config.js",
   "*.d.ts",

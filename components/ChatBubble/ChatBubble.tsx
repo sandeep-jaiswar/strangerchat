@@ -23,7 +23,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 }) => (
   <div className={cn("mb-2 flex items-end gap-2", isOwn ? "justify-end" : "justify-start")}>
     {!isOwn && (
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         {avatar ? (
           <Image src={avatar} alt="avatar" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
         ) : (

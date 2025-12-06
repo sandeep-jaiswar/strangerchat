@@ -1,76 +1,92 @@
-import { cva, type VariantProps } from "class-variance-authority"
+"use client"
+
 import Image from "next/image"
-import React from "react"
+import React, { useState } from "react"
 import { cn } from "utils/cn"
 
-const avatar = cva(
-  ["flex", "items-center", "justify-center", "overflow-hidden", "rounded-full", "bg-neutral-200", "shrink-0"],
-  {
-    variants: {
-      size: {
-        xs: ["w-6", "h-6", "text-xs"],
-        sm: ["w-8", "h-8", "text-xs"],
-        md: ["w-10", "h-10", "text-sm"],
-        lg: ["w-12", "h-12", "text-base"],
-        xl: ["w-16", "h-16", "text-lg"],
-        "2xl": ["w-20", "h-20", "text-xl"],
-      },
-      status: {
-        online: [],
-        offline: [],
-        busy: [],
-        away: [],
-      },
-    },
-    defaultVariants: {
-      size: "md",
-    },
-  }
-)
-
-const sizeMap = {
-  xs: 24,
-  sm: 32,
-  md: 40,
-  lg: 48,
-  xl: 64,
-  "2xl": 80,
-}
-
-export interface AvatarProps extends VariantProps<typeof avatar> {
+export interface AvatarProps {
   src?: string
   alt: string
+  size?: "xs" | "sm" | "md" | "lg" | "xl"
   initials?: string
   className?: string
+  loading?: boolean
+  status?: "online" | "offline" | "away" | "busy"
+  onLoad?: () => void
+  onError?: () => void
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ src, alt, size = "md", status, initials, className }) => {
-  const numericSize = size ? sizeMap[size] : sizeMap.md
+const sizeClasses = {
+  xs: "h-6 w-6 text-xs",
+  sm: "h-8 w-8 text-sm",
+  md: "h-10 w-10 text-base",
+  lg: "h-14 w-14 text-lg",
+  xl: "h-20 w-20 text-xl",
+}
+
+const statusColors = {
+  online: "bg-green-500",
+  offline: "bg-gray-400",
+  away: "bg-yellow-500",
+  busy: "bg-red-500",
+}
+
+export const Avatar: React.FC<AvatarProps> = ({
+  src,
+  alt,
+  size = "md",
+  initials,
+  className,
+  loading = false,
+  status,
+  onLoad,
+  onError,
+}) => {
+  const [imageError, setImageError] = useState(false)
+  const [, setImageLoaded] = useState(false)
+
+  const handleError = () => {
+    setImageError(true)
+    onError?.()
+  }
+
+  const handleLoad = () => {
+    setImageLoaded(true)
+    onLoad?.()
+  }
+
+  const showFallback = !src || imageError || loading
 
   return (
-    <div className="relative inline-flex">
-      <div className={cn(avatar({ size, status, className }))}>
-        {src ? (
-          <Image src={src} alt={alt} width={numericSize} height={numericSize} className="h-full w-full object-cover" />
+    <div className={cn("relative inline-block", className)} role="img" aria-label={alt}>
+      <div
+        className={cn(
+          "flex items-center justify-center overflow-hidden rounded-full bg-neutral-200",
+          sizeClasses[size],
+          loading && "animate-pulse"
+        )}
+      >
+        {showFallback ? (
+          <span className="font-semibold text-neutral-600 uppercase">
+            {initials?.slice(0, 2) || alt.charAt(0).toUpperCase()}
+          </span>
         ) : (
-          <span className="font-semibold text-neutral-600">{initials}</span>
+          <Image
+            src={src}
+            alt={alt}
+            width={parseInt(sizeClasses[size].match(/\d+/)?.[0] || "40") * 4}
+            height={parseInt(sizeClasses[size].match(/\d+/)?.[0] || "40") * 4}
+            className="h-full w-full object-cover"
+            onError={handleError}
+            onLoad={handleLoad}
+            unoptimized={src?.startsWith("http")}
+          />
         )}
       </div>
       {status && (
         <span
-          className={cn(
-            "absolute right-0 bottom-0 block rounded-full ring-2 ring-white",
-            size === "xs" && "h-1.5 w-1.5",
-            size === "sm" && "h-2 w-2",
-            size === "md" && "h-2.5 w-2.5",
-            size === "lg" && "h-3 w-3",
-            size === "xl" && "h-3.5 w-3.5",
-            size === "2xl" && "h-4 w-4",
-            status === "online" && "bg-success",
-            status === "offline" && "bg-neutral-400",
-            status === "busy" && "bg-error",
-            status === "away" && "bg-warning"
-          )}
+          className={cn("absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white", statusColors[status])}
+          aria-label={`Status: ${status}`}
         />
       )}
     </div>

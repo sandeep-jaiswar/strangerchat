@@ -2,83 +2,94 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { Badge } from "./Badge"
 
 const meta: Meta<typeof Badge> = {
-  title: "Badge",
+  title: "Components/Badge",
   component: Badge,
+  parameters: {
+    layout: "centered",
+    docs: {
+      description: {
+        component:
+          "An Apple-inspired badge component for displaying status, labels, or counts. Features smooth animations, multiple variants, and full accessibility support.",
+      },
+    },
+  },
+  tags: ["autodocs"],
   args: {
-    variant: "solid",
+    variant: "soft",
     intent: "primary",
     children: "Badge",
     size: "md",
   },
   argTypes: {
     variant: {
-      options: ["solid", "outline", "soft"],
-      control: { type: "select" },
+      control: "select",
+      options: ["filled", "outline", "soft", "minimal"],
+      description: "Visual style of the badge",
     },
     intent: {
-      options: ["primary", "secondary", "success", "warning", "error"],
-      control: { type: "select" },
+      control: "select",
+      options: ["primary", "secondary", "success", "warning", "error", "info", "purple", "pink", "teal"],
+      description: "Semantic color intent",
     },
     size: {
+      control: "select",
       options: ["sm", "md", "lg"],
-      control: { type: "select" },
+      description: "Size of the badge",
     },
   },
 }
 
+export default meta
 type Story = StoryObj<typeof Badge>
 
-export const Default: Story = {
-  render: (args) => <Badge {...args} />,
-}
+/**
+ * Default badge with soft variant
+ */
+export const Default: Story = {}
 
-export const SolidVariants: Story = {
+/**
+ * Filled variant provides high contrast
+ */
+export const FilledVariants: Story = {
   render: () => (
-    <div className="flex gap-4">
-      <Badge variant="solid" intent="primary">
+    <div className="flex flex-wrap gap-3">
+      <Badge variant="filled" intent="primary">
         Primary
       </Badge>
-      <Badge variant="solid" intent="secondary">
+      <Badge variant="filled" intent="secondary">
         Secondary
       </Badge>
-      <Badge variant="solid" intent="success">
+      <Badge variant="filled" intent="success">
         Success
       </Badge>
-      <Badge variant="solid" intent="warning">
+      <Badge variant="filled" intent="warning">
         Warning
       </Badge>
-      <Badge variant="solid" intent="error">
+      <Badge variant="filled" intent="error">
         Error
+      </Badge>
+      <Badge variant="filled" intent="info">
+        Info
+      </Badge>
+      <Badge variant="filled" intent="purple">
+        Purple
+      </Badge>
+      <Badge variant="filled" intent="pink">
+        Pink
+      </Badge>
+      <Badge variant="filled" intent="teal">
+        Teal
       </Badge>
     </div>
   ),
 }
 
-export const OutlineVariants: Story = {
-  render: () => (
-    <div className="flex gap-4">
-      <Badge variant="outline" intent="primary">
-        Primary
-      </Badge>
-      <Badge variant="outline" intent="secondary">
-        Secondary
-      </Badge>
-      <Badge variant="outline" intent="success">
-        Success
-      </Badge>
-      <Badge variant="outline" intent="warning">
-        Warning
-      </Badge>
-      <Badge variant="outline" intent="error">
-        Error
-      </Badge>
-    </div>
-  ),
-}
-
+/**
+ * Soft variant (Apple's preferred style)
+ */
 export const SoftVariants: Story = {
   render: () => (
-    <div className="flex gap-4">
+    <div className="flex flex-wrap gap-3">
       <Badge variant="soft" intent="primary">
         Primary
       </Badge>
@@ -94,38 +105,25 @@ export const SoftVariants: Story = {
       <Badge variant="soft" intent="error">
         Error
       </Badge>
-    </div>
-  ),
-}
-
-export const WithIcons: Story = {
-  render: () => (
-    <div className="flex gap-4">
-      <Badge
-        leftIcon={
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-          </svg>
-        }
-      >
-        Visitors
+      <Badge variant="soft" intent="info">
+        Info
       </Badge>
-      <Badge
-        variant="outline"
-        intent="primary"
-        leftIcon={
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-          </svg>
-        }
-      >
-        Contacts
+      <Badge variant="soft" intent="purple">
+        Purple
+      </Badge>
+      <Badge variant="soft" intent="pink">
+        Pink
+      </Badge>
+      <Badge variant="soft" intent="teal">
+        Teal
       </Badge>
     </div>
   ),
 }
 
+/**
+ * Different sizes
+ */
 export const Sizes: Story = {
   render: () => (
     <div className="flex items-center gap-4">
@@ -136,4 +134,102 @@ export const Sizes: Story = {
   ),
 }
 
-export default meta
+/**
+ * Badges with icons
+ */
+export const WithIcons: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-4">
+      <Badge
+        variant="soft"
+        intent="primary"
+        leftIcon={
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+        }
+      >
+        100 Visitors
+      </Badge>
+      <Badge
+        variant="filled"
+        intent="success"
+        leftIcon={
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        }
+      >
+        Verified
+      </Badge>
+      <Badge
+        variant="outline"
+        intent="warning"
+        rightIcon={
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+        }
+      >
+        Alert
+      </Badge>
+    </div>
+  ),
+}
+
+/**
+ * Real-world usage examples
+ */
+export const UsageExamples: Story = {
+  render: () => (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Status Indicators</h3>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="soft" intent="success">
+            Active
+          </Badge>
+          <Badge variant="soft" intent="warning">
+            Pending
+          </Badge>
+          <Badge variant="soft" intent="error">
+            Offline
+          </Badge>
+          <Badge variant="soft" intent="secondary">
+            Archived
+          </Badge>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Count Badges</h3>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="filled" intent="primary" size="sm">
+            3
+          </Badge>
+          <Badge variant="filled" intent="error" size="sm">
+            99+
+          </Badge>
+          <Badge variant="soft" intent="info" size="sm">
+            New
+          </Badge>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Category Tags</h3>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="minimal" intent="purple">
+            Design
+          </Badge>
+          <Badge variant="minimal" intent="teal">
+            Development
+          </Badge>
+          <Badge variant="minimal" intent="pink">
+            Marketing
+          </Badge>
+        </div>
+      </div>
+    </div>
+  ),
+}

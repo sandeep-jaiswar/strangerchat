@@ -129,6 +129,7 @@ pnpm start
 - **State Management**: In-memory singleton (ChatState class)
 - **Testing**: Vitest, React Testing Library, Playwright
 - **Type Safety**: TypeScript with strict mode
+- **UI Components**: Lightweight custom components following Apple HIG (no heavy dependencies)
 
 ### Project Structure
 

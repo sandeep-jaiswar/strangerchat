@@ -1,42 +1,67 @@
 import React from "react"
 import { cn } from "utils/cn"
-import { Avatar } from "../Avatar"
+import { Avatar } from "../Avatar/Avatar"
 
-type UserProfileProps = {
+export interface UserProfileProps {
   name: string
-  email: string
-  avatar?: string
-  phone?: string
-  status?: string
-  recentChats?: Array<{ name: string; lastMessage: string; time: string; avatar?: string; initials?: string }>
+  email?: string
+  avatarUrl?: string
+  status?: "online" | "offline" | "away" | "busy"
+  bio?: string
+  size?: "sm" | "md" | "lg"
+  onClick?: () => void
   className?: string
 }
 
-import { ProfileTabs } from "../ProfileTabs"
+const sizes = {
+  sm: {
+    avatar: "md" as const,
+    name: "text-sm",
+    email: "text-xs",
+  },
+  md: {
+    avatar: "lg" as const,
+    name: "text-base",
+    email: "text-sm",
+  },
+  lg: {
+    avatar: "xl" as const,
+    name: "text-lg",
+    email: "text-base",
+  },
+}
 
-export const UserProfile: React.FC<UserProfileProps> = ({ name, avatar, phone, status, recentChats, className }) => (
-  <div className={cn("p-4", className)}>
-    <div className="mb-4 flex items-center gap-4">
-      <Avatar src={avatar} alt={name + "'s avatar"} initials={name[0]} size="xl" />
-      <div>
-        <div className="text-lg font-bold text-neutral-900">{name}</div>
-        {status && <div className="text-xs text-neutral-500">{status}</div>}
-        {phone && <div className="mt-1 text-xs text-neutral-500">{phone}</div>}
+export const UserProfile: React.FC<UserProfileProps> = ({
+  name,
+  email,
+  avatarUrl,
+  status,
+  bio,
+  size = "md",
+  onClick,
+  className,
+}) => {
+  const sizeConfig = sizes[size]
+  const Component = onClick ? "button" : "div"
+
+  return (
+    <Component
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-xl p-3 transition-colors",
+        onClick && "cursor-pointer hover:bg-neutral-50 active:bg-neutral-100",
+        onClick && "focus:ring-2 focus:ring-[#0071e3]/20 focus:outline-none",
+        className
+      )}
+    >
+      <Avatar src={avatarUrl} alt={name} status={status} size={sizeConfig.avatar} />
+      <div className="min-w-0 flex-1 text-left">
+        <p className={cn("truncate font-semibold text-neutral-900", sizeConfig.name)}>{name}</p>
+        {email && <p className={cn("truncate text-neutral-600", sizeConfig.email)}>{email}</p>}
+        {bio && <p className={cn("line-clamp-2 text-neutral-500", sizeConfig.email)}>{bio}</p>}
       </div>
-    </div>
-    <ProfileTabs tabs={[{ label: "Chat", active: true }, { label: "Group" }]} />
-    <div className="mt-4">
-      {recentChats &&
-        recentChats.map((chat, i) => (
-          <div key={i} className="flex items-center gap-3 border-b py-2 last:border-b-0">
-            <Avatar src={chat.avatar} alt={chat.name + " avatar"} initials={chat.initials || chat.name[0]} size="md" />
-            <div className="flex-1">
-              <div className="font-medium text-neutral-900">{chat.name}</div>
-              <div className="truncate text-xs text-neutral-500">{chat.lastMessage}</div>
-            </div>
-            <div className="text-xs text-neutral-400">{chat.time}</div>
-          </div>
-        ))}
-    </div>
-  </div>
-)
+    </Component>
+  )
+}
+
+UserProfile.displayName = "UserProfile"
