@@ -69,6 +69,7 @@
     "@babel/plugin-transform-optional-chaining": "^7.28.5",
     "@babel/plugin-transform-react-jsx": "^7.27.1",
     "@eslint/eslintrc": "^3.3.3",
+    "@jridgewell/set-array": "^1.2.1",
     "@next/eslint-plugin-next": "15.1.6",
     "@opentelemetry/api": "1.7.0",
     "@opentelemetry/resources": "1.18.1",
