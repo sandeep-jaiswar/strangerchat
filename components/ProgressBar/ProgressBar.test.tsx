@@ -204,9 +204,7 @@ describe("CircularProgress", () => {
   it("respects custom size and strokeWidth and label font size", () => {
     const size = 120
     const strokeWidth = 12
-    const { container } = render(
-      <CircularProgress value={60} size={size} strokeWidth={strokeWidth} />
-    )
+    const { container } = render(<CircularProgress value={60} size={size} strokeWidth={strokeWidth} />)
 
     const svg = screen.getByRole("progressbar")
     expect(svg).toHaveAttribute("width", String(size))
@@ -234,9 +232,7 @@ describe("CircularProgress", () => {
     ]
 
     intents.forEach(([intent, color]) => {
-      const { container, unmount } = render(
-        <CircularProgress value={40} intent={intent} />
-      )
+      const { container, unmount } = render(<CircularProgress value={40} intent={intent} />)
       const svg = container.querySelector("svg") as SVGSVGElement
       const circles = svg.querySelectorAll("circle")
       const progressCircle = circles[1]
@@ -246,9 +242,7 @@ describe("CircularProgress", () => {
   })
 
   it("can hide label when showLabel is false", () => {
-    const { container } = render(
-      <CircularProgress value={30} showLabel={false} />
-    )
+    const { container } = render(<CircularProgress value={30} showLabel={false} />)
 
     // progressbar is still there
     const svg = screen.getByRole("progressbar")

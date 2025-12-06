@@ -61,21 +61,21 @@ describe("Select", () => {
     it("opens dropdown when clicking button", () => {
       render(<Select options={mockOptions} />)
       const button = screen.getByRole("button")
-      
+
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
-      
+
       fireEvent.click(button)
-      
+
       expect(screen.getByRole("listbox")).toBeInTheDocument()
     })
 
     it("closes dropdown when clicking button again", () => {
       render(<Select options={mockOptions} />)
       const button = screen.getByRole("button")
-      
+
       fireEvent.click(button)
       expect(screen.getByRole("listbox")).toBeInTheDocument()
-      
+
       fireEvent.click(button)
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
     })
@@ -87,11 +87,11 @@ describe("Select", () => {
           <div data-testid="outside">Outside</div>
         </div>
       )
-      
+
       const button = screen.getByRole("button")
       fireEvent.click(button)
       expect(screen.getByRole("listbox")).toBeInTheDocument()
-      
+
       fireEvent.mouseDown(screen.getByTestId("outside"))
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
     })
@@ -99,11 +99,11 @@ describe("Select", () => {
     it("sets aria-expanded to true when open", () => {
       render(<Select options={mockOptions} />)
       const button = screen.getByRole("button")
-      
+
       expect(button).toHaveAttribute("aria-expanded", "false")
-      
+
       fireEvent.click(button)
-      
+
       expect(button).toHaveAttribute("aria-expanded", "true")
     })
 
@@ -118,10 +118,10 @@ describe("Select", () => {
     it("selects an option when clicked", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       fireEvent.click(screen.getByText("Option 2"))
-      
+
       expect(onChange).toHaveBeenCalledWith("2")
     })
 
@@ -133,18 +133,18 @@ describe("Select", () => {
     it("closes dropdown after selection", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       fireEvent.click(screen.getByText("Option 3"))
-      
+
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
     })
 
     it("marks selected option with aria-selected", () => {
       render(<Select options={mockOptions} value="1" />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const options = screen.getAllByRole("option")
       expect(options[0]).toHaveAttribute("aria-selected", "true")
       expect(options[1]).toHaveAttribute("aria-selected", "false")
@@ -152,9 +152,9 @@ describe("Select", () => {
 
     it("shows checkmark on selected option", () => {
       render(<Select options={mockOptions} value="1" />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const selectedOption = screen.getAllByRole("option")[0]
       const checkmark = selectedOption.querySelector("svg")
       expect(checkmark).toBeInTheDocument()
@@ -163,11 +163,11 @@ describe("Select", () => {
     it("allows deselecting by clicking selected option", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} value="2" onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const options = screen.getAllByRole("option")
       fireEvent.click(options[1]) // Click Option 2
-      
+
       // Single select doesn't deselect, just calls onChange with same value
       expect(onChange).toHaveBeenCalledWith("2")
     })
@@ -177,15 +177,15 @@ describe("Select", () => {
     it("allows selecting multiple options", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} multiple onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const options = screen.getAllByRole("option")
       fireEvent.click(options[0]) // Click Option 1
-      
+
       expect(onChange).toHaveBeenCalledWith(["1"])
-      
+
       fireEvent.click(options[1]) // Click Option 2
-      
+
       expect(onChange).toHaveBeenLastCalledWith(["2"])
     })
 
@@ -197,16 +197,16 @@ describe("Select", () => {
     it("keeps dropdown open after selection", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} multiple onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       fireEvent.click(screen.getByText("Option 1"))
-      
+
       expect(screen.getByRole("listbox")).toBeInTheDocument()
     })
 
     it("renders selected options as pills", () => {
       render(<Select options={mockOptions} multiple value={["1", "2"]} />)
-      
+
       const pills = screen.getByText("Option 1").closest("span")
       expect(pills).toBeInTheDocument()
       expect(screen.getByText("Option 2")).toBeInTheDocument()
@@ -215,22 +215,22 @@ describe("Select", () => {
     it("removes option when clicking pill remove button", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} multiple value={["1", "2"]} onChange={onChange} />)
-      
+
       const removeButton = screen.getByLabelText("Remove Option 1")
       fireEvent.click(removeButton)
-      
+
       expect(onChange).toHaveBeenCalledWith(["2"])
     })
 
     it("deselects option when clicking selected option again", () => {
       const onChange = vi.fn()
       render(<Select options={mockOptions} multiple value={["1", "2"]} onChange={onChange} />)
-      
+
       const selectButton = screen.getByRole("button", { name: /2 selected/i })
       fireEvent.click(selectButton)
       const options = screen.getAllByRole("option")
       fireEvent.click(options[1]) // Click Option 2
-      
+
       expect(onChange).toHaveBeenCalledWith(["1"])
     })
 
@@ -243,51 +243,51 @@ describe("Select", () => {
   describe("Searchable", () => {
     it("renders search input when searchable", () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       expect(screen.getByPlaceholderText("Search...")).toBeInTheDocument()
     })
 
     it("filters options based on search query", () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const searchInput = screen.getByPlaceholderText("Search...")
-      
+
       fireEvent.change(searchInput, { target: { value: "Option 2" } })
-      
+
       expect(screen.getByText("Option 2")).toBeInTheDocument()
       expect(screen.queryByText("Option 1")).not.toBeInTheDocument()
     })
 
     it("shows no options message when no results", () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const searchInput = screen.getByPlaceholderText("Search...")
-      
+
       fireEvent.change(searchInput, { target: { value: "nonexistent" } })
-      
+
       expect(screen.getByText("No options found")).toBeInTheDocument()
     })
 
     it("search is case insensitive", () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const searchInput = screen.getByPlaceholderText("Search...")
-      
+
       fireEvent.change(searchInput, { target: { value: "option 3" } })
-      
+
       expect(screen.getByText("Option 3")).toBeInTheDocument()
     })
 
     it("focuses search input when dropdown opens", async () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       await waitFor(() => {
         expect(screen.getByPlaceholderText("Search...")).toHaveFocus()
       })
@@ -295,26 +295,26 @@ describe("Select", () => {
 
     it("clears search query when dropdown closes", async () => {
       render(<Select options={mockOptions} searchable />)
-      
+
       const button = screen.getByRole("button")
       fireEvent.click(button)
       const searchInput = screen.getByPlaceholderText("Search...")
-      
+
       fireEvent.change(searchInput, { target: { value: "test" } })
       expect(searchInput).toHaveValue("test")
-      
+
       // Close by clicking outside
       const outsideElement = document.body
       fireEvent.mouseDown(outsideElement)
-      
+
       // Wait for dropdown to close
       await waitFor(() => {
         expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
       })
-      
+
       // Reopen and check search is cleared
       fireEvent.click(button)
-      
+
       await waitFor(() => {
         expect(screen.getByPlaceholderText("Search...")).toHaveValue("")
       })
@@ -330,9 +330,9 @@ describe("Select", () => {
 
     it("renders disabled option", () => {
       render(<Select options={optionsWithDisabled} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const options = screen.getAllByRole("option")
       expect(options[1]).toBeDisabled()
     })
@@ -340,18 +340,18 @@ describe("Select", () => {
     it("does not select disabled option", () => {
       const onChange = vi.fn()
       render(<Select options={optionsWithDisabled} onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       fireEvent.click(screen.getByText("Option 2"))
-      
+
       expect(onChange).not.toHaveBeenCalled()
     })
 
     it("applies disabled styling to disabled option", () => {
       render(<Select options={optionsWithDisabled} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const disabledOption = screen.getAllByRole("option")[1]
       expect(disabledOption).toHaveClass("cursor-not-allowed", "opacity-50")
     })
@@ -368,9 +368,9 @@ describe("Select", () => {
     it("does not open dropdown when disabled", () => {
       render(<Select options={mockOptions} disabled />)
       const button = screen.getByRole("button")
-      
+
       fireEvent.click(button)
-      
+
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
     })
   })
@@ -437,9 +437,9 @@ describe("Select", () => {
     it("applies border and ring when open", () => {
       render(<Select options={mockOptions} />)
       const button = screen.getByRole("button")
-      
+
       fireEvent.click(button)
-      
+
       expect(button).toHaveClass("border-[#0071e3]", "ring-2", "ring-[#0071e3]/20")
     })
   })
@@ -470,11 +470,11 @@ describe("Select", () => {
       render(<Select options={mockOptions} />)
       const button = screen.getByRole("button")
       const chevron = button.querySelector("svg")
-      
+
       expect(chevron).not.toHaveClass("rotate-180")
-      
+
       fireEvent.click(button)
-      
+
       expect(chevron).toHaveClass("rotate-180")
     })
   })
@@ -482,9 +482,9 @@ describe("Select", () => {
   describe("Edge Cases", () => {
     it("handles empty options array", () => {
       render(<Select options={[]} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       expect(screen.getByText("No options found")).toBeInTheDocument()
     })
 
@@ -510,20 +510,20 @@ describe("Select", () => {
       ]
       const onChange = vi.fn()
       render(<Select options={duplicateOptions} onChange={onChange} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
       const options = screen.getAllByText("Same")
       fireEvent.click(options[0])
-      
+
       expect(onChange).toHaveBeenCalledWith("1")
     })
 
     it("handles very long option labels", () => {
       const longLabel = "This is a very long option label ".repeat(10)
       const longOptions: SelectOption[] = [{ value: "1", label: longLabel }]
-      
+
       render(<Select options={longOptions} value="1" />)
-      
+
       const button = screen.getByRole("button")
       const displayText = button.querySelector("span")
       expect(displayText).toHaveClass("truncate")
@@ -535,26 +535,26 @@ describe("Select", () => {
         { value: "2", label: "Option with emoji 😊" },
       ]
       render(<Select options={specialOptions} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       expect(screen.getByText("Option <>&\"'")).toBeInTheDocument()
       expect(screen.getByText("Option with emoji 😊")).toBeInTheDocument()
     })
 
     it("handles onChange not provided", () => {
       render(<Select options={mockOptions} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       expect(() => fireEvent.click(screen.getAllByRole("option")[0])).not.toThrow()
     })
 
     it("handles removing pill without onChange", () => {
       render(<Select options={mockOptions} multiple value={["1"]} />)
-      
+
       const removeButton = screen.getByLabelText("Remove Option 1")
-      
+
       expect(() => fireEvent.click(removeButton)).not.toThrow()
     })
 
@@ -566,10 +566,10 @@ describe("Select", () => {
           <Select options={mockOptions} multiple value={["1"]} onChange={onChange} />
         </div>
       )
-      
+
       const removeButton = screen.getByLabelText("Remove Option 1")
       fireEvent.click(removeButton)
-      
+
       expect(onChange).toHaveBeenCalled()
       expect(onClick).not.toHaveBeenCalled()
     })
@@ -579,7 +579,7 @@ describe("Select", () => {
     it("has proper ARIA attributes", () => {
       render(<Select options={mockOptions} label="Test Select" />)
       const button = screen.getByRole("button")
-      
+
       expect(button).toHaveAttribute("aria-haspopup", "listbox")
       expect(button).toHaveAttribute("aria-expanded", "false")
     })
@@ -588,10 +588,10 @@ describe("Select", () => {
       render(<Select options={mockOptions} label="Test Select" />)
       const label = screen.getByText("Test Select")
       const button = screen.getByRole("button")
-      
+
       const labelFor = label.getAttribute("for")
       const buttonId = button.getAttribute("id")
-      
+
       expect(labelFor).toBe(buttonId)
       expect(buttonId).toBeTruthy()
     })
@@ -604,7 +604,7 @@ describe("Select", () => {
 
     it("has accessible remove button labels", () => {
       render(<Select options={mockOptions} multiple value={["1", "2"]} />)
-      
+
       expect(screen.getByLabelText("Remove Option 1")).toBeInTheDocument()
       expect(screen.getByLabelText("Remove Option 2")).toBeInTheDocument()
     })
@@ -648,7 +648,7 @@ describe("Select", () => {
           fullWidth
         />
       )
-      
+
       expect(screen.getByText("Complete Select")).toBeInTheDocument()
       expect(screen.getByText("This is helper text")).toBeInTheDocument()
       expect(screen.getByText("Option 1")).toBeInTheDocument()
@@ -656,16 +656,8 @@ describe("Select", () => {
     })
 
     it("renders multiple searchable with pills", () => {
-      render(
-        <Select
-          options={mockOptions}
-          multiple
-          searchable
-          value={["1", "2"]}
-          label="Multi Search"
-        />
-      )
-      
+      render(<Select options={mockOptions} multiple searchable value={["1", "2"]} label="Multi Search" />)
+
       expect(screen.getByText("Multi Search")).toBeInTheDocument()
       expect(screen.getByText("Option 1")).toBeInTheDocument()
       expect(screen.getByText("Option 2")).toBeInTheDocument()
@@ -683,27 +675,27 @@ describe("Select", () => {
   describe("Dropdown Position", () => {
     it("renders dropdown with proper z-index", () => {
       render(<Select options={mockOptions} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const dropdown = screen.getByRole("listbox")
       expect(dropdown).toHaveClass("z-50")
     })
 
     it("renders dropdown with shadow", () => {
       render(<Select options={mockOptions} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const dropdown = screen.getByRole("listbox")
       expect(dropdown).toHaveClass("shadow-lg")
     })
 
     it("renders dropdown with max height", () => {
       render(<Select options={mockOptions} />)
-      
+
       fireEvent.click(screen.getByRole("button"))
-      
+
       const dropdown = screen.getByRole("listbox")
       expect(dropdown).toHaveClass("max-h-60")
     })
