@@ -1,0 +1,48 @@
+[09:54:36.685] [INFO] Storybook upgrade - v10.1.4
+[09:54:36.690] [INFO] detect-projects-spinner-start: Detecting projects...
+[09:54:36.693] [DEBUG] Finding Storybook projects...
+[09:54:46.300] [DEBUG] Found 1 Storybook projects
+[09:54:46.302] [INFO] detect-projects-spinner: Detecting projects: 1 projects
+[09:54:46.303] [DEBUG] Getting Storybook data...
+[09:54:46.303] [DEBUG] Getting Storybook info...
+[09:54:46.476] [DEBUG] Loading main config...
+[09:54:46.476] [DEBUG] Getting stories paths...
+[09:54:46.512] [DEBUG] Getting package manager...
+[09:54:48.394] [DEBUG] Getting package.json info for /media/sandeep/DataDrive/projects/strangerchat/package.json...
+[09:54:48.394] [DEBUG] Getting Storybook version...
+[09:54:48.415] [DEBUG] /.storybook - Validating before version... 8.6.14
+[09:54:48.415] [DEBUG] /.storybook - Validating upgrade compatibility...
+[09:54:48.416] [DEBUG] /.storybook - Fetching NPM version information...
+[09:54:48.416] [DEBUG] Getting CLI versions from NPM for storybook...
+[09:54:48.417] [DEBUG] Executing command: pnpm info storybook version
+[09:54:48.427] [DEBUG] Getting CLI versions from NPM for storybook@next...
+[09:54:48.427] [DEBUG] Executing command: pnpm info storybook@next version
+[09:54:50.363] [DEBUG] TypeError: Invalid Version: 
+[09:54:50.363] [INFO] detect-projects-spinner-stop: 1 project detected
+[09:54:50.363] [DEBUG] Found 0 valid projects and 1 error projects
+[09:54:50.363] [ERROR] Failed to get projects
+[09:54:50.367] [ERROR] [38;2;241;97;97mError: ❌ Storybook found errors while collecting data for the following projects:
+/.storybook:
+TypeError: Invalid Version: 
+    at new _SemVer (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:169:17)
+    at compare (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:439:92)
+    at lt (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:505:60)
+    at processProject (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-OVFQGXY3.js:303:46)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Please fix the errors and run the upgrade command again.[39m
+    at getProjects (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-OVFQGXY3.js:468:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async upgrade (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/run-7KXREMXI.js:9351:24)
+    at async file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/run-7KXREMXI.js:9549:70
+    at async withTelemetry (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/storybook/dist/_node-chunks/chunk-6KX7N5UF.js:205:12)
+    at async Command.<anonymous> (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/run-7KXREMXI.js:9545:3)
+[09:54:50.376] [INFO] Storybook collects completely anonymous usage telemetry. We use it to shape Storybook's roadmap and prioritize features. You can learn more, including how to opt out, at https://storybook.js.org/telemetry
+[09:54:52.929] [ERROR] Error: ❌ Storybook found errors while collecting data for the following projects:
+/.storybook:
+TypeError: Invalid Version: 
+    at new _SemVer (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:169:17)
+    at compare (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:439:92)
+    at lt (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-Z6DPEQCC.js:505:60)
+    at processProject (file:///home/sandeep/.npm/_npx/3d02af3ae01a29b3/node_modules/@storybook/cli/dist/_node-chunks/chunk-OVFQGXY3.js:303:46)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Please fix the errors and run the upgrade command again.
