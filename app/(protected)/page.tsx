@@ -3,15 +3,13 @@
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useEffect } from "react"
-import { AdsenseBanner } from "components/AdsenseBanner"
 import LoginButton from "components/LoginButton/LoginButton"
-import { env } from "../env.mjs"
 
-export default function Web() {
+const Home = () => {
   const { data: session } = useSession()
+  console.log("Session data on landing page:", session)
   const router = useRouter()
 
-  // If user is authenticated, redirect to dashboard
   useEffect(() => {
     if (session) {
       router.push("/dashboard")
@@ -20,7 +18,6 @@ export default function Web() {
 
   return (
     <>
-      <AdsenseBanner adClient={env.NEXT_PUBLIC_ADSENSE_CLIENT} />
       <section className="bg-white dark:bg-gray-900">
         <div className="mx-auto grid max-w-(--breakpoint-xl) px-4 py-8 text-center lg:py-16">
           <div className="mx-auto place-self-center">
@@ -105,3 +102,5 @@ export default function Web() {
     </>
   )
 }
+
+export default Home
