@@ -72,9 +72,8 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       multiple = false,
       searchable = false,
       fullWidth = true,
-      ...props
     },
-    ref
+    _ref
   ) => {
     const [isOpen, setIsOpen] = React.useState(false)
     const [searchQuery, setSearchQuery] = React.useState("")

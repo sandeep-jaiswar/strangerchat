@@ -204,7 +204,7 @@ describe("CircularProgress", () => {
   it("respects custom size and strokeWidth and label font size", () => {
     const size = 120
     const strokeWidth = 12
-    const { container } = render(<CircularProgress value={60} size={size} strokeWidth={strokeWidth} />)
+    render(<CircularProgress value={60} size={size} strokeWidth={strokeWidth} />)
 
     const svg = screen.getByRole("progressbar")
     expect(svg).toHaveAttribute("width", String(size))

@@ -50,7 +50,6 @@ describe("Calendar", () => {
 
   it("shows Today button and navigates to today", () => {
     const onChange = vi.fn()
-    const today = new Date()
     render(<Calendar showTodayButton onChange={onChange} />)
 
     const todayButton = screen.getByRole("button", { name: "Today" })

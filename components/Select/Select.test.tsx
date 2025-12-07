@@ -561,7 +561,7 @@ describe("Select", () => {
     it("stops propagation when removing pill", () => {
       const onChange = vi.fn()
       const onClick = vi.fn()
-      const { container } = render(
+      render(
         <div onClick={onClick}>
           <Select options={mockOptions} multiple value={["1"]} onChange={onChange} />
         </div>
