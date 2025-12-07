@@ -11,7 +11,7 @@ describe("SearchBar", () => {
   it("calls onChange when typing", () => {
     const onChange = vi.fn()
     render(<SearchBar value="" onChange={onChange} />)
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "abc" } })
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "abc" } })
     expect(onChange).toHaveBeenCalledWith("abc")
   })
 

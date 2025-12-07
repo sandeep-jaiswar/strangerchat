@@ -1,1 +1,1 @@
-export { TabGroup, type TabGroupProps, type Tab } from "./TabGroup"
+export { TabGroup, TabPanel, type TabGroupProps, type TabPanelProps, type Tab } from "./TabGroup"

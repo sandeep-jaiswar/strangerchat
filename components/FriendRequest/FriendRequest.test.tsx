@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import React from "react"
 import { FriendRequest } from "./FriendRequest"
 
@@ -10,19 +10,19 @@ describe("FriendRequest", () => {
     expect(screen.getByText("Decline")).toBeInTheDocument()
   })
 
-  it("calls onAccept and onDecline", () => {
+  it("calls onAccept and onDecline", async () => {
     const onAccept = vi.fn()
     const onDecline = vi.fn()
     render(<FriendRequest name="Charlie" onAccept={onAccept} onDecline={onDecline} />)
     fireEvent.click(screen.getByText("Accept"))
-    expect(onAccept).toHaveBeenCalled()
+    await waitFor(() => expect(onAccept).toHaveBeenCalled())
     fireEvent.click(screen.getByText("Decline"))
-    expect(onDecline).toHaveBeenCalled()
+    await waitFor(() => expect(onDecline).toHaveBeenCalled())
   })
 
   it("renders avatar initials", () => {
     render(<FriendRequest name="Charlie" onAccept={() => {}} onDecline={() => {}} />)
-    expect(screen.getByText("C")).toBeInTheDocument()
+    expect(screen.getByText("CH")).toBeInTheDocument()
   })
 
   it("renders name", () => {

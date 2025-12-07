@@ -23,7 +23,7 @@ describe("FriendList", () => {
 
   it("renders avatar initials", () => {
     render(<FriendList friends={friends} />)
-    expect(screen.getByText("A")).toBeInTheDocument()
-    expect(screen.getByText("B")).toBeInTheDocument()
+    expect(screen.getByText("AL")).toBeInTheDocument()
+    expect(screen.getByText("BO")).toBeInTheDocument()
   })
 })
