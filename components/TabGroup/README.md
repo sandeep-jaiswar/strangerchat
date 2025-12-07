@@ -268,7 +268,6 @@ If you were using the old Radix-based component, the migration is simple:
 
 ```tsx
 import * as Tabs from "@radix-ui/react-tabs"
-
 ;<Tabs.Root>
   <Tabs.List>
     <Tabs.Trigger value="tab1">Tab 1</Tabs.Trigger>
