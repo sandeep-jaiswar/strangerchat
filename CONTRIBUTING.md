@@ -32,23 +32,27 @@ By participating in this project, you agree to:
 ### Setup
 
 1. **Fork and Clone**:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/strangerchat.git
    cd strangerchat
    ```
 
 2. **Enable Corepack**:
+
    ```bash
    corepack enable
    corepack prepare pnpm@10.0.0 --activate
    ```
 
 3. **Install Dependencies**:
+
    ```bash
    pnpm install
    ```
 
 4. **Set up Environment Variables**:
+
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your configuration
@@ -85,6 +89,7 @@ chore: update dependencies
 ```
 
 Examples:
+
 ```bash
 git commit -m "feat: add typing indicator to chat"
 git commit -m "fix: prevent duplicate friend requests"
@@ -191,6 +196,7 @@ describe("Button", () => {
 ```
 
 Run tests:
+
 ```bash
 # Run all tests
 pnpm test
@@ -220,6 +226,7 @@ test("user can send a message", async ({ page }) => {
 ```
 
 Run E2E tests:
+
 ```bash
 # Run E2E tests
 pnpm e2e
@@ -244,12 +251,14 @@ pnpm e2e:ui
 ### Pull Request Process
 
 1. **Update from main**:
+
    ```bash
    git fetch origin
    git rebase origin/main
    ```
 
 2. **Ensure all checks pass**:
+
    ```bash
    pnpm lint          # Linting
    pnpm type-check    # TypeScript
@@ -268,23 +277,28 @@ pnpm e2e:ui
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] E2E tests added/updated
 - [ ] Manual testing completed
 
 ## Screenshots (if applicable)
+
 [Add screenshots here]
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Comments added for complex code
@@ -306,6 +320,7 @@ All submissions require review. Reviewers will check:
 ## Security
 
 **Never commit**:
+
 - API keys or secrets
 - Personal credentials
 - `.env` files
@@ -345,12 +360,14 @@ pnpm coupling-graph    # Generate dependency graph
 **VS Code** (recommended):
 
 Install extensions:
+
 - ESLint
 - Prettier
 - TypeScript
 - Tailwind CSS IntelliSense
 
 **Settings** (`.vscode/settings.json`):
+
 ```json
 {
   "editor.formatOnSave": true,

@@ -18,7 +18,8 @@ We take the security of StrangerChat seriously. If you discover a security vulne
 
 Instead, please report security issues by:
 
-1. **GitHub Security Advisories** (Recommended): 
+1. **GitHub Security Advisories** (Recommended):
+
    - Navigate to the Security tab in the repository
    - Click "Report a vulnerability"
    - Fill out the form with details
@@ -65,20 +66,23 @@ Please provide the following information:
 ### Best Practices for Deployment
 
 1. **Environment Variables**:
+
    ```bash
    # Always use strong secrets
    NEXTAUTH_SECRET=$(openssl rand -base64 32)
-   
+
    # Never commit .env files
    echo ".env*" >> .gitignore
    ```
 
 2. **Authentication**:
+
    - Use HTTPS in production
    - Set secure cookie flags
    - Implement CSRF protection (enabled by default in NextAuth)
 
 3. **Rate Limiting**:
+
    - Add rate limiting middleware for:
      - Authentication attempts
      - Message sending
@@ -86,6 +90,7 @@ Please provide the following information:
    - Example: Use `express-rate-limit` or similar
 
 4. **Content Security Policy**:
+
    - Configure CSP headers in `next.config.ts`
    - Restrict script sources
    - Enable XSS protection

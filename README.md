@@ -223,6 +223,7 @@ pnpm test:coverage
 ```
 
 Coverage requirements:
+
 - Unit tests: **>95% coverage**
 - All critical business logic must be tested
 - Tests run automatically on every push via GitHub Actions
@@ -248,6 +249,7 @@ pnpm e2e:ui
 ```
 
 Coverage requirements:
+
 - E2E tests: **>95% coverage** of critical user flows
 - Tests run automatically on every pull request
 
@@ -258,7 +260,9 @@ Coverage requirements:
 The repository includes comprehensive CI/CD pipelines:
 
 #### **CI Workflow** (`.github/workflows/ci.yml`)
+
 Runs on every push and pull request:
+
 - ESLint code linting
 - Prettier formatting check
 - TypeScript type checking
@@ -266,26 +270,34 @@ Runs on every push and pull request:
 - Coverage threshold validation (95%)
 
 #### **Build Workflow** (`.github/workflows/build.yml`)
+
 Verifies successful production builds:
+
 - Next.js build compilation
 - Bundle size analysis
 - Build artifact creation
 
 #### **E2E Tests Workflow** (`.github/workflows/e2e.yml`)
+
 Tests critical user flows:
+
 - Playwright browser tests
 - Multi-browser testing (Chromium, Firefox, WebKit)
 - Test report generation
 
 #### **Security Workflow** (`.github/workflows/security.yml`)
+
 Automated security scanning:
+
 - CodeQL analysis for vulnerabilities
 - Dependency review for known CVEs
 - NPM audit for package vulnerabilities
 - Runs daily and on every push
 
 #### **Code Quality Workflow** (`.github/workflows/code-quality.yml`)
+
 Code quality checks:
+
 - Bundle size analysis
 - Storybook build verification
 - Component documentation
@@ -316,23 +328,27 @@ pnpm build
 StrangerChat implements multiple security layers:
 
 ### Authentication & Authorization
+
 - **NextAuth.js**: Industry-standard authentication
 - **JWT Tokens**: Secure session management
 - **OAuth 2.0**: Google and GitHub sign-in
 - **CSRF Protection**: Built-in by NextAuth
 
 ### Code Security
+
 - **CodeQL Analysis**: Automated vulnerability scanning
 - **Dependency Scanning**: Daily security audits
 - **TypeScript**: Type safety to prevent common errors
 - **Input Validation**: Zod schemas for runtime checks
 
 ### Environment Security
+
 - **Environment Variables**: Validated using @t3-oss/env-nextjs
 - **Secrets Management**: Never committed to repository
 - **.env.example**: Template for required variables
 
 ### Security Best Practices
+
 - Regular dependency updates via Renovate Bot
 - Security advisories monitoring
 - Conventional commit messages for audit trail
@@ -346,12 +362,14 @@ Please see [SECURITY.md](./SECURITY.md) for information on reporting security vu
 ## 🚀 Development Best Practices
 
 ### Code Quality
+
 - **ESLint**: Enforces code style and catches errors
 - **Prettier**: Consistent code formatting
 - **TypeScript Strict Mode**: Maximum type safety
 - **Conventional Commits**: Standardized commit messages
 
 ### Component Development
+
 - **Storybook**: Component playground and documentation
 - **CVA**: Consistent component variants
 - **Tailwind CSS**: Utility-first styling
@@ -545,6 +563,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for de
 - Pull request process
 
 Before contributing:
+
 1. Read the [Contributing Guide](./CONTRIBUTING.md)
 2. Check [open issues](https://github.com/sandeep-jaiswar/strangerchat/issues)
 3. Follow our coding standards
@@ -574,6 +593,7 @@ Built with:
 **Current Status**: Active Development
 
 This is a demonstration project showcasing best practices for:
+
 - Modern Next.js development
 - Real-time WebSocket communication
 - Comprehensive testing strategies
