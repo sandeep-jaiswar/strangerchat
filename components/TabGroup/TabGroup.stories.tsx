@@ -173,15 +173,10 @@ export const WithoutAnimation: Story = {
 export const Controlled: Story = {
   render: () => {
     const [value, setValue] = useState("visitors")
-    
+
     return (
       <div className="space-y-4">
-        <TabGroup 
-          tabs={tabs.slice(0, 4)} 
-          variant="pills" 
-          value={value}
-          onValueChange={setValue}
-        />
+        <TabGroup tabs={tabs.slice(0, 4)} variant="pills" value={value} onValueChange={setValue} />
         <div className="text-sm text-neutral-600">
           Current tab: <strong>{value}</strong>
         </div>
@@ -204,15 +199,10 @@ export const Controlled: Story = {
 export const WithContent: Story = {
   render: () => {
     const [activeTab, setActiveTab] = useState("visitors")
-    
+
     return (
       <div className="space-y-4">
-        <TabGroup 
-          tabs={tabs.slice(0, 3)} 
-          variant="default" 
-          value={activeTab}
-          onValueChange={setActiveTab}
-        />
+        <TabGroup tabs={tabs.slice(0, 3)} variant="default" value={activeTab} onValueChange={setActiveTab} />
         <TabPanel value="visitors" activeValue={activeTab}>
           <div className="rounded-lg border border-neutral-200 p-6">
             <h3 className="mb-2 text-lg font-semibold">Visitors Content</h3>
@@ -292,7 +282,7 @@ export const AllSizes: Story = {
 
 export const DarkTheme: Story = {
   render: () => (
-    <div className="dark bg-neutral-950 p-8 space-y-8">
+    <div className="dark space-y-8 bg-neutral-950 p-8">
       <div>
         <h3 className="mb-3 text-sm font-semibold text-neutral-300">Pills (Dark)</h3>
         <TabGroup tabs={tabs.slice(0, 4)} variant="pills" />
@@ -340,13 +330,13 @@ export const FullWidthExamples: Story = {
 export const RichContent: Story = {
   render: () => {
     const [activeTab, setActiveTab] = useState("messages")
-    
+
     const richTabs = [
       {
         value: "messages",
         label: "Messages",
         icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -361,7 +351,7 @@ export const RichContent: Story = {
         value: "calls",
         label: "Calls",
         icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -376,7 +366,7 @@ export const RichContent: Story = {
         value: "settings",
         label: "Settings",
         icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -388,21 +378,21 @@ export const RichContent: Story = {
         ),
       },
     ]
-    
+
     return (
       <div className="space-y-4">
         <TabGroup tabs={richTabs} variant="pills" size="lg" value={activeTab} onValueChange={setActiveTab} />
-        <div className="rounded-xl border border-neutral-200 p-6 bg-white">
+        <div className="rounded-xl border border-neutral-200 bg-white p-6">
           <TabPanel value="messages" activeValue={activeTab}>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Messages</h3>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">Messages</h3>
             <p className="text-neutral-600">You have 12 unread messages.</p>
           </TabPanel>
           <TabPanel value="calls" activeValue={activeTab}>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Calls</h3>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">Calls</h3>
             <p className="text-neutral-600">You have 3 missed calls.</p>
           </TabPanel>
           <TabPanel value="settings" activeValue={activeTab}>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Settings</h3>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">Settings</h3>
             <p className="text-neutral-600">Configure your preferences.</p>
           </TabPanel>
         </div>
@@ -416,7 +406,7 @@ export const KeyboardNavigation: Story = {
     <div className="space-y-4">
       <TabGroup tabs={tabs.slice(0, 4)} variant="pills" />
       <div className="rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
-        <h4 className="font-semibold mb-2">Keyboard Navigation:</h4>
+        <h4 className="mb-2 font-semibold">Keyboard Navigation:</h4>
         <ul className="space-y-1">
           <li>• Arrow Left/Right: Navigate between tabs</li>
           <li>• Home: Jump to first tab</li>

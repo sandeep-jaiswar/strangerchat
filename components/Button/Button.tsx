@@ -79,7 +79,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         className={cn(
           // Base styles
-          "inline-flex items-center justify-center gap-2 font-medium cursor-pointer select-none",
+          "inline-flex cursor-pointer items-center justify-center gap-2 font-medium select-none",
           "transition-all duration-200 ease-out",
           "focus:ring-2 focus:ring-offset-2 focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",

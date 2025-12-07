@@ -7,64 +7,49 @@ import { cn } from "utils/cn"
 
 /**
  * Header Component
- * 
+ *
  * An Apple-inspired header component with multiple variants for different contexts.
  * Features smooth blur effects, elegant animations, and proper accessibility.
- * 
+ *
  * @example
  * ```tsx
- * <Header 
- *   title="Messages" 
+ * <Header
+ *   title="Messages"
  *   subtitle="3 active conversations"
  *   actions={<Button>New Chat</Button>}
  * />
  * ```
  */
 
-const headerVariants = cva(
-  [
-    "w-full transition-all duration-300 ease-out",
-    "border-b backdrop-blur-xl",
-  ],
-  {
-    variants: {
-      variant: {
-        default: [
-          "bg-white/80 border-neutral-200/60",
-          "dark:bg-neutral-900/80 dark:border-neutral-800/60",
-        ],
-        translucent: [
-          "bg-white/70 border-neutral-200/40",
-          "dark:bg-neutral-900/70 dark:border-neutral-800/40",
-          "backdrop-blur-2xl",
-        ],
-        solid: [
-          "bg-white border-neutral-200",
-          "dark:bg-neutral-900 dark:border-neutral-800",
-        ],
-        elevated: [
-          "bg-white border-neutral-200/60 shadow-sm",
-          "dark:bg-neutral-900 dark:border-neutral-800/60",
-        ],
-      },
-      size: {
-        sm: "h-12",
-        md: "h-14",
-        lg: "h-16",
-        xl: "h-20",
-      },
-      sticky: {
-        true: "sticky top-0 z-1100",
-        false: "",
-      },
+const headerVariants = cva(["w-full transition-all duration-300 ease-out", "border-b backdrop-blur-xl"], {
+  variants: {
+    variant: {
+      default: ["bg-white/80 border-neutral-200/60", "dark:bg-neutral-900/80 dark:border-neutral-800/60"],
+      translucent: [
+        "bg-white/70 border-neutral-200/40",
+        "dark:bg-neutral-900/70 dark:border-neutral-800/40",
+        "backdrop-blur-2xl",
+      ],
+      solid: ["bg-white border-neutral-200", "dark:bg-neutral-900 dark:border-neutral-800"],
+      elevated: ["bg-white border-neutral-200/60 shadow-sm", "dark:bg-neutral-900 dark:border-neutral-800/60"],
     },
-    defaultVariants: {
-      variant: "default",
-      size: "lg",
-      sticky: false,
+    size: {
+      sm: "h-12",
+      md: "h-14",
+      lg: "h-16",
+      xl: "h-20",
     },
-  }
-)
+    sticky: {
+      true: "sticky top-0 z-1100",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "lg",
+    sticky: false,
+  },
+})
 
 const titleVariants = cva("truncate font-semibold", {
   variants: {
@@ -162,12 +147,8 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
     const hasRightActions = Boolean(onSearch || actions)
 
     return (
-      <header
-        ref={ref}
-        className={cn(headerVariants({ variant, size, sticky }), className)}
-        {...props}
-      >
-        <div className={cn("mx-auto px-4 sm:px-6 lg:px-8 h-full", maxWidthClasses[maxWidth])}>
+      <header ref={ref} className={cn(headerVariants({ variant, size, sticky }), className)} {...props}>
+        <div className={cn("mx-auto h-full px-4 sm:px-6 lg:px-8", maxWidthClasses[maxWidth])}>
           <div className="flex h-full items-center justify-between gap-4">
             {/* Left Section */}
             <div className="flex items-center gap-2 sm:gap-3">
@@ -179,7 +160,7 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
                   aria-label="Go back"
                   className="shrink-0"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </IconButton>
@@ -192,7 +173,7 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
                   aria-label="Open menu"
                   className="shrink-0 sm:hidden"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </IconButton>
@@ -229,7 +210,7 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
                     <span
                       className={cn(
                         "inline-flex items-center justify-center rounded-full",
-                        "bg-[#0071e3] text-white font-semibold",
+                        "bg-[#0071e3] font-semibold text-white",
                         size === "sm" && "h-4 min-w-4 px-1 text-[10px]",
                         size === "md" && "h-5 min-w-5 px-1.5 text-[11px]",
                         size === "lg" && "h-5 min-w-5 px-1.5 text-xs",
@@ -241,13 +222,7 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
                   )}
                 </div>
                 {subtitle && (
-                  <p
-                    className={cn(
-                      subtitleVariants({ size }),
-                      centered && "justify-center",
-                      subtitleClassName
-                    )}
-                  >
+                  <p className={cn(subtitleVariants({ size }), centered && "justify-center", subtitleClassName)}>
                     {subtitle}
                   </p>
                 )}
@@ -264,8 +239,13 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
                   aria-label="Search"
                   className="shrink-0"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                 </IconButton>
               )}
@@ -276,7 +256,7 @@ export const Header = React.forwardRef<HTMLElement, HeaderProps>(
 
         {/* Bottom border animation on scroll */}
         {sticky && variant === "translucent" && (
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-200 to-transparent dark:via-neutral-800 opacity-0 transition-opacity duration-300" />
+          <div className="absolute right-0 bottom-0 left-0 h-px bg-linear-to-r from-transparent via-neutral-200 to-transparent opacity-0 transition-opacity duration-300 dark:via-neutral-800" />
         )}
       </header>
     )

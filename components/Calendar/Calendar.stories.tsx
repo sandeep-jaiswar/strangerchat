@@ -90,12 +90,7 @@ export const WithMinMaxDates: Story = {
 
 export const WithDisabledDates: Story = {
   args: {
-    disabledDates: [
-      new Date(2024, 11, 14),
-      new Date(2024, 11, 15),
-      new Date(2024, 11, 21),
-      new Date(2024, 11, 22),
-    ],
+    disabledDates: [new Date(2024, 11, 14), new Date(2024, 11, 15), new Date(2024, 11, 21), new Date(2024, 11, 22)],
     defaultValue: new Date(2024, 11, 1),
   },
 }
@@ -103,7 +98,7 @@ export const WithDisabledDates: Story = {
 export const Interactive: Story = {
   render: (args) => {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-    
+
     return (
       <div className="flex flex-col items-center gap-4">
         <Calendar
@@ -139,7 +134,7 @@ export const MultipleCalendars: Story = {
 
 export const DarkBackground: Story = {
   render: (args) => (
-    <div className="bg-neutral-900 p-8 rounded-xl">
+    <div className="rounded-xl bg-neutral-900 p-8">
       <Calendar {...args} variant="elevated" />
     </div>
   ),
@@ -154,7 +149,7 @@ export const DateRangeSelection: Story = {
   render: () => {
     const [startDate, setStartDate] = useState<Date | undefined>()
     const [endDate, setEndDate] = useState<Date | undefined>()
-    
+
     return (
       <div className="flex flex-col gap-6">
         <div className="flex gap-6">
@@ -169,12 +164,7 @@ export const DateRangeSelection: Story = {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-neutral-700">End Date</label>
-            <Calendar
-              value={endDate}
-              onChange={setEndDate}
-              onClear={() => setEndDate(undefined)}
-              minDate={startDate}
-            />
+            <Calendar value={endDate} onChange={setEndDate} onClear={() => setEndDate(undefined)} minDate={startDate} />
           </div>
         </div>
         <div className="rounded-lg bg-neutral-100 px-4 py-3 text-sm text-neutral-700">

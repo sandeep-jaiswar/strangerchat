@@ -200,17 +200,9 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
                   {editMessage ? "Edit message" : `Reply to ${replyTo?.name}`}
                 </span>
               </div>
-              <p className="truncate text-[13px] text-neutral-600">
-                {editMessage?.message || replyTo?.message}
-              </p>
+              <p className="truncate text-[13px] text-neutral-600">{editMessage?.message || replyTo?.message}</p>
             </div>
-            <IconButton
-              variant="plain"
-              intent="secondary"
-              size="sm"
-              onClick={onCancel}
-              aria-label="Cancel"
-            >
+            <IconButton variant="plain" intent="secondary" size="sm" onClick={onCancel} aria-label="Cancel">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -222,10 +214,7 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {attachments.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-[13px]"
-              >
+              <div key={index} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-[13px]">
                 <svg className="h-4 w-4 text-neutral-600" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
                 </svg>
@@ -272,7 +261,11 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
                   aria-label="Attach file"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </IconButton>
               </>
@@ -297,13 +290,7 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
 
             {/* Formatting (Bold, Italic, etc.) */}
             {showFormatting && (
-              <IconButton
-                variant="plain"
-                intent="secondary"
-                size="sm"
-                disabled={disabled}
-                aria-label="Format text"
-              >
+              <IconButton variant="plain" intent="secondary" size="sm" disabled={disabled} aria-label="Format text">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 7V4h16v3M9 20h6M12 4v16" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -335,15 +322,13 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
           <div className="flex shrink-0 items-center gap-1">
             {/* Voice Message (show when no text) */}
             {showVoice && !hasContent && (
-              <IconButton
-                variant="plain"
-                intent="secondary"
-                size="sm"
-                disabled={disabled}
-                aria-label="Voice message"
-              >
+              <IconButton variant="plain" intent="secondary" size="sm" disabled={disabled} aria-label="Voice message">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                   <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </IconButton>
@@ -381,9 +366,7 @@ export const MessageComposer = React.forwardRef<HTMLTextAreaElement, MessageComp
         {/* Character Count / Hints */}
         {(showCharCount || sendOnEnter) && (
           <div className="flex items-center justify-between text-[12px] text-neutral-500">
-            <div>
-              {sendOnEnter && <span>Press Enter to send • Shift+Enter for new line</span>}
-            </div>
+            <div>{sendOnEnter && <span>Press Enter to send • Shift+Enter for new line</span>}</div>
             {showCharCount && maxLength && (
               <span className={cn(isOverLimit && "font-semibold text-[#ff3b30]")}>
                 {charCount} / {maxLength}

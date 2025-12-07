@@ -7,13 +7,13 @@ import { cn } from "utils/cn"
 
 /**
  * Sidebar Component
- * 
+ *
  * An Apple-inspired sidebar navigation with elegant design and smooth interactions.
  * Features collapsible sections, active states, badges, and multiple variants.
- * 
+ *
  * @example
  * ```tsx
- * <Sidebar 
+ * <Sidebar
  *   items={[
  *     { id: 'chats', label: 'Chats', icon: <ChatIcon />, onClick: () => {} }
  *   ]}
@@ -22,46 +22,34 @@ import { cn } from "utils/cn"
  * ```
  */
 
-const sidebarVariants = cva(
-  ["transition-all duration-300 ease-out", "border-r"],
-  {
-    variants: {
-      variant: {
-        default: [
-          "bg-neutral-50 border-neutral-200",
-          "dark:bg-neutral-900 dark:border-neutral-800",
-        ],
-        translucent: [
-          "bg-white/80 backdrop-blur-xl border-neutral-200/60",
-          "dark:bg-neutral-900/80 dark:border-neutral-800/60",
-        ],
-        solid: [
-          "bg-white border-neutral-200",
-          "dark:bg-neutral-900 dark:border-neutral-800",
-        ],
-        elevated: [
-          "bg-white border-neutral-200 shadow-sm",
-          "dark:bg-neutral-900 dark:border-neutral-800",
-        ],
-      },
-      size: {
-        sm: "w-52",
-        md: "w-64",
-        lg: "w-72",
-        xl: "w-80",
-      },
-      collapsed: {
-        true: "w-16",
-        false: "",
-      },
+const sidebarVariants = cva(["transition-all duration-300 ease-out", "border-r"], {
+  variants: {
+    variant: {
+      default: ["bg-neutral-50 border-neutral-200", "dark:bg-neutral-900 dark:border-neutral-800"],
+      translucent: [
+        "bg-white/80 backdrop-blur-xl border-neutral-200/60",
+        "dark:bg-neutral-900/80 dark:border-neutral-800/60",
+      ],
+      solid: ["bg-white border-neutral-200", "dark:bg-neutral-900 dark:border-neutral-800"],
+      elevated: ["bg-white border-neutral-200 shadow-sm", "dark:bg-neutral-900 dark:border-neutral-800"],
     },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-      collapsed: false,
+    size: {
+      sm: "w-52",
+      md: "w-64",
+      lg: "w-72",
+      xl: "w-80",
     },
-  }
-)
+    collapsed: {
+      true: "w-16",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "md",
+    collapsed: false,
+  },
+})
 
 const itemVariants = cva(
   [
@@ -73,11 +61,7 @@ const itemVariants = cva(
   {
     variants: {
       active: {
-        true: [
-          "bg-[#0071e3] text-white",
-          "hover:bg-[#0077ed]",
-          "active:bg-[#005bb5]",
-        ],
+        true: ["bg-[#0071e3] text-white", "hover:bg-[#0077ed]", "active:bg-[#005bb5]"],
         false: [
           "text-neutral-700 hover:bg-neutral-100",
           "active:bg-neutral-200",
@@ -214,11 +198,7 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             )}
 
             {/* Label */}
-            {!collapsed && (
-              <span className="flex-1 truncate text-left text-[15px] font-medium">
-                {item.label}
-              </span>
-            )}
+            {!collapsed && <span className="flex-1 truncate text-left text-[15px] font-medium">{item.label}</span>}
 
             {/* Badge */}
             {!collapsed && item.badge !== undefined && (
@@ -234,9 +214,7 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           </button>
 
           {/* Divider */}
-          {item.divider && (
-            <hr className="my-2 border-neutral-200 dark:border-neutral-700" />
-          )}
+          {item.divider && <hr className="my-2 border-neutral-200 dark:border-neutral-700" />}
         </li>
       )
     }
@@ -248,31 +226,23 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         <div key={index} className="space-y-1">
           {/* Section Header */}
           {section.title && !collapsed && (
-            <div className="px-3 py-2 flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            <div className="flex items-center justify-between px-3 py-2">
+              <h3 className="text-xs font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
                 {section.title}
               </h3>
               {section.collapsible && (
                 <button
                   onClick={() => toggleSection(index)}
-                  className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                  className="rounded p-1 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-700"
                   aria-label={isCollapsed ? "Expand section" : "Collapse section"}
                 >
                   <svg
-                    className={cn(
-                      "w-4 h-4 text-neutral-500 transition-transform",
-                      isCollapsed && "-rotate-90"
-                    )}
+                    className={cn("h-4 w-4 text-neutral-500 transition-transform", isCollapsed && "-rotate-90")}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
               )}
@@ -288,21 +258,12 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={cn(
-          sidebarVariants({ variant, size, collapsed }),
-          "flex flex-col h-full",
-          className
-        )}
+        className={cn(sidebarVariants({ variant, size, collapsed }), "flex h-full flex-col", className)}
         {...props}
       >
         {/* Header */}
         {header && (
-          <div
-            className={cn(
-              "px-4 py-4 border-b border-neutral-200 dark:border-neutral-800",
-              collapsed && "px-2"
-            )}
-          >
+          <div className={cn("border-b border-neutral-200 px-4 py-4 dark:border-neutral-800", collapsed && "px-2")}>
             {header}
           </div>
         )}
@@ -318,12 +279,7 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
         {/* Footer */}
         {footer && (
-          <div
-            className={cn(
-              "px-4 py-4 border-t border-neutral-200 dark:border-neutral-800",
-              collapsed && "px-2"
-            )}
-          >
+          <div className={cn("border-t border-neutral-200 px-4 py-4 dark:border-neutral-800", collapsed && "px-2")}>
             {footer}
           </div>
         )}
@@ -333,32 +289,27 @@ export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <button
             onClick={onToggleCollapse}
             className={cn(
-              "absolute -right-3 top-20 z-10",
-              "w-6 h-6 rounded-full",
+              "absolute top-20 -right-3 z-10",
+              "h-6 w-6 rounded-full",
               "bg-white dark:bg-neutral-800",
               "border-2 border-neutral-200 dark:border-neutral-700",
               "hover:border-[#0071e3] dark:hover:border-[#0071e3]",
               "flex items-center justify-center",
               "transition-all duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2"
+              "focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none"
             )}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg
               className={cn(
-                "w-3 h-3 text-neutral-600 dark:text-neutral-400 transition-transform",
+                "h-3 w-3 text-neutral-600 transition-transform dark:text-neutral-400",
                 collapsed && "rotate-180"
               )}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         )}

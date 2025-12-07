@@ -7,13 +7,13 @@ import { cn } from "utils/cn"
 
 /**
  * SearchBar Component
- * 
+ *
  * An Apple-inspired search bar with elegant design and smooth interactions.
  * Features auto-focus, clear button, loading state, and keyboard shortcuts.
- * 
+ *
  * @example
  * ```tsx
- * <SearchBar 
+ * <SearchBar
  *   value={query}
  *   onChange={setQuery}
  *   placeholder="Search messages..."
@@ -194,7 +194,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
       <div
         className={cn(
           searchBarVariants({ variant, size, fullWidth }),
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && "cursor-not-allowed opacity-50",
           className
         )}
       >
@@ -267,22 +267,12 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
               "dark:text-neutral-400 dark:hover:text-neutral-200",
               "dark:hover:bg-neutral-700 dark:active:bg-neutral-600",
               "transition-colors duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-1"
+              "focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-1 focus:outline-none"
             )}
             aria-label="Clear search"
           >
-            <svg
-              className={size ? iconSize[size] : iconSize.md}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className={size ? iconSize[size] : iconSize.md} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         )}
@@ -314,7 +304,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
             aria-label="Search"
             className="shrink-0"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

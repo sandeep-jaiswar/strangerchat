@@ -159,11 +159,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
       deleted: "bg-neutral-50 text-neutral-400 italic border border-neutral-200",
     }
 
-    const bubbleClass = deleted
-      ? bubbleColors.deleted
-      : isOwn
-      ? bubbleColors.own[variant]
-      : bubbleColors.other[variant]
+    const bubbleClass = deleted ? bubbleColors.deleted : isOwn ? bubbleColors.own[variant] : bubbleColors.other[variant]
 
     return (
       <div
@@ -192,12 +188,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
         {!isOwn && showAvatar && isGrouped && <div className="w-8 shrink-0" />}
 
         {/* Message Container */}
-        <div
-          className={cn(
-            "flex max-w-[75%] flex-col gap-1",
-            isOwn ? "items-end" : "items-start"
-          )}
-        >
+        <div className={cn("flex max-w-[75%] flex-col gap-1", isOwn ? "items-end" : "items-start")}>
           {/* Sender Name (for group chats) */}
           {showName && !isOwn && !isGrouped && (
             <span className="px-2 text-[13px] font-medium text-neutral-600">{name}</span>
@@ -224,19 +215,11 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
                 className={cn(
                   "absolute -bottom-0.5 h-4 w-4",
                   isOwn ? "-right-1" : "-left-1",
-                  deleted
-                    ? "text-neutral-50"
-                    : isOwn
-                    ? "text-[#0071e3]"
-                    : "text-neutral-100"
+                  deleted ? "text-neutral-50" : isOwn ? "text-[#0071e3]" : "text-neutral-100"
                 )}
               >
                 <svg viewBox="0 0 16 16" fill="currentColor">
-                  {isOwn ? (
-                    <path d="M16 0v16c-8-8-16-8-16-16h16z" />
-                  ) : (
-                    <path d="M0 0v16c8-8 16-8 16-16H0z" />
-                  )}
+                  {isOwn ? <path d="M16 0v16c-8-8-16-8-16-16h16z" /> : <path d="M0 0v16c8-8 16-8 16-16H0z" />}
                 </svg>
               </div>
             )}
@@ -294,10 +277,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
                     </div>
                     {linkPreview.description && (
                       <div
-                        className={cn(
-                          "mt-1 line-clamp-2 text-[13px]",
-                          isOwn ? "text-white/80" : "text-neutral-600"
-                        )}
+                        className={cn("mt-1 line-clamp-2 text-[13px]", isOwn ? "text-white/80" : "text-neutral-600")}
                       >
                         {linkPreview.description}
                       </div>
@@ -312,7 +292,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
               ) : (
                 <div
                   className={cn(
-                    "whitespace-pre-wrap wrap-break-word text-[17px] leading-relaxed",
+                    "text-[17px] leading-relaxed wrap-break-word whitespace-pre-wrap",
                     deleted && "select-none"
                   )}
                 >
@@ -322,14 +302,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
 
               {/* Edited Badge */}
               {edited && !deleted && (
-                <span
-                  className={cn(
-                    "ml-2 text-[12px]",
-                    isOwn ? "text-white/60" : "text-neutral-500"
-                  )}
-                >
-                  (edited)
-                </span>
+                <span className={cn("ml-2 text-[12px]", isOwn ? "text-white/60" : "text-neutral-500")}>(edited)</span>
               )}
 
               {/* Timestamp and Status */}
@@ -342,16 +315,14 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
                 >
                   <span>{timestamp}</span>
                   {isOwn && deliveryStatus && (
-                    <span className="flex items-center">
-                      {deliveryStatusIcons[deliveryStatus]}
-                    </span>
+                    <span className="flex items-center">{deliveryStatusIcons[deliveryStatus]}</span>
                   )}
                 </div>
               )}
 
               {/* Unread Indicator */}
               {unread && !isOwn && (
-                <div className="absolute -right-1 -top-1">
+                <div className="absolute -top-1 -right-1">
                   <span className="flex h-3 w-3">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0071e3] opacity-75" />
                     <span className="relative inline-flex h-3 w-3 rounded-full bg-[#0071e3]" />
@@ -363,12 +334,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
 
           {/* Reactions */}
           {reactions && reactions.length > 0 && (
-            <div
-              className={cn(
-                "flex flex-wrap gap-1",
-                isOwn ? "justify-end" : "justify-start"
-              )}
-            >
+            <div className={cn("flex flex-wrap gap-1", isOwn ? "justify-end" : "justify-start")}>
               {reactions.map((reaction, index) => (
                 <button
                   key={index}
@@ -382,9 +348,7 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
                   )}
                 >
                   <span>{reaction.emoji}</span>
-                  {reaction.count > 1 && (
-                    <span className="font-medium text-neutral-700">{reaction.count}</span>
-                  )}
+                  {reaction.count > 1 && <span className="font-medium text-neutral-700">{reaction.count}</span>}
                 </button>
               ))}
             </div>

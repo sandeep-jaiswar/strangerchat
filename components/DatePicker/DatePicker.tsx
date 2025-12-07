@@ -307,14 +307,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
 
         {/* Helper text */}
         {helperText && (
-          <p
-            className={cn(
-              "mt-1 text-[13px]",
-              error ? "text-[#ff3b30]" : "text-neutral-500"
-            )}
-          >
-            {helperText}
-          </p>
+          <p className={cn("mt-1 text-[13px]", error ? "text-[#ff3b30]" : "text-neutral-500")}>{helperText}</p>
         )}
       </div>
     )

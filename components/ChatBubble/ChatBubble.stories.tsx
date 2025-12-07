@@ -207,36 +207,11 @@ export const GroupedMessages: Story = {
 export const DeliveryStates: Story = {
   render: () => (
     <div className="space-y-4">
-      <ChatBubble
-        message="Sending..."
-        isOwn={true}
-        timestamp="3:00 PM"
-        deliveryStatus="sending"
-      />
-      <ChatBubble
-        message="Message sent"
-        isOwn={true}
-        timestamp="3:01 PM"
-        deliveryStatus="sent"
-      />
-      <ChatBubble
-        message="Message delivered"
-        isOwn={true}
-        timestamp="3:02 PM"
-        deliveryStatus="delivered"
-      />
-      <ChatBubble
-        message="Message read"
-        isOwn={true}
-        timestamp="3:03 PM"
-        deliveryStatus="read"
-      />
-      <ChatBubble
-        message="Failed to send"
-        isOwn={true}
-        timestamp="3:04 PM"
-        deliveryStatus="failed"
-      />
+      <ChatBubble message="Sending..." isOwn={true} timestamp="3:00 PM" deliveryStatus="sending" />
+      <ChatBubble message="Message sent" isOwn={true} timestamp="3:01 PM" deliveryStatus="sent" />
+      <ChatBubble message="Message delivered" isOwn={true} timestamp="3:02 PM" deliveryStatus="delivered" />
+      <ChatBubble message="Message read" isOwn={true} timestamp="3:03 PM" deliveryStatus="read" />
+      <ChatBubble message="Failed to send" isOwn={true} timestamp="3:04 PM" deliveryStatus="failed" />
     </div>
   ),
 }
@@ -309,9 +284,7 @@ export const Conversation: Story = {
         isOwn={true}
         timestamp="9:07 AM"
         deliveryStatus="delivered"
-        reactions={[
-          { emoji: "👍", count: 1, userReacted: false },
-        ]}
+        reactions={[{ emoji: "👍", count: 1, userReacted: false }]}
       />
     </div>
   ),
@@ -319,7 +292,8 @@ export const Conversation: Story = {
 
 export const LongMessage: Story = {
   args: {
-    message: "This is a much longer message to demonstrate how the chat bubble handles multi-line content. It should wrap nicely and maintain good readability even with several lines of text. The bubble should expand to accommodate all the content while still maintaining the maximum width constraint for better conversation flow.",
+    message:
+      "This is a much longer message to demonstrate how the chat bubble handles multi-line content. It should wrap nicely and maintain good readability even with several lines of text. The bubble should expand to accommodate all the content while still maintaining the maximum width constraint for better conversation flow.",
     isOwn: false,
     timestamp: "3:30 PM",
     avatar: "https://i.pravatar.cc/150?img=11",

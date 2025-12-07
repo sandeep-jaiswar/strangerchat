@@ -41,10 +41,10 @@ describe("Calendar", () => {
   it("calls onChange when a date is clicked", () => {
     const onChange = vi.fn()
     render(<Calendar defaultValue={new Date(2024, 11, 1)} onChange={onChange} />)
-    
+
     const dateButton = screen.getByRole("gridcell", { name: /December 15, 2024/ })
     fireEvent.click(dateButton)
-    
+
     expect(onChange).toHaveBeenCalledWith(new Date(2024, 11, 15))
   })
 
@@ -52,10 +52,10 @@ describe("Calendar", () => {
     const onChange = vi.fn()
     const today = new Date()
     render(<Calendar showTodayButton onChange={onChange} />)
-    
+
     const todayButton = screen.getByRole("button", { name: "Today" })
     expect(todayButton).toBeInTheDocument()
-    
+
     fireEvent.click(todayButton)
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -69,22 +69,22 @@ describe("Calendar", () => {
   it("shows Clear button when onClear is provided and date is selected", () => {
     const onClear = vi.fn()
     render(<Calendar defaultValue={new Date(2024, 11, 15)} onClear={onClear} />)
-    
+
     const clearButton = screen.getByRole("button", { name: "Clear" })
     expect(clearButton).toBeInTheDocument()
-    
+
     fireEvent.click(clearButton)
     expect(onClear).toHaveBeenCalledTimes(1)
   })
 
   it("shows year selector when enabled", () => {
     render(<Calendar showYearSelector defaultValue={new Date(2024, 11, 15)} />)
-    
+
     const yearButton = screen.getByRole("button", { name: /December 2024/ })
     expect(yearButton).toBeInTheDocument()
-    
+
     fireEvent.click(yearButton)
-    
+
     // Year picker should appear
     expect(screen.getByText("2024")).toBeInTheDocument()
     expect(screen.getByText("2023")).toBeInTheDocument()
@@ -95,11 +95,11 @@ describe("Calendar", () => {
     const onChange = vi.fn()
     const minDate = new Date(2024, 11, 15)
     render(<Calendar defaultValue={new Date(2024, 11, 20)} minDate={minDate} onChange={onChange} />)
-    
+
     // Try to click a date before minDate
     const disabledDate = screen.getByRole("gridcell", { name: /December 10, 2024/ })
     expect(disabledDate).toBeDisabled()
-    
+
     fireEvent.click(disabledDate)
     expect(onChange).not.toHaveBeenCalled()
   })
@@ -108,11 +108,11 @@ describe("Calendar", () => {
     const onChange = vi.fn()
     const maxDate = new Date(2024, 11, 15)
     render(<Calendar defaultValue={new Date(2024, 11, 10)} maxDate={maxDate} onChange={onChange} />)
-    
+
     // Try to click a date after maxDate
     const disabledDate = screen.getByRole("gridcell", { name: /December 20, 2024/ })
     expect(disabledDate).toBeDisabled()
-    
+
     fireEvent.click(disabledDate)
     expect(onChange).not.toHaveBeenCalled()
   })
@@ -121,17 +121,17 @@ describe("Calendar", () => {
     const onChange = vi.fn()
     const disabledDates = [new Date(2024, 11, 15), new Date(2024, 11, 20)]
     render(<Calendar defaultValue={new Date(2024, 11, 1)} disabledDates={disabledDates} onChange={onChange} />)
-    
+
     const disabledDate = screen.getByRole("gridcell", { name: /December 15, 2024/ })
     expect(disabledDate).toBeDisabled()
-    
+
     fireEvent.click(disabledDate)
     expect(onChange).not.toHaveBeenCalled()
   })
 
   it("supports week starting on Monday", () => {
     render(<Calendar weekStartsOn={1} />)
-    
+
     const dayLabels = screen.getAllByRole("columnheader")
     expect(dayLabels[0]).toHaveTextContent("M") // Monday first
   })
@@ -139,18 +139,20 @@ describe("Calendar", () => {
   it("highlights today's date", () => {
     const today = new Date()
     render(<Calendar />)
-    
-    const todayCell = screen.getByRole("gridcell", { 
-      name: new RegExp(`${today.toLocaleString('default', { month: 'long' })} ${today.getDate()}, ${today.getFullYear()}`)
+
+    const todayCell = screen.getByRole("gridcell", {
+      name: new RegExp(
+        `${today.toLocaleString("default", { month: "long" })} ${today.getDate()}, ${today.getFullYear()}`
+      ),
     })
-    
+
     expect(todayCell).toHaveAttribute("aria-current", "date")
   })
 
   it("highlights selected date", () => {
     const selectedDate = new Date(2024, 11, 15)
     render(<Calendar value={selectedDate} />)
-    
+
     const selectedCell = screen.getByRole("gridcell", { name: /December 15, 2024/ })
     expect(selectedCell).toHaveAttribute("aria-selected", "true")
   })
@@ -163,7 +165,7 @@ describe("Calendar", () => {
   it("updates when value prop changes", () => {
     const { rerender } = render(<Calendar value={new Date(2024, 11, 15)} />)
     expect(screen.getByText("December 2024")).toBeInTheDocument()
-    
+
     rerender(<Calendar value={new Date(2024, 0, 1)} />)
     expect(screen.getByText("January 2024")).toBeInTheDocument()
   })

@@ -137,8 +137,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
     useEffect(() => {
       if (autoScroll && listRef.current) {
         const scrollElement = listRef.current
-        const isScrolledToBottom =
-          scrollElement.scrollHeight - scrollElement.scrollTop === scrollElement.clientHeight
+        const isScrolledToBottom = scrollElement.scrollHeight - scrollElement.scrollTop === scrollElement.clientHeight
 
         if (isScrolledToBottom || messages.length === 0) {
           setTimeout(() => {
@@ -151,8 +150,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
     // Handle scroll to show/hide scroll to bottom button
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
       const element = e.currentTarget
-      const isScrolledToBottom =
-        element.scrollHeight - element.scrollTop - element.clientHeight < 100
+      const isScrolledToBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 100
 
       setShouldShowScrollButton(!isScrolledToBottom && messages.length > 0)
 
@@ -203,13 +201,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
     // Empty state
     if (messages.length === 0 && !isTyping) {
       return (
-        <div
-          ref={ref}
-          className={cn(
-            "flex h-full flex-col items-center justify-center p-8 text-center",
-            className
-          )}
-        >
+        <div ref={ref} className={cn("flex h-full flex-col items-center justify-center p-8 text-center", className)}>
           {emptyIcon || (
             <svg
               className="mb-4 h-20 w-20 text-neutral-300"
@@ -255,14 +247,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
               {loading ? (
                 <div className="flex items-center gap-2 text-[15px] text-neutral-500">
                   <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path
                       className="opacity-75"
                       fill="currentColor"
@@ -303,9 +288,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
                           {showUnreadDivider && (
                             <div className="my-4 flex items-center gap-3">
                               <div className="h-px flex-1 bg-[#ff3b30]" />
-                              <span className="text-[13px] font-semibold text-[#ff3b30]">
-                                Unread Messages
-                              </span>
+                              <span className="text-[13px] font-semibold text-[#ff3b30]">Unread Messages</span>
                               <div className="h-px flex-1 bg-[#ff3b30]" />
                             </div>
                           )}
@@ -334,9 +317,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
                     {showUnreadDivider && (
                       <div className="my-4 flex items-center gap-3">
                         <div className="h-px flex-1 bg-[#ff3b30]" />
-                        <span className="text-[13px] font-semibold text-[#ff3b30]">
-                          Unread Messages
-                        </span>
+                        <span className="text-[13px] font-semibold text-[#ff3b30]">Unread Messages</span>
                         <div className="h-px flex-1 bg-[#ff3b30]" />
                       </div>
                     )}
@@ -368,7 +349,7 @@ export const ChatList = React.forwardRef<HTMLDivElement, ChatListProps>(
 
         {/* Scroll to Bottom Button */}
         {shouldShowScrollButton && (
-          <div className="absolute bottom-4 right-4">
+          <div className="absolute right-4 bottom-4">
             <button
               type="button"
               onClick={scrollToBottom}

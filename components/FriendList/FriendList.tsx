@@ -157,10 +157,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
     // Empty state
     if (filteredFriends.length === 0) {
       return (
-        <div
-          ref={ref}
-          className={cn("flex flex-col items-center justify-center py-12 text-center", className)}
-        >
+        <div ref={ref} className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
             <svg className="h-10 w-10 text-neutral-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
@@ -170,9 +167,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
             {searchQuery ? "No results found" : emptyMessage}
           </h3>
           <p className="text-[15px] text-neutral-500">
-            {searchQuery
-              ? `No friends match "${searchQuery}"`
-              : "Add friends to start connecting"}
+            {searchQuery ? `No friends match "${searchQuery}"` : "Add friends to start connecting"}
           </p>
         </div>
       )
@@ -208,7 +203,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
             {showStatus && friend.status && (
               <div
                 className={cn(
-                  "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white",
+                  "absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white",
                   getStatusColor(friend.status)
                 )}
               />
@@ -218,12 +213,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
           {/* Friend info */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3
-                className={cn(
-                  "truncate text-[17px] font-semibold",
-                  isSelected ? "text-white" : "text-neutral-900"
-                )}
-              >
+              <h3 className={cn("truncate text-[17px] font-semibold", isSelected ? "text-white" : "text-neutral-900")}>
                 {friend.name}
               </h3>
               {friend.isVerified && (
@@ -249,32 +239,17 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
             {variant !== "compact" && (
               <div className="mt-0.5 flex items-center gap-2">
                 {friend.username && (
-                  <span
-                    className={cn(
-                      "truncate text-[13px]",
-                      isSelected ? "text-white/80" : "text-neutral-500"
-                    )}
-                  >
+                  <span className={cn("truncate text-[13px]", isSelected ? "text-white/80" : "text-neutral-500")}>
                     @{friend.username}
                   </span>
                 )}
                 {friend.status === "online" ? (
-                  <span
-                    className={cn(
-                      "text-[13px] font-medium",
-                      isSelected ? "text-white/90" : "text-[#34c759]"
-                    )}
-                  >
+                  <span className={cn("text-[13px] font-medium", isSelected ? "text-white/90" : "text-[#34c759]")}>
                     Active now
                   </span>
                 ) : (
                   friend.lastSeen && (
-                    <span
-                      className={cn(
-                        "truncate text-[13px]",
-                        isSelected ? "text-white/70" : "text-neutral-400"
-                      )}
-                    >
+                    <span className={cn("truncate text-[13px]", isSelected ? "text-white/70" : "text-neutral-400")}>
                       {formatLastSeen(friend.lastSeen)}
                     </span>
                   )
@@ -291,12 +266,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
                 >
                   <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                 </svg>
-                <span
-                  className={cn(
-                    "text-[12px]",
-                    isSelected ? "text-white/70" : "text-neutral-400"
-                  )}
-                >
+                <span className={cn("text-[12px]", isSelected ? "text-white/70" : "text-neutral-400")}>
                   {friend.mutualFriends} mutual
                 </span>
               </div>
@@ -319,7 +289,11 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
                   className={isSelected ? "text-white hover:bg-white/20" : ""}
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </IconButton>
               )}
@@ -336,7 +310,11 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
                   className={isSelected ? "text-white hover:bg-white/20" : ""}
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </IconButton>
               )}
@@ -354,7 +332,16 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M23 7l-7 5 7 5V7z" strokeLinecap="round" strokeLinejoin="round" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect
+                      x="1"
+                      y="5"
+                      width="15"
+                      height="14"
+                      rx="2"
+                      ry="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </IconButton>
               )}
@@ -376,9 +363,7 @@ export const FriendList = React.forwardRef<HTMLDivElement, FriendListProps>(
                     {letter}
                   </Badge>
                 </div>
-                <ul className="mt-2 space-y-1">
-                  {groupedFriends[letter]?.map(renderFriend)}
-                </ul>
+                <ul className="mt-2 space-y-1">{groupedFriends[letter]?.map(renderFriend)}</ul>
               </div>
             ))}
           </div>

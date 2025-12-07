@@ -38,9 +38,9 @@ const meta: Meta<typeof Sidebar> = {
   },
   decorators: [
     (Story) => (
-      <div className="h-screen flex">
+      <div className="flex h-screen">
         <Story />
-        <div className="flex-1 p-8 bg-white dark:bg-neutral-950">
+        <div className="flex-1 bg-white p-8 dark:bg-neutral-950">
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Main Content</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
             This is the main content area. The sidebar is on the left.
@@ -56,7 +56,7 @@ type Story = StoryObj<typeof Sidebar>
 
 // Helper icons
 const ChatIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -67,7 +67,7 @@ const ChatIcon = () => (
 )
 
 const FriendsIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -78,7 +78,7 @@ const FriendsIcon = () => (
 )
 
 const SettingsIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -90,7 +90,7 @@ const SettingsIcon = () => (
 )
 
 const NotificationIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -101,7 +101,7 @@ const NotificationIcon = () => (
 )
 
 const HomeIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -247,25 +247,28 @@ export const WithHeaderAndFooter: Story = {
     activeItemId: "chats",
     header: (
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#0071e3] flex items-center justify-center text-white font-bold">
-          S
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-neutral-900 dark:text-white truncate">StrangerChat</h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">v2.0</p>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0071e3] font-bold text-white">S</div>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-semibold text-neutral-900 dark:text-white">StrangerChat</h2>
+          <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">v2.0</p>
         </div>
       </div>
     ),
     footer: (
       <div className="flex items-center gap-3">
         <Avatar alt="John Doe" initials="JD" size="sm" status="online" />
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-neutral-900 dark:text-white truncate">John Doe</p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">john@example.com</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-neutral-900 dark:text-white">John Doe</p>
+          <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">john@example.com</p>
         </div>
         <IconButton variant="plain" size="sm" aria-label="User menu">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+            />
           </svg>
         </IconButton>
       </div>
@@ -395,7 +398,7 @@ export const Interactive: Story = {
     ]
 
     return (
-      <div className="h-screen flex">
+      <div className="flex h-screen">
         <Sidebar
           {...args}
           items={items}
@@ -404,7 +407,7 @@ export const Interactive: Story = {
           onToggleCollapse={() => setCollapsed(!collapsed)}
           showCollapseButton
         />
-        <div className="flex-1 p-8 bg-white dark:bg-neutral-950">
+        <div className="flex-1 bg-white p-8 dark:bg-neutral-950">
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
             {items.find((i) => i.id === activeId)?.label}
           </h1>
@@ -427,19 +430,19 @@ export const AllVariants: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-8 p-8">
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Default</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Default</h3>
         <Sidebar items={basicItems} activeItemId="chats" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Translucent</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Translucent</h3>
         <Sidebar items={basicItems} activeItemId="friends" variant="translucent" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Solid</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Solid</h3>
         <Sidebar items={basicItems} activeItemId="settings" variant="solid" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Elevated</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Elevated</h3>
         <Sidebar items={basicItems} activeItemId="chats" variant="elevated" />
       </div>
     </div>
@@ -454,19 +457,19 @@ export const AllSizes: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-8 p-8">
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Small (w-52)</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Small (w-52)</h3>
         <Sidebar items={basicItems} activeItemId="chats" size="sm" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Medium (w-64)</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Medium (w-64)</h3>
         <Sidebar items={basicItems} activeItemId="friends" size="md" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Large (w-72)</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Large (w-72)</h3>
         <Sidebar items={basicItems} activeItemId="settings" size="lg" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-4">Extra Large (w-80)</h3>
+        <h3 className="mb-4 text-sm font-semibold text-neutral-700">Extra Large (w-80)</h3>
         <Sidebar items={basicItems} activeItemId="chats" size="xl" />
       </div>
     </div>
@@ -484,11 +487,9 @@ export const DarkTheme: Story = {
     variant: "translucent",
     header: (
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#0071e3] flex items-center justify-center text-white font-bold">
-          S
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-white truncate">StrangerChat</h2>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0071e3] font-bold text-white">S</div>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-semibold text-white">StrangerChat</h2>
         </div>
       </div>
     ),
@@ -500,9 +501,9 @@ export const DarkTheme: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="dark h-screen flex">
+      <div className="dark flex h-screen">
         <Story />
-        <div className="flex-1 p-8 bg-neutral-950">
+        <div className="flex-1 bg-neutral-950 p-8">
           <h1 className="text-2xl font-bold text-white">Main Content</h1>
           <p className="mt-2 text-neutral-400">Dark theme sidebar example.</p>
         </div>

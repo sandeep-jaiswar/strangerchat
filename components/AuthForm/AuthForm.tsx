@@ -118,9 +118,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
     <div className={cn("w-full max-w-md space-y-6", className)}>
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-neutral-900">
-          {isRegister ? "Create your account" : "Welcome back"}
-        </h2>
+        <h2 className="text-2xl font-bold text-neutral-900">{isRegister ? "Create your account" : "Welcome back"}</h2>
         <p className="mt-2 text-sm text-neutral-600">
           {isRegister ? "Sign up to get started" : "Sign in to your account"}
         </p>
@@ -268,11 +266,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 </svg>
               ) : (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -321,11 +315,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                   </svg>
                 ) : (
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -344,7 +334,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             <button
               type="button"
               onClick={onForgotPassword}
-              className="text-sm font-medium text-primary-500 hover:text-primary-600 focus:outline-none focus:underline"
+              className="text-primary-500 hover:text-primary-600 text-sm font-medium focus:underline focus:outline-none"
             >
               Forgot password?
             </button>
@@ -353,7 +343,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 
         {/* Error Message */}
         {error && (
-          <div className="rounded-lg bg-error-50 p-3 text-sm text-error-700" role="alert">
+          <div className="bg-error-50 text-error-700 rounded-lg p-3 text-sm" role="alert">
             <div className="flex items-center gap-2">
               <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -380,7 +370,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           <button
             type="button"
             onClick={onSwitchMode}
-            className="font-semibold text-primary-500 hover:text-primary-600 focus:outline-none focus:underline"
+            className="text-primary-500 hover:text-primary-600 font-semibold focus:underline focus:outline-none"
           >
             {isRegister ? "Sign in" : "Sign up"}
           </button>

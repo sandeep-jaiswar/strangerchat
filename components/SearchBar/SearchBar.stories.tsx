@@ -203,14 +203,7 @@ export const WithShortcut: Story = {
 export const WithSearchButton: Story = {
   render: (args) => {
     const [value, setValue] = useState("query")
-    return (
-      <SearchBar
-        {...args}
-        value={value}
-        onChange={setValue}
-        onSearch={() => alert(`Searching for: ${value}`)}
-      />
-    )
+    return <SearchBar {...args} value={value} onChange={setValue} onSearch={() => alert(`Searching for: ${value}`)} />
   },
   args: {
     placeholder: "Search...",
@@ -303,11 +296,7 @@ export const Interactive: Story = {
       setIsSearching(true)
       // Simulate API call
       setTimeout(() => {
-        setResults([
-          `Result for "${value}" #1`,
-          `Result for "${value}" #2`,
-          `Result for "${value}" #3`,
-        ])
+        setResults([`Result for "${value}" #1`, `Result for "${value}" #2`, `Result for "${value}" #3`])
         setIsSearching(false)
       }, 1000)
     }
@@ -332,7 +321,7 @@ export const Interactive: Story = {
             <p className="text-sm text-neutral-600">Search Results:</p>
             <ul className="space-y-1">
               {results.map((result, i) => (
-                <li key={i} className="text-sm text-neutral-800 bg-neutral-100 rounded-lg px-3 py-2">
+                <li key={i} className="rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-800">
                   {result}
                 </li>
               ))}
@@ -365,30 +354,15 @@ export const AllVariants: Story = {
         </div>
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-neutral-700">Bordered</h3>
-          <SearchBar
-            value={value2}
-            onChange={setValue2}
-            placeholder="Bordered style"
-            variant="bordered"
-          />
+          <SearchBar value={value2} onChange={setValue2} placeholder="Bordered style" variant="bordered" />
         </div>
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-neutral-700">Filled</h3>
-          <SearchBar
-            value={value3}
-            onChange={setValue3}
-            placeholder="Filled style"
-            variant="filled"
-          />
+          <SearchBar value={value3} onChange={setValue3} placeholder="Filled style" variant="filled" />
         </div>
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-neutral-700">Minimal</h3>
-          <SearchBar
-            value={value4}
-            onChange={setValue4}
-            placeholder="Minimal style"
-            variant="minimal"
-          />
+          <SearchBar value={value4} onChange={setValue4} placeholder="Minimal style" variant="minimal" />
         </div>
       </div>
     )

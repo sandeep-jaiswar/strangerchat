@@ -2,8 +2,8 @@ import LoginButton from "@/components/LoginButton/LoginButton"
 
 const Navbar = () => {
   return (
-    <header className="w-full flex items-center justify-between">
-      <div className="text-2xl font-bold flex-1 uppercase">StrangerChat</div>
+    <header className="flex w-full items-center justify-between">
+      <div className="flex-1 text-2xl font-bold uppercase">StrangerChat</div>
       <div>
         <LoginButton />
       </div>

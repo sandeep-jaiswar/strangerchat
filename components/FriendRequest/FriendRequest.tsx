@@ -124,16 +124,13 @@ export const FriendRequest = React.forwardRef<HTMLDivElement, FriendRequestProps
           variantStyles[variant],
           isUnread && "bg-[#0071e3]/5",
           (isAccepting || isDeclining) && "opacity-60",
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && "cursor-not-allowed opacity-50",
           className
         )}
       >
         {/* Avatar */}
         <div className="relative shrink-0">
-          <div
-            onClick={onViewProfile}
-            className={onViewProfile ? "cursor-pointer" : ""}
-          >
+          <div onClick={onViewProfile} className={onViewProfile ? "cursor-pointer" : ""}>
             <Avatar
               src={avatar}
               alt={name}
@@ -143,7 +140,7 @@ export const FriendRequest = React.forwardRef<HTMLDivElement, FriendRequestProps
             />
           </div>
           {isUnread && variant !== "notification" && (
-            <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-[#0071e3]" />
+            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-[#0071e3]" />
           )}
         </div>
 
@@ -175,9 +172,7 @@ export const FriendRequest = React.forwardRef<HTMLDivElement, FriendRequestProps
               )}
 
               {showTimestamp && timestamp && (
-                <p className="mt-0.5 text-[13px] text-neutral-400">
-                  {formatTimestamp(timestamp)}
-                </p>
+                <p className="mt-0.5 text-[13px] text-neutral-400">{formatTimestamp(timestamp)}</p>
               )}
             </div>
 

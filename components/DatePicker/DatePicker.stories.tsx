@@ -302,12 +302,7 @@ export const Interactive: Story = {
             {selectedDate ? selectedDate.toLocaleDateString() : "No date selected"}
           </p>
         </div>
-        <DatePicker
-          value={selectedDate}
-          onChange={setSelectedDate}
-          placeholder="Pick a date"
-          showPresets
-        />
+        <DatePicker value={selectedDate} onChange={setSelectedDate} placeholder="Pick a date" showPresets />
       </div>
     )
   },

@@ -60,10 +60,10 @@ describe("TabGroup", () => {
   it("calls onValueChange when tab is clicked", () => {
     const handleChange = vi.fn()
     render(<TabGroup tabs={tabs} onValueChange={handleChange} />)
-    
+
     const globeTab = screen.getByRole("tab", { name: "Globe" })
     fireEvent.click(globeTab)
-    
+
     expect(handleChange).toHaveBeenCalledWith("globe")
   })
 
@@ -74,17 +74,17 @@ describe("TabGroup", () => {
       { value: "disabled", label: "Disabled", disabled: true },
     ]
     render(<TabGroup tabs={tabsWithDisabled} onValueChange={handleChange} />)
-    
+
     const disabledTab = screen.getByRole("tab", { name: "Disabled" })
     fireEvent.click(disabledTab)
-    
+
     expect(handleChange).not.toHaveBeenCalled()
   })
 
   it("works in controlled mode", () => {
     const { rerender } = render(<TabGroup tabs={tabs} value="visitors" />)
     expect(screen.getByRole("tab", { name: "Visitors" })).toHaveAttribute("aria-selected", "true")
-    
+
     rerender(<TabGroup tabs={tabs} value="globe" />)
     expect(screen.getByRole("tab", { name: "Globe" })).toHaveAttribute("aria-selected", "true")
   })
@@ -92,10 +92,10 @@ describe("TabGroup", () => {
   it("renders different variants", () => {
     const { rerender } = render(<TabGroup tabs={tabs} variant="default" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
-    
+
     rerender(<TabGroup tabs={tabs} variant="pills" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
-    
+
     rerender(<TabGroup tabs={tabs} variant="underline" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
   })
@@ -103,20 +103,20 @@ describe("TabGroup", () => {
   it("renders different sizes", () => {
     const { rerender } = render(<TabGroup tabs={tabs} size="sm" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
-    
+
     rerender(<TabGroup tabs={tabs} size="md" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
-    
+
     rerender(<TabGroup tabs={tabs} size="lg" />)
     expect(screen.getByText("Visitors")).toBeInTheDocument()
   })
 
   it("supports keyboard navigation", () => {
     render(<TabGroup tabs={tabs} />)
-    
+
     const visitorsTab = screen.getByRole("tab", { name: "Visitors" })
     const globeTab = screen.getByRole("tab", { name: "Globe" })
-    
+
     // Press ArrowRight to move to next tab
     fireEvent.keyDown(visitorsTab, { key: "ArrowRight" })
     expect(globeTab).toHaveFocus()
@@ -124,13 +124,12 @@ describe("TabGroup", () => {
 
   it("has proper accessibility attributes", () => {
     render(<TabGroup tabs={tabs} />)
-    
+
     const tabList = screen.getByRole("tablist")
     expect(tabList).toHaveAttribute("aria-orientation", "horizontal")
-    
+
     const visitorsTab = screen.getByRole("tab", { name: "Visitors" })
     expect(visitorsTab).toHaveAttribute("aria-selected")
     expect(visitorsTab).toHaveAttribute("aria-controls")
   })
 })
-

@@ -324,8 +324,7 @@ export const Interactive: Story = {
     return (
       <div className="space-y-3">
         <div className="rounded-lg bg-neutral-100 p-3 text-sm text-neutral-600">
-          <strong>Interactive Demo:</strong> Accept or decline requests. Actions simulate async
-          operations.
+          <strong>Interactive Demo:</strong> Accept or decline requests. Actions simulate async operations.
         </div>
         {requests.length === 0 ? (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-8 text-center">

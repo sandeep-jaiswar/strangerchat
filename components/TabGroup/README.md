@@ -27,12 +27,12 @@ import { TabGroup, TabPanel } from "@/components/TabGroup"
 ### Simple Tabs
 
 ```tsx
-<TabGroup 
+<TabGroup
   tabs={[
     { value: "tab1", label: "First Tab" },
     { value: "tab2", label: "Second Tab" },
     { value: "tab3", label: "Third Tab" },
-  ]} 
+  ]}
 />
 ```
 
@@ -43,16 +43,12 @@ const [activeTab, setActiveTab] = useState("tab1")
 
 return (
   <>
-    <TabGroup 
-      tabs={tabs} 
-      value={activeTab}
-      onValueChange={setActiveTab}
-    />
-    
+    <TabGroup tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
+
     <TabPanel value="tab1" activeValue={activeTab}>
       <div>Content for Tab 1</div>
     </TabPanel>
-    
+
     <TabPanel value="tab2" activeValue={activeTab}>
       <div>Content for Tab 2</div>
     </TabPanel>
@@ -63,6 +59,7 @@ return (
 ## Variants
 
 ### 1. Default
+
 Classic tabs with bottom border indicator.
 
 ```tsx
@@ -70,6 +67,7 @@ Classic tabs with bottom border indicator.
 ```
 
 ### 2. Pills
+
 Rounded tabs with background highlight.
 
 ```tsx
@@ -77,6 +75,7 @@ Rounded tabs with background highlight.
 ```
 
 ### 3. Underline
+
 Minimal tabs with simple underline.
 
 ```tsx
@@ -84,6 +83,7 @@ Minimal tabs with simple underline.
 ```
 
 ### 4. Enclosed
+
 Tabs enclosed in a bordered container.
 
 ```tsx
@@ -91,6 +91,7 @@ Tabs enclosed in a bordered container.
 ```
 
 ### 5. Solid
+
 Pills variant with solid background.
 
 ```tsx
@@ -98,6 +99,7 @@ Pills variant with solid background.
 ```
 
 ### 6. Buttons
+
 Tab styled as individual buttons.
 
 ```tsx
@@ -105,6 +107,7 @@ Tab styled as individual buttons.
 ```
 
 ### 7. Minimal
+
 Clean, minimal style with subtle indicator.
 
 ```tsx
@@ -124,7 +127,7 @@ Clean, minimal style with subtle indicator.
 ### With Icons
 
 ```tsx
-<TabGroup 
+<TabGroup
   tabs={[
     {
       value: "users",
@@ -144,7 +147,7 @@ Clean, minimal style with subtle indicator.
 ### With Badges
 
 ```tsx
-<TabGroup 
+<TabGroup
   tabs={[
     { value: "all", label: "All", badge: 24 },
     { value: "unread", label: "Unread", badge: 5 },
@@ -157,7 +160,7 @@ Clean, minimal style with subtle indicator.
 ### With Disabled Tabs
 
 ```tsx
-<TabGroup 
+<TabGroup
   tabs={[
     { value: "tab1", label: "Active" },
     { value: "tab2", label: "Disabled", disabled: true },
@@ -169,20 +172,13 @@ Clean, minimal style with subtle indicator.
 ### Full Width
 
 ```tsx
-<TabGroup 
-  tabs={tabs} 
-  variant="enclosed" 
-  fullWidth 
-/>
+<TabGroup tabs={tabs} variant="enclosed" fullWidth />
 ```
 
 ### Without Animation
 
 ```tsx
-<TabGroup 
-  tabs={tabs} 
-  animated={false}
-/>
+<TabGroup tabs={tabs} animated={false} />
 ```
 
 ### Controlled Mode
@@ -190,49 +186,43 @@ Clean, minimal style with subtle indicator.
 ```tsx
 const [currentTab, setCurrentTab] = useState("tab1")
 
-return (
-  <TabGroup 
-    tabs={tabs}
-    value={currentTab}
-    onValueChange={setCurrentTab}
-  />
-)
+return <TabGroup tabs={tabs} value={currentTab} onValueChange={setCurrentTab} />
 ```
 
 ## API Reference
 
 ### TabGroup Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `tabs` | `Tab[]` | required | Array of tab objects |
-| `defaultValue` | `string` | First tab | Initial active tab (uncontrolled) |
-| `value` | `string` | - | Current active tab (controlled) |
-| `onValueChange` | `(value: string) => void` | - | Callback when tab changes |
-| `variant` | `"default" \| "pills" \| "underline" \| "enclosed" \| "solid" \| "buttons" \| "minimal"` | `"default"` | Visual style variant |
-| `size` | `"sm" \| "md" \| "lg"` | `"md"` | Size of the tabs |
-| `fullWidth` | `boolean` | `false` | Whether tabs take full width |
-| `animated` | `boolean` | `true` | Enable/disable indicator animation |
-| `className` | `string` | - | Additional CSS classes |
+| Prop            | Type                                                                                     | Default     | Description                        |
+| --------------- | ---------------------------------------------------------------------------------------- | ----------- | ---------------------------------- |
+| `tabs`          | `Tab[]`                                                                                  | required    | Array of tab objects               |
+| `defaultValue`  | `string`                                                                                 | First tab   | Initial active tab (uncontrolled)  |
+| `value`         | `string`                                                                                 | -           | Current active tab (controlled)    |
+| `onValueChange` | `(value: string) => void`                                                                | -           | Callback when tab changes          |
+| `variant`       | `"default" \| "pills" \| "underline" \| "enclosed" \| "solid" \| "buttons" \| "minimal"` | `"default"` | Visual style variant               |
+| `size`          | `"sm" \| "md" \| "lg"`                                                                   | `"md"`      | Size of the tabs                   |
+| `fullWidth`     | `boolean`                                                                                | `false`     | Whether tabs take full width       |
+| `animated`      | `boolean`                                                                                | `true`      | Enable/disable indicator animation |
+| `className`     | `string`                                                                                 | -           | Additional CSS classes             |
 
 ### Tab Object
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `value` | `string` | ✓ | Unique identifier for the tab |
-| `label` | `string` | ✓ | Display text for the tab |
-| `icon` | `React.ReactNode` | - | Icon to display before label |
-| `badge` | `string \| number` | - | Badge to display after label |
-| `disabled` | `boolean` | - | Whether the tab is disabled |
+| Property   | Type               | Required | Description                   |
+| ---------- | ------------------ | -------- | ----------------------------- |
+| `value`    | `string`           | ✓        | Unique identifier for the tab |
+| `label`    | `string`           | ✓        | Display text for the tab      |
+| `icon`     | `React.ReactNode`  | -        | Icon to display before label  |
+| `badge`    | `string \| number` | -        | Badge to display after label  |
+| `disabled` | `boolean`          | -        | Whether the tab is disabled   |
 
 ### TabPanel Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `value` | `string` | ✓ | Value matching the tab |
-| `activeValue` | `string` | ✓ | Currently active tab value |
-| `children` | `React.ReactNode` | ✓ | Content to display |
-| `className` | `string` | - | Additional CSS classes |
+| Prop          | Type              | Required | Description                |
+| ------------- | ----------------- | -------- | -------------------------- |
+| `value`       | `string`          | ✓        | Value matching the tab     |
+| `activeValue` | `string`          | ✓        | Currently active tab value |
+| `children`    | `React.ReactNode` | ✓        | Content to display         |
+| `className`   | `string`          | -        | Additional CSS classes     |
 
 ## Keyboard Navigation
 
@@ -267,10 +257,7 @@ You can customize the component by:
 3. **Extending variants** - Add new variants in the component file
 
 ```tsx
-<TabGroup 
-  tabs={tabs}
-  className="my-custom-class"
-/>
+<TabGroup tabs={tabs} className="my-custom-class" />
 ```
 
 ## Migration from Radix
@@ -278,10 +265,11 @@ You can customize the component by:
 If you were using the old Radix-based component, the migration is simple:
 
 ### Before (Radix)
+
 ```tsx
 import * as Tabs from "@radix-ui/react-tabs"
 
-<Tabs.Root>
+;<Tabs.Root>
   <Tabs.List>
     <Tabs.Trigger value="tab1">Tab 1</Tabs.Trigger>
     <Tabs.Trigger value="tab2">Tab 2</Tabs.Trigger>
@@ -292,12 +280,13 @@ import * as Tabs from "@radix-ui/react-tabs"
 ```
 
 ### After (Custom)
+
 ```tsx
 import { TabGroup, TabPanel } from "@/components/TabGroup"
 
 const [tab, setTab] = useState("tab1")
 
-<TabGroup 
+<TabGroup
   tabs={[
     { value: "tab1", label: "Tab 1" },
     { value: "tab2", label: "Tab 2" },
@@ -329,6 +318,7 @@ Navigate to `TabGroup` to see all variants and configurations in action.
 ## Browser Support
 
 Works in all modern browsers that support:
+
 - CSS transitions
 - Flexbox
 - ES6+ JavaScript

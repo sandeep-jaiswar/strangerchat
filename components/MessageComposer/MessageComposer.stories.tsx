@@ -257,7 +257,7 @@ export const Interactive: Story = {
               ))}
             </ul>
           )}
-          {isTyping && <p className="mt-2 text-xs italic text-neutral-500">Typing...</p>}
+          {isTyping && <p className="mt-2 text-xs text-neutral-500 italic">Typing...</p>}
         </div>
         <MessageComposer
           onSend={(msg) => setMessages([...messages, msg])}

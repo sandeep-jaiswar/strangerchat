@@ -151,22 +151,13 @@ export const UserProfile = React.forwardRef<HTMLDivElement, UserProfileProps>(
             isCompact && "gap-2"
           )}
         >
-          <Avatar
-            src={avatarUrl}
-            alt={name}
-            status={status}
-            size={avatarSize as "xs" | "sm" | "md" | "lg" | "xl"}
-          />
+          <Avatar src={avatarUrl} alt={name} status={status} size={avatarSize as "xs" | "sm" | "md" | "lg" | "xl"} />
 
           <div className={cn("min-w-0 flex-1", isDetailed && "w-full")}>
             {/* Name and Verified Badge */}
             <div className={cn("flex items-center gap-2", isDetailed && "justify-center")}>
               <h3
-                className={cn(
-                  "truncate font-semibold text-neutral-900",
-                  sizeConfig.name,
-                  isDetailed && "text-[34px]"
-                )}
+                className={cn("truncate font-semibold text-neutral-900", sizeConfig.name, isDetailed && "text-[34px]")}
               >
                 {name}
               </h3>
@@ -184,45 +175,24 @@ export const UserProfile = React.forwardRef<HTMLDivElement, UserProfileProps>(
                 >
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                   <circle cx="12" cy="12" r="11" fill="currentColor" opacity="0.1" />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="11"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
+                  <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="2" />
                 </svg>
               )}
             </div>
 
             {/* Username */}
             {username && (
-              <p
-                className={cn(
-                  "truncate text-neutral-500",
-                  sizeConfig.username,
-                  isDetailed && "text-[20px]"
-                )}
-              >
+              <p className={cn("truncate text-neutral-500", sizeConfig.username, isDetailed && "text-[20px]")}>
                 @{username}
               </p>
             )}
 
             {/* Email */}
-            {email && !isCompact && (
-              <p className={cn("truncate text-neutral-600", sizeConfig.email)}>{email}</p>
-            )}
+            {email && !isCompact && <p className={cn("truncate text-neutral-600", sizeConfig.email)}>{email}</p>}
 
             {/* Bio */}
             {bio && !isCompact && (
-              <p
-                className={cn(
-                  "mt-2 text-neutral-700",
-                  sizeConfig.bio,
-                  isInline ? "line-clamp-2" : "line-clamp-3"
-                )}
-              >
+              <p className={cn("mt-2 text-neutral-700", sizeConfig.bio, isInline ? "line-clamp-2" : "line-clamp-3")}>
                 {bio}
               </p>
             )}
@@ -270,55 +240,38 @@ export const UserProfile = React.forwardRef<HTMLDivElement, UserProfileProps>(
             )}
 
             {/* Stats (Followers, Following, Posts) */}
-            {(followers !== undefined || following !== undefined || posts !== undefined) &&
-              !isCompact && (
-                <div
-                  className={cn(
-                    "mt-4 flex gap-6",
-                    isDetailed && "justify-center border-y border-neutral-100 py-4"
-                  )}
-                >
-                  {posts !== undefined && (
-                    <div className="text-center">
-                      <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>
-                        {formatNumber(posts)}
-                      </div>
-                      <div className={cn("text-neutral-500", sizeConfig.metadata)}>Posts</div>
+            {(followers !== undefined || following !== undefined || posts !== undefined) && !isCompact && (
+              <div className={cn("mt-4 flex gap-6", isDetailed && "justify-center border-y border-neutral-100 py-4")}>
+                {posts !== undefined && (
+                  <div className="text-center">
+                    <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>{formatNumber(posts)}</div>
+                    <div className={cn("text-neutral-500", sizeConfig.metadata)}>Posts</div>
+                  </div>
+                )}
+                {followers !== undefined && (
+                  <div className="text-center">
+                    <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>
+                      {formatNumber(followers)}
                     </div>
-                  )}
-                  {followers !== undefined && (
-                    <div className="text-center">
-                      <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>
-                        {formatNumber(followers)}
-                      </div>
-                      <div className={cn("text-neutral-500", sizeConfig.metadata)}>
-                        Followers
-                      </div>
+                    <div className={cn("text-neutral-500", sizeConfig.metadata)}>Followers</div>
+                  </div>
+                )}
+                {following !== undefined && (
+                  <div className="text-center">
+                    <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>
+                      {formatNumber(following)}
                     </div>
-                  )}
-                  {following !== undefined && (
-                    <div className="text-center">
-                      <div className={cn("font-semibold text-neutral-900", sizeConfig.name)}>
-                        {formatNumber(following)}
-                      </div>
-                      <div className={cn("text-neutral-500", sizeConfig.metadata)}>
-                        Following
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    <div className={cn("text-neutral-500", sizeConfig.metadata)}>Following</div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Badges */}
             {badges && badges.length > 0 && !isCompact && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {badges.map((badge, index) => (
-                  <Badge
-                    key={index}
-                    variant="soft"
-                    intent={badge.intent || "secondary"}
-                    size="sm"
-                  >
+                  <Badge key={index} variant="soft" intent={badge.intent || "secondary"} size="sm">
                     {badge.label}
                   </Badge>
                 ))}
@@ -349,14 +302,7 @@ export const UserProfile = React.forwardRef<HTMLDivElement, UserProfileProps>(
 
         {/* Action Buttons */}
         {showActions && (onMessage || onCall || onMore) && (
-          <div
-            className={cn(
-              "mt-4 flex gap-2",
-              isDetailed && "mt-6",
-              isCard && "mt-4",
-              isInline && "mt-3"
-            )}
-          >
+          <div className={cn("mt-4 flex gap-2", isDetailed && "mt-6", isCard && "mt-4", isInline && "mt-3")}>
             {onMessage && (
               <Button
                 variant="filled"
@@ -425,8 +371,8 @@ export const UserProfile = React.forwardRef<HTMLDivElement, UserProfileProps>(
             "w-full text-left transition-all duration-200",
             variantStyles[variant],
             "hover:bg-neutral-50 active:bg-neutral-100",
-            "focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2",
-            isCard && "hover:shadow-md hover:scale-[1.02]",
+            "focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none",
+            isCard && "hover:scale-[1.02] hover:shadow-md",
             className
           )}
         >

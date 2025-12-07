@@ -59,12 +59,7 @@ function isSameDay(date1: Date | undefined, date2: Date): boolean {
   )
 }
 
-function isDateDisabled(
-  date: Date,
-  minDate?: Date,
-  maxDate?: Date,
-  disabledDates?: Date[]
-): boolean {
+function isDateDisabled(date: Date, minDate?: Date, maxDate?: Date, disabledDates?: Date[]): boolean {
   if (minDate && date < minDate) return true
   if (maxDate && date > maxDate) return true
   if (disabledDates?.some((d) => isSameDay(d, date))) return true
@@ -138,10 +133,13 @@ export function Calendar({
     onChange?.(today)
   }, [onChange])
 
-  const handleYearChange = useCallback((newYear: number) => {
-    setCurrentDate(new Date(newYear, month, 1))
-    setShowYearPicker(false)
-  }, [month])
+  const handleYearChange = useCallback(
+    (newYear: number) => {
+      setCurrentDate(new Date(newYear, month, 1))
+      setShowYearPicker(false)
+    },
+    [month]
+  )
 
   const isSelected = useCallback(
     (day: number) => {
@@ -216,10 +214,7 @@ export function Calendar({
   }, [selectedDate, daysInMonth, handleDateClick])
 
   // Generate calendar grid
-  const prevMonthDaysArray = Array.from(
-    { length: firstDayOfMonth },
-    (_, i) => prevMonthDays - firstDayOfMonth + i + 1
-  )
+  const prevMonthDaysArray = Array.from({ length: firstDayOfMonth }, (_, i) => prevMonthDays - firstDayOfMonth + i + 1)
   const currentMonthDaysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const totalCells = prevMonthDaysArray.length + currentMonthDaysArray.length
   const nextMonthDays = totalCells > 35 ? 42 - totalCells : 35 - totalCells
@@ -262,13 +257,7 @@ export function Calendar({
     >
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <IconButton
-          variant="plain"
-          intent="secondary"
-          size="sm"
-          onClick={handlePrevMonth}
-          aria-label="Previous month"
-        >
+        <IconButton variant="plain" intent="secondary" size="sm" onClick={handlePrevMonth} aria-label="Previous month">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -282,7 +271,7 @@ export function Calendar({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-[17px] font-semibold transition-colors",
                 "text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200",
-                "focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2"
+                "focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none"
               )}
               aria-label={`${MONTHS[month]} ${year}, click to select year`}
             >
@@ -295,13 +284,7 @@ export function Calendar({
           )}
         </div>
 
-        <IconButton
-          variant="plain"
-          intent="secondary"
-          size="sm"
-          onClick={handleNextMonth}
-          aria-label="Next month"
-        >
+        <IconButton variant="plain" intent="secondary" size="sm" onClick={handleNextMonth} aria-label="Next month">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -375,9 +358,11 @@ export function Calendar({
               aria-current={today ? "date" : undefined}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-medium transition-all duration-200",
-                "focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2",
-                selected && !disabled && "bg-[#0071e3] text-white shadow-md hover:bg-[#0077ed] active:bg-[#005bb5] scale-105",
-                today && !selected && !disabled && "bg-[#0071e3]/10 text-[#0071e3] font-semibold ring-2 ring-[#0071e3]",
+                "focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none",
+                selected &&
+                  !disabled &&
+                  "scale-105 bg-[#0071e3] text-white shadow-md hover:bg-[#0077ed] active:bg-[#005bb5]",
+                today && !selected && !disabled && "bg-[#0071e3]/10 font-semibold text-[#0071e3] ring-2 ring-[#0071e3]",
                 !selected && !today && !disabled && "text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200",
                 disabled && "cursor-not-allowed text-neutral-300 hover:bg-transparent active:bg-transparent"
               )}
@@ -404,24 +389,12 @@ export function Calendar({
       {(showTodayButton || onClear) && (
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-neutral-100 pt-4">
           {showTodayButton && (
-            <Button
-              variant="plain"
-              intent="primary"
-              size="sm"
-              onClick={handleToday}
-              className="text-[15px]"
-            >
+            <Button variant="plain" intent="primary" size="sm" onClick={handleToday} className="text-[15px]">
               Today
             </Button>
           )}
           {onClear && selectedDate && (
-            <Button
-              variant="plain"
-              intent="secondary"
-              size="sm"
-              onClick={handleClear}
-              className="text-[15px]"
-            >
+            <Button variant="plain" intent="secondary" size="sm" onClick={handleClear} className="text-[15px]">
               Clear
             </Button>
           )}

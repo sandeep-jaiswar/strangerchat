@@ -115,7 +115,7 @@ export const Interactive: Story = {
       setTimeout(() => {
         console.log(`${mode} data:`, data)
         setLoading(false)
-        
+
         // Simulate success
         alert(`${mode === "login" ? "Logged in" : "Registered"} successfully!\n\nEmail: ${data.email}`)
       }, 2000)

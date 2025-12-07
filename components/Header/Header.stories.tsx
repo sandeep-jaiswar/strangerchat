@@ -65,14 +65,19 @@ type Story = StoryObj<typeof Header>
 
 // Helper icons
 const PlusIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
   </svg>
 )
 
 const SettingsIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+    />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 )
@@ -227,7 +232,7 @@ export const WithBadge: Story = {
     badge: "12",
     actions: (
       <IconButton variant="plain" aria-label="Mark all as read">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </IconButton>
@@ -292,7 +297,7 @@ export const Sticky: Story = {
     (Story) => (
       <div>
         <Story />
-        <div className="h-[200vh] p-8 space-y-4">
+        <div className="h-[200vh] space-y-4 p-8">
           <p className="text-neutral-600">Scroll down to see the sticky header in action!</p>
           {Array.from({ length: 50 }).map((_, i) => (
             <p key={i} className="text-neutral-500">
@@ -353,19 +358,19 @@ export const AllVariants: Story = {
   render: () => (
     <div className="space-y-8">
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Default</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Default</h3>
         <Header title="Default Header" subtitle="Standard appearance" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Translucent</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Translucent</h3>
         <Header title="Translucent Header" subtitle="With blur effect" variant="translucent" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Solid</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Solid</h3>
         <Header title="Solid Header" subtitle="No transparency" variant="solid" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Elevated</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Elevated</h3>
         <Header title="Elevated Header" subtitle="With shadow" variant="elevated" />
       </div>
     </div>
@@ -379,19 +384,19 @@ export const AllSizes: Story = {
   render: () => (
     <div className="space-y-8">
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Small (h-12)</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Small (h-12)</h3>
         <Header title="Small Header" size="sm" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Medium (h-14)</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Medium (h-14)</h3>
         <Header title="Medium Header" size="md" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Large (h-16)</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Large (h-16)</h3>
         <Header title="Large Header" size="lg" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2 px-4">Extra Large (h-20)</h3>
+        <h3 className="mb-2 px-4 text-sm font-semibold text-neutral-700">Extra Large (h-20)</h3>
         <Header title="Extra Large Header" size="xl" />
       </div>
     </div>
