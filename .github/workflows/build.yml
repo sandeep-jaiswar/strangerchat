@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    env:
+      # Mock environment variables for build
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'mock-secret-for-build-min-32-chars-long-test' }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-google-client-id' }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'mock-google-client-secret' }}
+      NEXT_PUBLIC_ADSENSE_CLIENT: ${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-placeholder' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.github/nodejs.version'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.0.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Analyze bundle size
+        run: |
+          if [ -f ".next/analyze/client.html" ]; then
+            echo "Bundle analysis completed"
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next
+          retention-days: 7

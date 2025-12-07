@@ -1,0 +1,108 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    env:
+      NEXTAUTH_SECRET: 'mock-secret-for-bundle-analysis-min-32-chars-long'
+      GOOGLE_CLIENT_ID: 'mock-google-client-id'
+      GOOGLE_CLIENT_SECRET: 'mock-google-client-secret'
+      NEXT_PUBLIC_ADSENSE_CLIENT: 'ca-pub-placeholder'
+      ANALYZE: 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.github/nodejs.version'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.0.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Analyze bundle
+        run: pnpm analyze
+
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: .next/analyze/
+          retention-days: 30
+
+  storybook:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.github/nodejs.version'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.0.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+
+      - name: Upload Storybook build
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: storybook-static/
+          retention-days: 7
