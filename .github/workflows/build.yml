@@ -14,15 +14,36 @@ jobs:
   build:
     name: Build Application
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
-      # Mock environment variables for build
-      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'mock-secret-for-build-min-32-chars-long-test' }}
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'mock-google-client-id' }}
-      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'mock-google-client-secret' }}
-      NEXT_PUBLIC_ADSENSE_CLIENT: ${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-placeholder' }}
+      # Environment variables for build - use secrets or fail
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      NEXT_PUBLIC_ADSENSE_CLIENT: ${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.NEXTAUTH_SECRET }}" ]; then
+            echo "⚠️ NEXTAUTH_SECRET not set, using fallback for build test"
+            echo "NEXTAUTH_SECRET=mock-secret-for-build-min-32-chars-long-test" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ]; then
+            echo "⚠️ GOOGLE_CLIENT_ID not set, using fallback for build test"
+            echo "GOOGLE_CLIENT_ID=mock-google-client-id" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]; then
+            echo "⚠️ GOOGLE_CLIENT_SECRET not set, using fallback for build test"
+            echo "GOOGLE_CLIENT_SECRET=mock-google-client-secret" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT }}" ]; then
+            echo "⚠️ NEXT_PUBLIC_ADSENSE_CLIENT not set, using fallback for build test"
+            echo "NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-placeholder" >> $GITHUB_ENV
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -15,6 +15,8 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     env:
       # Mock environment variables for E2E tests
       NEXTAUTH_SECRET: 'mock-secret-for-e2e-tests-min-32-chars-long-test-key'

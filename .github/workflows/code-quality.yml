@@ -14,6 +14,8 @@ jobs:
   bundle-analysis:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       NEXTAUTH_SECRET: 'mock-secret-for-bundle-analysis-min-32-chars-long'
       GOOGLE_CLIENT_ID: 'mock-google-client-id'
@@ -65,6 +67,8 @@ jobs:
   storybook:
     name: Build Storybook
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
