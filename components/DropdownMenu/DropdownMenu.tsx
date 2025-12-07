@@ -97,7 +97,7 @@ export const DropdownMenu = React.forwardRef<HTMLDivElement, DropdownMenuProps>(
       }
     }
 
-    const renderMenuItem = (item: DropdownMenuItem, isSubmenu = false) => {
+    const renderMenuItem = (item: DropdownMenuItem, _isSubmenu = false) => {
       const hasSubmenu = !!item.submenu
       const isSubmenuOpen = openSubmenuId === item.id
 

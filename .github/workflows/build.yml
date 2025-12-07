@@ -1,0 +1,90 @@
+name: Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Environment variables for build - use secrets or fail
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      NEXT_PUBLIC_ADSENSE_CLIENT: ${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.NEXTAUTH_SECRET }}" ]; then
+            echo "⚠️ NEXTAUTH_SECRET not set, using fallback for build test"
+            echo "NEXTAUTH_SECRET=mock-secret-for-build-min-32-chars-long-test" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ]; then
+            echo "⚠️ GOOGLE_CLIENT_ID not set, using fallback for build test"
+            echo "GOOGLE_CLIENT_ID=mock-google-client-id" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]; then
+            echo "⚠️ GOOGLE_CLIENT_SECRET not set, using fallback for build test"
+            echo "GOOGLE_CLIENT_SECRET=mock-google-client-secret" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT }}" ]; then
+            echo "⚠️ NEXT_PUBLIC_ADSENSE_CLIENT not set, using fallback for build test"
+            echo "NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-placeholder" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.github/nodejs.version'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.0.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Analyze bundle size
+        run: |
+          if [ -f ".next/analyze/client.html" ]; then
+            echo "Bundle analysis completed"
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next
+          retention-days: 7

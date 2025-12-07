@@ -6,7 +6,7 @@ import { CircularProgress, ProgressBar } from "./ProgressBar"
 
 describe("ProgressBar", () => {
   it("renders basic progress bar without label (default props)", () => {
-    const { container } = render(<ProgressBar value={50} />)
+    render(<ProgressBar value={50} />)
 
     // outer progress wrapper
     const progress = screen.getByRole("progressbar")
@@ -18,64 +18,71 @@ describe("ProgressBar", () => {
     expect(progress).toHaveAttribute("aria-valuemax", "100")
 
     // inner bar width ~ 50%
-    const inner = container.querySelector("div > div") as HTMLDivElement
+    const inner = progress.querySelector("div") as HTMLDivElement
     expect(inner).toBeInTheDocument()
     expect(inner.style.width).toBe("50%")
   })
 
   it("clamps percentage between 0 and 100 (negative value)", () => {
-    const { container } = render(<ProgressBar value={-20} />)
+    render(<ProgressBar value={-20} />)
 
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveAttribute("aria-valuenow", "-20")
 
-    const inner = container.querySelector("div > div") as HTMLDivElement
+    const inner = progress.querySelector("div") as HTMLDivElement
     expect(inner.style.width).toBe("0%") // clamped to 0
   })
 
   it("clamps percentage between 0 and 100 (value > max)", () => {
-    const { container } = render(<ProgressBar value={150} max={100} />)
+    render(<ProgressBar value={150} max={100} />)
 
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveAttribute("aria-valuenow", "150")
     expect(progress).toHaveAttribute("aria-valuemax", "100")
 
-    const inner = container.querySelector("div > div") as HTMLDivElement
+    const inner = progress.querySelector("div") as HTMLDivElement
     expect(inner.style.width).toBe("100%") // clamped to 100
   })
 
   it("handles custom max correctly", () => {
-    const { container } = render(<ProgressBar value={25} max={200} />)
+    render(<ProgressBar value={25} max={200} />)
 
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveAttribute("aria-valuenow", "25")
     expect(progress).toHaveAttribute("aria-valuemax", "200")
 
-    const inner = container.querySelector("div > div") as HTMLDivElement
+    const inner = progress.querySelector("div") as HTMLDivElement
     // 25 / 200 = 12.5% -> rounded width string "12.5%"
     expect(inner.style.width).toBe("12.5%")
   })
 
   it("applies intent classes for different intents", () => {
-    const { container: primaryContainer } = render(<ProgressBar value={10} intent="primary" />)
-    const primaryInner = primaryContainer.querySelector("div > div") as HTMLDivElement
-    expect(primaryInner.className).toContain("bg-[#0071e3]")
+    const { unmount, rerender } = render(<ProgressBar value={10} intent="primary" />)
+    let progress = screen.getByRole("progressbar")
+    let inner = progress.querySelector("div") as HTMLDivElement
+    expect(inner.className).toContain("bg-[#0071e3]")
 
-    const { container: successContainer } = render(<ProgressBar value={10} intent="success" />)
-    const successInner = successContainer.querySelector("div > div") as HTMLDivElement
-    expect(successInner.className).toContain("bg-[#34c759]")
+    rerender(<ProgressBar value={10} intent="success" />)
+    progress = screen.getByRole("progressbar")
+    inner = progress.querySelector("div") as HTMLDivElement
+    expect(inner.className).toContain("bg-[#34c759]")
 
-    const { container: warningContainer } = render(<ProgressBar value={10} intent="warning" />)
-    const warningInner = warningContainer.querySelector("div > div") as HTMLDivElement
-    expect(warningInner.className).toContain("bg-[#ff9500]")
+    rerender(<ProgressBar value={10} intent="warning" />)
+    progress = screen.getByRole("progressbar")
+    inner = progress.querySelector("div") as HTMLDivElement
+    expect(inner.className).toContain("bg-[#ff9500]")
 
-    const { container: dangerContainer } = render(<ProgressBar value={10} intent="danger" />)
-    const dangerInner = dangerContainer.querySelector("div > div") as HTMLDivElement
-    expect(dangerInner.className).toContain("bg-[#ff3b30]")
+    rerender(<ProgressBar value={10} intent="danger" />)
+    progress = screen.getByRole("progressbar")
+    inner = progress.querySelector("div") as HTMLDivElement
+    expect(inner.className).toContain("bg-[#ff3b30]")
 
-    const { container: infoContainer } = render(<ProgressBar value={10} intent="info" />)
-    const infoInner = infoContainer.querySelector("div > div") as HTMLDivElement
-    expect(infoInner.className).toContain("bg-[#007aff]")
+    rerender(<ProgressBar value={10} intent="info" />)
+    progress = screen.getByRole("progressbar")
+    inner = progress.querySelector("div") as HTMLDivElement
+    expect(inner.className).toContain("bg-[#007aff]")
+
+    unmount()
   })
 
   it("applies size classes correctly", () => {
@@ -93,12 +100,12 @@ describe("ProgressBar", () => {
   })
 
   it("applies custom className to the progress bar wrapper", () => {
-    const { container } = render(<ProgressBar value={10} className="custom-class" />)
+    render(<ProgressBar value={10} className="custom-class" />)
 
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveClass("custom-class")
 
-    const inner = container.querySelector("div > div") as HTMLDivElement
+    const inner = progress.querySelector("div") as HTMLDivElement
     expect(inner).toBeInTheDocument()
   })
 
@@ -204,7 +211,7 @@ describe("CircularProgress", () => {
   it("respects custom size and strokeWidth and label font size", () => {
     const size = 120
     const strokeWidth = 12
-    const { container } = render(<CircularProgress value={60} size={size} strokeWidth={strokeWidth} />)
+    render(<CircularProgress value={60} size={size} strokeWidth={strokeWidth} />)
 
     const svg = screen.getByRole("progressbar")
     expect(svg).toHaveAttribute("width", String(size))
@@ -242,9 +249,7 @@ describe("CircularProgress", () => {
   })
 
   it("can hide label when showLabel is false", () => {
-    const { container } = render(<CircularProgress value={30} showLabel={false} />)
-
-    // progressbar is still there
+    const { container } = render(<CircularProgress value={60} showLabel={false} />)
     const svg = screen.getByRole("progressbar")
     expect(svg).toBeInTheDocument()
 

@@ -1,215 +1,456 @@
 import { render, screen } from "@testing-library/react"
-import React from "react"
-import { describe, expect, it } from "vitest"
-import "@testing-library/jest-dom/vitest"
-
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { DotsLoader, Loader } from "./Loader"
 
-describe("Loader", () => {
-  it("renders default loader without overlay and without label", () => {
-    const { container } = render(<Loader />)
-
-    const status = screen.getByRole("status")
-    expect(status).toBeInTheDocument()
-    expect(status).toHaveClass("flex", "flex-col", "items-center", "justify-center", "gap-3")
-
-    // Spinner element (first child)
-    const spinner = container.querySelector("div > div") as HTMLDivElement
-    expect(spinner).toBeInTheDocument()
-    // default intent = primary, default size = md
-    expect(spinner.className).toContain("border-[#0071e3]")
-    expect(spinner.className).toContain("border-t-transparent")
-    expect(spinner.className).toContain("w-6")
-    expect(spinner.className).toContain("h-6")
-    expect(spinner.className).toContain("animate-spin")
-
-    // No visible label
-    const visibleLabels = container.querySelectorAll("span:not(.sr-only)")
-    expect(visibleLabels.length).toBe(0)
-
-    // sr-only fallback text
-    const srOnly = container.querySelector("span.sr-only") as HTMLSpanElement
-    expect(srOnly).toBeInTheDocument()
-    expect(srOnly).toHaveTextContent("Loading...")
+describe("Loader Component", () => {
+  beforeEach(() => {
+    document.body.innerHTML = ""
   })
 
-  it("renders label and uses it in sr-only text", () => {
-    const label = "Loading data"
-    const { container } = render(<Loader label={label} />)
-
-    // visible label
-    const labelEl = screen.getByText(label)
-    expect(labelEl).toBeInTheDocument()
-    expect(labelEl).toHaveClass("text-sm", "font-medium", "text-gray-700")
-
-    // sr-only uses the same label
-    const srOnly = container.querySelector("span.sr-only") as HTMLSpanElement
-    expect(srOnly).toBeInTheDocument()
-    expect(srOnly).toHaveTextContent(label)
+  afterEach(() => {
+    document.body.innerHTML = ""
   })
 
-  it("applies intent and size variants correctly", () => {
-    const intents: Array<["primary" | "secondary" | "success" | "warning" | "danger" | "white", string]> = [
-      ["primary", "border-[#0071e3]"],
-      ["secondary", "border-gray-400"],
-      ["success", "border-[#34c759]"],
-      ["warning", "border-[#ff9500]"],
-      ["danger", "border-[#ff3b30]"],
-      ["white", "border-white"],
-    ]
-
-    const sizes: Array<["xs" | "sm" | "md" | "lg" | "xl", string, string]> = [
-      ["xs", "w-3", "h-3"],
-      ["sm", "w-4", "h-4"],
-      ["md", "w-6", "h-6"],
-      ["lg", "w-8", "h-8"],
-      ["xl", "w-12", "h-12"],
-    ]
-
-    intents.forEach(([intent, className]) => {
-      const { container, unmount } = render(<Loader intent={intent} />)
-      const spinner = container.querySelector("div > div") as HTMLDivElement
-      expect(spinner.className).toContain(className)
-      expect(spinner.className).toContain("border-t-transparent")
-      unmount()
+  describe("Basic Rendering", () => {
+    it("renders with default props", () => {
+      render(<Loader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toBeInTheDocument()
+      expect(screen.getByText("Loading...")).toBeInTheDocument()
     })
 
-    sizes.forEach(([size, wClass, hClass]) => {
-      const { container, unmount } = render(<Loader size={size} />)
-      const spinner = container.querySelector("div > div") as HTMLDivElement
-      expect(spinner.className).toContain(wClass)
-      expect(spinner.className).toContain(hClass)
-      unmount()
+    it("renders with custom label", () => {
+      render(<Loader label="Please wait..." />)
+      const visibleLabel = screen.getByText("Please wait...", { selector: "span:not(.sr-only)" })
+      expect(visibleLabel).toBeInTheDocument()
+      expect(visibleLabel).toHaveClass("text-sm")
+    })
+
+    it("renders without label", () => {
+      render(<Loader />)
+      const visibleLabel = screen.queryByText("Loading...", { selector: "span:not(.sr-only)" })
+      expect(visibleLabel).not.toBeInTheDocument()
+      // But sr-only text should be present
+      expect(screen.getByText("Loading...")).toHaveClass("sr-only")
+    })
+
+    it("has correct accessibility attributes", () => {
+      render(<Loader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveAttribute("aria-live", "polite")
+    })
+
+    it("forwards ref correctly", () => {
+      const ref = { current: null }
+      render(<Loader ref={ref} />)
+      expect(ref.current).toBeInstanceOf(HTMLDivElement)
+    })
+
+    it("has displayName set", () => {
+      expect(Loader.displayName).toBe("Loader")
     })
   })
 
-  it("applies custom className to root content when not overlay", () => {
-    render(<Loader className="custom-loader" />)
+  describe("Size Variants", () => {
+    it("renders xs size", () => {
+      const { container } = render(<Loader size="xs" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-3", "h-3")
+    })
 
-    const status = screen.getByRole("status")
-    expect(status).toHaveClass("custom-loader")
-    // non-overlay should NOT have overlay fixed classes
-    expect(status.className).not.toContain("fixed")
-    expect(status.className).not.toContain("inset-0")
+    it("renders sm size", () => {
+      const { container } = render(<Loader size="sm" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-4", "h-4")
+    })
+
+    it("renders md size (default)", () => {
+      const { container } = render(<Loader size="md" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-6", "h-6")
+    })
+
+    it("renders lg size", () => {
+      const { container } = render(<Loader size="lg" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-8", "h-8")
+    })
+
+    it("renders xl size", () => {
+      const { container } = render(<Loader size="xl" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-12", "h-12")
+    })
+
+    it("uses md size by default", () => {
+      const { container } = render(<Loader />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-6", "h-6")
+    })
   })
 
-  it("renders as overlay when overlay is true", () => {
-    render(<Loader overlay label="Overlay loading" className="overlay-extra" />)
+  describe("Intent Colors", () => {
+    it("renders primary intent (default)", () => {
+      const { container } = render(<Loader intent="primary" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-[#0071e3]", "border-t-transparent")
+    })
 
-    // Overlay wrapper
-    const overlayWrapper = screen.getByText("Overlay loading").parentElement!.parentElement as HTMLElement
-    expect(overlayWrapper).toBeInTheDocument()
-    expect(overlayWrapper).toHaveClass(
-      "fixed",
-      "inset-0",
-      "z-[200]",
-      "flex",
-      "items-center",
-      "justify-center",
-      "bg-white/80",
-      "backdrop-blur-sm"
-    )
-    expect(overlayWrapper).toHaveClass("overlay-extra")
+    it("renders secondary intent", () => {
+      const { container } = render(<Loader intent="secondary" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-gray-400", "border-t-transparent")
+    })
 
-    // Inner content (the forwarded ref target) is role="status"
-    const status = screen.getByRole("status")
-    expect(status).toBeInTheDocument()
-    // For overlay, content should NOT have the custom className
-    expect(status.className).not.toContain("overlay-extra")
+    it("renders success intent", () => {
+      const { container } = render(<Loader intent="success" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-[#34c759]", "border-t-transparent")
+    })
+
+    it("renders warning intent", () => {
+      const { container } = render(<Loader intent="warning" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-[#ff9500]", "border-t-transparent")
+    })
+
+    it("renders danger intent", () => {
+      const { container } = render(<Loader intent="danger" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-[#ff3b30]", "border-t-transparent")
+    })
+
+    it("renders white intent", () => {
+      const { container } = render(<Loader intent="white" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-white", "border-t-transparent")
+    })
+
+    it("uses primary intent by default", () => {
+      const { container } = render(<Loader />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("border-[#0071e3]")
+    })
   })
 
-  it("forwards ref to the content container", () => {
-    const ref = React.createRef<HTMLDivElement>()
-    const { rerender } = render(<Loader ref={ref} />)
+  describe("Overlay Mode", () => {
+    it("renders as overlay when overlay prop is true", () => {
+      const { container } = render(<Loader overlay={true} />)
+      const overlay = container.querySelector(".fixed.inset-0")
+      expect(overlay).toBeInTheDocument()
+      expect(overlay).toHaveClass("z-[200]", "bg-white/80", "backdrop-blur-sm")
+    })
 
-    expect(ref.current).toBeInstanceOf(HTMLDivElement)
-    // In non-overlay mode, ref is the same as the role=status element
-    expect(ref.current).toBe(screen.getByRole("status"))
+    it("does not render as overlay by default", () => {
+      const { container } = render(<Loader />)
+      const overlay = container.querySelector(".fixed.inset-0")
+      expect(overlay).not.toBeInTheDocument()
+    })
 
-    // In overlay mode, ref still points to the content div inside overlay wrapper
-    const ref2 = React.createRef<HTMLDivElement>()
-    rerender(<Loader ref={ref2} overlay />)
-    expect(ref2.current).toBeInstanceOf(HTMLDivElement)
-    expect(ref2.current).toBe(screen.getByRole("status"))
+    it("renders inline when overlay is false", () => {
+      const { container } = render(<Loader overlay={false} />)
+      const overlay = container.querySelector(".fixed.inset-0")
+      expect(overlay).not.toBeInTheDocument()
+    })
+
+    it("applies className to overlay wrapper when in overlay mode", () => {
+      const { container } = render(<Loader overlay={true} className="custom-overlay" />)
+      const overlay = container.querySelector(".fixed.inset-0")
+      expect(overlay).toHaveClass("custom-overlay")
+    })
+
+    it("applies className to content wrapper when not in overlay mode", () => {
+      render(<Loader overlay={false} className="custom-class" />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("custom-class")
+    })
+
+    it("has dark mode styles in overlay mode", () => {
+      const { container } = render(<Loader overlay={true} />)
+      const overlay = container.querySelector(".fixed.inset-0")
+      expect(overlay).toHaveClass("dark:bg-gray-900/80")
+    })
   })
 
-  it("has correct displayName", () => {
-    expect(Loader.displayName).toBe("Loader")
+  describe("Label Styling", () => {
+    it("applies correct label classes", () => {
+      render(<Loader label="Loading content..." />)
+      const visibleLabel = screen.getByText("Loading content...", { selector: "span:not(.sr-only)" })
+      expect(visibleLabel).toHaveClass("text-sm", "font-medium", "text-gray-700")
+    })
+
+    it("has dark mode styles for label", () => {
+      render(<Loader label="Loading..." />)
+      const visibleLabel = screen.getByText("Loading...", { selector: "span:not(.sr-only)" })
+      expect(visibleLabel).toHaveClass("dark:text-gray-300")
+    })
+
+    it("shows sr-only text when label is provided", () => {
+      render(<Loader label="Custom loading" />)
+      const srOnlyText = screen.getAllByText("Custom loading").find((el) => el.classList.contains("sr-only"))
+      expect(srOnlyText).toBeInTheDocument()
+    })
+
+    it("shows default sr-only text when no label provided", () => {
+      render(<Loader />)
+      const srOnlyText = screen.getByText("Loading...", { selector: ".sr-only" })
+      expect(srOnlyText).toBeInTheDocument()
+    })
+  })
+
+  describe("Container Styling", () => {
+    it("has flex layout classes", () => {
+      render(<Loader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("flex", "flex-col", "items-center", "justify-center", "gap-3")
+    })
+
+    it("spinner has correct base classes", () => {
+      const { container } = render(<Loader />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("inline-block", "rounded-full", "border-2", "border-solid")
+    })
+  })
+
+  describe("Custom Props", () => {
+    it("passes through additional props", () => {
+      render(<Loader data-testid="custom-loader" />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveAttribute("data-testid", "custom-loader")
+    })
+
+    it("merges custom className with defaults", () => {
+      render(<Loader className="my-custom-class" />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("my-custom-class", "flex", "items-center")
+    })
+  })
+
+  describe("Combined Props", () => {
+    it("combines size and intent correctly", () => {
+      const { container } = render(<Loader size="xl" intent="success" />)
+      const spinner = container.querySelector(".animate-spin")
+      expect(spinner).toHaveClass("w-12", "h-12", "border-[#34c759]")
+    })
+
+    it("combines overlay with label", () => {
+      const { container } = render(<Loader overlay={true} label="Processing..." />)
+      expect(container.querySelector(".fixed.inset-0")).toBeInTheDocument()
+      expect(screen.getByText("Processing...", { selector: "span:not(.sr-only)" })).toBeInTheDocument()
+    })
+
+    it("combines all props together", () => {
+      const { container } = render(
+        <Loader overlay={true} size="lg" intent="danger" label="Error loading" className="custom" />
+      )
+      const overlay = container.querySelector(".fixed.inset-0")
+      const spinner = container.querySelector(".animate-spin")
+      expect(overlay).toHaveClass("custom")
+      expect(spinner).toHaveClass("w-8", "h-8", "border-[#ff3b30]")
+      expect(screen.getByText("Error loading", { selector: "span:not(.sr-only)" })).toBeInTheDocument()
+    })
   })
 })
 
-describe("DotsLoader", () => {
-  it("renders default dots loader with three dots and sr-only text", () => {
-    const { container } = render(<DotsLoader />)
-
-    const status = screen.getByRole("status")
-    expect(status).toBeInTheDocument()
-    expect(status).toHaveClass("inline-flex", "items-center", "gap-1")
-
-    const dots = container.querySelectorAll("div > div")
-    expect(dots.length).toBe(3)
-
-    // default intent = primary, default size = md
-    dots.forEach((dotEl) => {
-      const dotClass = (dotEl as HTMLDivElement).className
-      expect(dotClass).toContain("bg-[#0071e3]")
-      expect(dotClass).toContain("w-2")
-      expect(dotClass).toContain("h-2")
-      expect(dotClass).toContain("animate-bounce")
-    })
-
-    const srOnly = container.querySelector("span.sr-only") as HTMLSpanElement
-    expect(srOnly).toBeInTheDocument()
-    expect(srOnly).toHaveTextContent("Loading...")
+describe("DotsLoader Component", () => {
+  beforeEach(() => {
+    document.body.innerHTML = ""
   })
 
-  it("applies animation delays to each dot", () => {
-    const { container } = render(<DotsLoader />)
-    const dots = container.querySelectorAll("div > div")
-
-    expect((dots[0] as HTMLDivElement).style.animationDelay).toBe("0ms")
-    expect((dots[1] as HTMLDivElement).style.animationDelay).toBe("150ms")
-    expect((dots[2] as HTMLDivElement).style.animationDelay).toBe("300ms")
+  afterEach(() => {
+    document.body.innerHTML = ""
   })
 
-  it("applies intent and size variants correctly", () => {
-    const intents: Array<["primary" | "secondary" | "success" | "warning" | "danger" | "white", string]> = [
-      ["primary", "bg-[#0071e3]"],
-      ["secondary", "bg-gray-400"],
-      ["success", "bg-[#34c759]"],
-      ["warning", "bg-[#ff9500]"],
-      ["danger", "bg-[#ff3b30]"],
-      ["white", "bg-white"],
-    ]
-
-    const sizes: Array<["xs" | "sm" | "md" | "lg" | "xl", string, string]> = [
-      ["xs", "w-1", "h-1"],
-      ["sm", "w-1.5", "h-1.5"],
-      ["md", "w-2", "h-2"],
-      ["lg", "w-2.5", "h-2.5"],
-      ["xl", "w-3", "h-3"],
-    ]
-
-    intents.forEach(([intent, bg]) => {
-      const { container, unmount } = render(<DotsLoader intent={intent} />)
-      const firstDot = container.querySelector("div > div") as HTMLDivElement
-      expect(firstDot.className).toContain(bg)
-      unmount()
+  describe("Basic Rendering", () => {
+    it("renders with default props", () => {
+      render(<DotsLoader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toBeInTheDocument()
     })
 
-    sizes.forEach(([size, wClass, hClass]) => {
-      const { container, unmount } = render(<DotsLoader size={size} />)
-      const firstDot = container.querySelector("div > div") as HTMLDivElement
-      expect(firstDot.className).toContain(wClass)
-      expect(firstDot.className).toContain(hClass)
-      unmount()
+    it("renders three dots", () => {
+      const { container } = render(<DotsLoader />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      expect(dots).toHaveLength(3)
+    })
+
+    it("has accessibility attributes", () => {
+      render(<DotsLoader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveAttribute("aria-live", "polite")
+    })
+
+    it("has sr-only loading text", () => {
+      render(<DotsLoader />)
+      expect(screen.getByText("Loading...")).toHaveClass("sr-only")
     })
   })
 
-  it("applies custom className to outer wrapper", () => {
-    render(<DotsLoader className="custom-dots" />)
+  describe("Size Variants", () => {
+    it("renders xs size", () => {
+      const { container } = render(<DotsLoader size="xs" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-1", "h-1")
+      })
+    })
 
-    const status = screen.getByRole("status")
-    expect(status).toHaveClass("custom-dots")
+    it("renders sm size", () => {
+      const { container } = render(<DotsLoader size="sm" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-1.5", "h-1.5")
+      })
+    })
+
+    it("renders md size (default)", () => {
+      const { container } = render(<DotsLoader size="md" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-2", "h-2")
+      })
+    })
+
+    it("renders lg size", () => {
+      const { container } = render(<DotsLoader size="lg" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-2.5", "h-2.5")
+      })
+    })
+
+    it("renders xl size", () => {
+      const { container } = render(<DotsLoader size="xl" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-3", "h-3")
+      })
+    })
+
+    it("uses md size by default", () => {
+      const { container } = render(<DotsLoader />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-2", "h-2")
+      })
+    })
+  })
+
+  describe("Intent Colors", () => {
+    it("renders primary intent (default)", () => {
+      const { container } = render(<DotsLoader intent="primary" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-[#0071e3]")
+      })
+    })
+
+    it("renders secondary intent", () => {
+      const { container } = render(<DotsLoader intent="secondary" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-gray-400")
+      })
+    })
+
+    it("renders success intent", () => {
+      const { container } = render(<DotsLoader intent="success" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-[#34c759]")
+      })
+    })
+
+    it("renders warning intent", () => {
+      const { container } = render(<DotsLoader intent="warning" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-[#ff9500]")
+      })
+    })
+
+    it("renders danger intent", () => {
+      const { container } = render(<DotsLoader intent="danger" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-[#ff3b30]")
+      })
+    })
+
+    it("renders white intent", () => {
+      const { container } = render(<DotsLoader intent="white" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-white")
+      })
+    })
+
+    it("uses primary intent by default", () => {
+      const { container } = render(<DotsLoader />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("bg-[#0071e3]")
+      })
+    })
+  })
+
+  describe("Animation Delays", () => {
+    it("applies staggered animation delays to dots", () => {
+      const { container } = render(<DotsLoader />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      expect(dots[0]).toHaveStyle({ animationDelay: "0ms" })
+      expect(dots[1]).toHaveStyle({ animationDelay: "150ms" })
+      expect(dots[2]).toHaveStyle({ animationDelay: "300ms" })
+    })
+  })
+
+  describe("Container Styling", () => {
+    it("has correct container classes", () => {
+      render(<DotsLoader />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("inline-flex", "items-center", "gap-1")
+    })
+
+    it("each dot has rounded-full class", () => {
+      const { container } = render(<DotsLoader />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("rounded-full")
+      })
+    })
+  })
+
+  describe("Custom Props", () => {
+    it("applies custom className", () => {
+      render(<DotsLoader className="custom-dots" />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("custom-dots")
+    })
+
+    it("merges custom className with defaults", () => {
+      render(<DotsLoader className="my-custom-class" />)
+      const loader = screen.getByRole("status")
+      expect(loader).toHaveClass("my-custom-class", "inline-flex", "items-center")
+    })
+  })
+
+  describe("Combined Props", () => {
+    it("combines size and intent correctly", () => {
+      const { container } = render(<DotsLoader size="xl" intent="success" />)
+      const dots = container.querySelectorAll(".animate-bounce")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-3", "h-3", "bg-[#34c759]")
+      })
+    })
+
+    it("combines all props together", () => {
+      const { container } = render(<DotsLoader size="lg" intent="danger" className="custom" />)
+      const loader = screen.getByRole("status")
+      const dots = container.querySelectorAll(".animate-bounce")
+      expect(loader).toHaveClass("custom")
+      dots.forEach((dot) => {
+        expect(dot).toHaveClass("w-2.5", "h-2.5", "bg-[#ff3b30]")
+      })
+    })
   })
 })
