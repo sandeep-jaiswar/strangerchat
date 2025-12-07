@@ -1,10 +1,123 @@
 "use client"
 
-import * as Popover from "@radix-ui/react-popover"
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { cn } from "utils/cn"
 import { Calendar } from "../Calendar"
 import { IconButton } from "../IconButton"
+
+/**
+ * Simple Popover implementation to replace Radix UI
+ */
+interface PopoverContextValue {
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+const PopoverContext = React.createContext<PopoverContextValue | null>(null)
+
+const usePopover = () => {
+  const context = React.useContext(PopoverContext)
+  if (!context) throw new Error("Popover components must be used within Popover.Root")
+  return context
+}
+
+const PopoverRoot: React.FC<{ open?: boolean; onOpenChange?: (open: boolean) => void; children: React.ReactNode }> = ({
+  open: controlledOpen,
+  onOpenChange,
+  children,
+}) => {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+
+  const setOpen = (newOpen: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(newOpen)
+    } else {
+      setInternalOpen(newOpen)
+    }
+  }
+
+  return <PopoverContext.Provider value={{ open, setOpen }}>{children}</PopoverContext.Provider>
+}
+
+const PopoverTrigger = React.forwardRef<
+  HTMLButtonElement,
+  { asChild?: boolean; disabled?: boolean; children: React.ReactElement }
+>(({ children, disabled }, ref) => {
+  const { setOpen } = usePopover()
+
+  return React.cloneElement(children, {
+    ref,
+    disabled,
+    onClick: (e: React.MouseEvent) => {
+      children.props.onClick?.(e)
+      if (!disabled) {
+        setOpen(true)
+      }
+    },
+  })
+})
+PopoverTrigger.displayName = "PopoverTrigger"
+
+const PopoverContent: React.FC<{ sideOffset?: number; className?: string; children: React.ReactNode }> = ({
+  sideOffset = 0,
+  className,
+  children,
+}) => {
+  const { open, setOpen } = usePopover()
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contentRef.current && !contentRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [open, setOpen])
+
+  if (!open) return null
+
+  return (
+    <div
+      ref={contentRef}
+      className={className}
+      style={{
+        position: "fixed",
+        zIndex: 50,
+        marginTop: `${sideOffset}px`,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+const PopoverPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <>{children}</>
+}
+
+const Popover = {
+  Root: PopoverRoot,
+  Trigger: PopoverTrigger,
+  Content: PopoverContent,
+  Portal: PopoverPortal,
+}
 
 /**
  * DatePicker Component - Apple Calendar-inspired Design

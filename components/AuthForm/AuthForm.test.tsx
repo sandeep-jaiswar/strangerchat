@@ -491,7 +491,7 @@ describe("AuthForm component", () => {
 
   describe("Form submission with preventDefault", () => {
     it("prevents default form submission", async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       render(<AuthForm type="login" onSubmit={mockOnSubmit} />)
 
       const form = screen.getByRole("button", { name: /sign in/i }).closest("form")

@@ -254,7 +254,7 @@ describe("UserProfile", () => {
     })
 
     it("displays metadata with custom icons", () => {
-      const { container } = render(
+      render(
         <UserProfile
           {...defaultProps}
           metadata={[
