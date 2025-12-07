@@ -1,6 +1,24 @@
 # StrangerChat — Anonymous Random Chat Application
 
+[![CI](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/ci.yml/badge.svg)](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/ci.yml)
+[![Build](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/build.yml/badge.svg)](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/build.yml)
+[![Security](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/security.yml/badge.svg)](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/security.yml)
+[![E2E Tests](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/e2e.yml/badge.svg)](https://github.com/sandeep-jaiswar/strangerchat/actions/workflows/e2e.yml)
+
 A world-class, professional anonymous chat application built with Next.js, NextAuth, and WebSocket for real-time communication. Connect with random strangers around the world instantly!
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Important Notes](#️-important-notes)
+- [Getting Started](#-getting-started)
+- [Architecture](#️-architecture)
+- [Testing](#-testing)
+- [CI/CD](#-cicd)
+- [Security](#-security)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## ⚡ Features
 
@@ -184,7 +202,9 @@ strangerchat/
 
 ## 🧪 Testing
 
-Run all tests:
+### Unit Tests (Vitest)
+
+Run all unit tests:
 
 ```bash
 pnpm test
@@ -202,10 +222,171 @@ Run tests with coverage:
 pnpm test:coverage
 ```
 
+Coverage requirements:
+- Unit tests: **>95% coverage**
+- All critical business logic must be tested
+- Tests run automatically on every push via GitHub Actions
+
+### E2E Tests (Playwright)
+
 Run end-to-end tests:
 
 ```bash
+pnpm e2e
+```
+
+Run in headless mode (CI):
+
+```bash
 pnpm e2e:headless
+```
+
+Run in UI mode (interactive):
+
+```bash
+pnpm e2e:ui
+```
+
+Coverage requirements:
+- E2E tests: **>95% coverage** of critical user flows
+- Tests run automatically on every pull request
+
+## 🔄 CI/CD
+
+### GitHub Actions Workflows
+
+The repository includes comprehensive CI/CD pipelines:
+
+#### **CI Workflow** (`.github/workflows/ci.yml`)
+Runs on every push and pull request:
+- ESLint code linting
+- Prettier formatting check
+- TypeScript type checking
+- Unit tests with coverage reporting
+- Coverage threshold validation (95%)
+
+#### **Build Workflow** (`.github/workflows/build.yml`)
+Verifies successful production builds:
+- Next.js build compilation
+- Bundle size analysis
+- Build artifact creation
+
+#### **E2E Tests Workflow** (`.github/workflows/e2e.yml`)
+Tests critical user flows:
+- Playwright browser tests
+- Multi-browser testing (Chromium, Firefox, WebKit)
+- Test report generation
+
+#### **Security Workflow** (`.github/workflows/security.yml`)
+Automated security scanning:
+- CodeQL analysis for vulnerabilities
+- Dependency review for known CVEs
+- NPM audit for package vulnerabilities
+- Runs daily and on every push
+
+#### **Code Quality Workflow** (`.github/workflows/code-quality.yml`)
+Code quality checks:
+- Bundle size analysis
+- Storybook build verification
+- Component documentation
+
+### Running Checks Locally
+
+Before pushing, ensure all checks pass:
+
+```bash
+# Linting
+pnpm lint
+
+# Type checking
+pnpm type-check
+
+# Tests
+pnpm test:coverage
+
+# E2E tests
+pnpm e2e
+
+# Build
+pnpm build
+```
+
+## 🔒 Security
+
+StrangerChat implements multiple security layers:
+
+### Authentication & Authorization
+- **NextAuth.js**: Industry-standard authentication
+- **JWT Tokens**: Secure session management
+- **OAuth 2.0**: Google and GitHub sign-in
+- **CSRF Protection**: Built-in by NextAuth
+
+### Code Security
+- **CodeQL Analysis**: Automated vulnerability scanning
+- **Dependency Scanning**: Daily security audits
+- **TypeScript**: Type safety to prevent common errors
+- **Input Validation**: Zod schemas for runtime checks
+
+### Environment Security
+- **Environment Variables**: Validated using @t3-oss/env-nextjs
+- **Secrets Management**: Never committed to repository
+- **.env.example**: Template for required variables
+
+### Security Best Practices
+- Regular dependency updates via Renovate Bot
+- Security advisories monitoring
+- Conventional commit messages for audit trail
+
+### Reporting Security Issues
+
+Please see [SECURITY.md](./SECURITY.md) for information on reporting security vulnerabilities.
+
+**DO NOT** create public issues for security concerns.
+
+## 🚀 Development Best Practices
+
+### Code Quality
+- **ESLint**: Enforces code style and catches errors
+- **Prettier**: Consistent code formatting
+- **TypeScript Strict Mode**: Maximum type safety
+- **Conventional Commits**: Standardized commit messages
+
+### Component Development
+- **Storybook**: Component playground and documentation
+- **CVA**: Consistent component variants
+- **Tailwind CSS**: Utility-first styling
+- **Accessibility**: WCAG compliance focus
+
+### Available Scripts
+
+```bash
+# Development
+pnpm dev                # Start dev server
+pnpm build             # Production build
+pnpm start             # Start production server
+
+# Code Quality
+pnpm lint              # Run ESLint
+pnpm lint:next         # Run Next.js linting
+pnpm format            # Format with Prettier
+pnpm format:check      # Check formatting
+pnpm type-check        # TypeScript check
+
+# Testing
+pnpm test              # Run unit tests
+pnpm test:watch        # Watch mode
+pnpm test:coverage     # With coverage
+pnpm e2e               # Run E2E tests
+pnpm e2e:headless      # E2E in headless mode
+pnpm e2e:ui            # E2E in UI mode
+
+# Documentation
+pnpm storybook         # Start Storybook
+pnpm build-storybook   # Build Storybook
+
+# Analysis
+pnpm analyze           # Bundle analysis
+pnpm coupling-graph    # Dependency graph
 ```
 
 ## 📦 Deployment
@@ -328,22 +509,6 @@ sub.on("message", (channel, message) => {
 })
 ```
 
-## 🔒 Security Considerations
-
-1. **Rate Limiting**: Implement rate limiting for:
-
-   - Authentication attempts
-   - Message sending
-   - Friend requests
-
-2. **Input Validation**: Validate all user input on server-side
-
-3. **XSS Prevention**: React handles this automatically, but be careful with `dangerouslySetInnerHTML`
-
-4. **CSRF Protection**: NextAuth includes CSRF protection
-
-5. **Environment Variables**: Never commit `.env.local` to version control
-
 ## 🎨 Customization
 
 ### Themes
@@ -370,128 +535,75 @@ module.exports = {
 4. Add new pages in `app/`
 5. Write tests for new functionality
 
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for details on:
+
+- Development workflow
+- Coding standards
+- Testing requirements
+- Pull request process
+
+Before contributing:
+1. Read the [Contributing Guide](./CONTRIBUTING.md)
+2. Check [open issues](https://github.com/sandeep-jaiswar/strangerchat/issues)
+3. Follow our coding standards
+4. Write tests for new features
+5. Ensure all CI checks pass
+
 ## 📝 License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) for details
 
 ## 🙏 Acknowledgments
 
 Built with:
 
-- [Next.js](https://nextjs.org/)
-- [NextAuth.js](https://next-auth.js.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Radix UI](https://www.radix-ui.com/)
-- [Framer Motion](https://www.framer.com/motion/)
+- [Next.js](https://nextjs.org/) - The React Framework
+- [NextAuth.js](https://next-auth.js.org/) - Authentication
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Radix UI](https://www.radix-ui.com/) - UI Components
+- [Framer Motion](https://www.framer.com/motion/) - Animations
+- [Vitest](https://vitest.dev/) - Unit Testing
+- [Playwright](https://playwright.dev/) - E2E Testing
 
 ---
 
-**Note**: This is a demonstration project. For production use, implement:
+## 📌 Project Status
 
-- Database persistence
-- Message history
-- Moderation tools
-- Analytics
-- Error tracking (Sentry)
-- Monitoring (Datadog, New Relic)
+**Current Status**: Active Development
 
-A production-ready template for building enterprise applications with Next.js. This boilerplate provides a solid foundation with carefully selected technologies and ready-to-go infrastructure to help you develop high-quality applications efficiently.
+This is a demonstration project showcasing best practices for:
+- Modern Next.js development
+- Real-time WebSocket communication
+- Comprehensive testing strategies
+- CI/CD automation
+- Security-first approach
 
-## Motivation
+### For Production Use
 
-While most Next.js boilerplates focus on individual developer needs with excessive complexity, **next-enterprise** prioritizes strategic simplicity for enterprise teams. It offers a streamlined foundation with high-impact features that maximize developer productivity and accelerate time-to-market for business-critical applications.
+Before deploying to production, implement:
 
-<a href="https://blazity.com/">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/assets/blazity-logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/assets/blazity-logo-light.svg">
-  <img alt="Logo" align="right" height="80" src="/assets/blazity-logo-light.svg">
-</picture>
-</a>
+- ✅ Database persistence (PostgreSQL/MongoDB)
+- ✅ Message history storage
+- ✅ Rate limiting middleware
+- ✅ Content moderation tools
+- ✅ Analytics integration
+- ✅ Error tracking (Sentry)
+- ✅ Performance monitoring
+- ✅ Horizontal scaling with Redis
+- ✅ CDN for static assets
+- ✅ Load balancing
 
-> [!NOTE] > **Blazity** is a group of Next.js architects. We help organizations architect, optimize, and deploy high-performance Next.js applications at scale. Contact us at [contact@blazity.com](https://blazity.com) if you’d like to talk about your project.
+---
 
-## Documentation
+## 📞 Support & Community
 
-There is a separate documentation that explains its functionality, highlights core business values and technical decisions, provides guidelines for future development, and includes architectural diagrams.
+- **Documentation**: [GitHub Wiki](https://github.com/sandeep-jaiswar/strangerchat/wiki)
+- **Issues**: [GitHub Issues](https://github.com/sandeep-jaiswar/strangerchat/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sandeep-jaiswar/strangerchat/discussions)
+- **Security**: [SECURITY.md](./SECURITY.md)
 
-We encourage you to [visit our docs (docs.blazity.com)](https://docs.blazity.com) to learn more
+---
 
-## Integrated features
-
-### Boilerplate
-
-With this template you will get all the boilerplate features included:
-
-- [Next.js 15](https://nextjs.org/) - Performance-optimized configuration using App Directory
-- [Tailwind CSS v4](https://tailwindcss.com/) - Utility-first CSS framework for efficient UI development
-- [ESlint 9](https://eslint.org/) and [Prettier](https://prettier.io/) - Code consistency and error prevention
-- [Corepack](https://github.com/nodejs/corepack) & [pnpm](https://pnpm.io/) as the package manager - For project management without compromises
-- [Strict TypeScript](https://www.typescriptlang.org/) - Enhanced type safety with carefully crafted config and [ts-reset](https://github.com/total-typescript/ts-reset) library
-- [GitHub Actions](https://github.com/features/actions) - Pre-configured workflows including bundle size and performance tracking
-- Perfect Lighthouse score - Optimized performance metrics
-- [Bundle analyzer](https://www.npmjs.com/package/@next/bundle-analyzer) - Monitor and manage bundle size during development
-- Testing suite - [Vitest](https://vitest.dev), [React Testing Library](https://testing-library.com/react), and [Playwright](https://playwright.dev/) for comprehensive testing
-- [Storybook](https://storybook.js.org/) - Component development and documentation
-- Advanced testing - Smoke and acceptance testing capabilities
-- [Conventional commits](https://www.conventionalcommits.org/) - Standardized commit history management
-- [Observability](https://opentelemetry.io/) - Open Telemetry integration
-- [Absolute imports](https://nextjs.org/docs/advanced-features/module-path-aliases) - Simplified import structure
-- [Health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) - Kubernetes-compatible monitoring
-- [Radix UI](https://www.radix-ui.com/) - Headless components for customization
-- [CVA](http://cva.style/) (Class Variance Authority) - Consistent design system creation
-- [Renovate BOT](https://www.whitesourcesoftware.com/free-developer-tools/renovate) - Automated dependency and security updates
-- [Patch-package](https://www.npmjs.com/package/patch-package) - External dependency fixes without compromises
-- Component relationship tools - Graph for managing coupling and cohesion
-- [Semantic Release](https://github.com/semantic-release/semantic-release) - Automated changelog generation
-- [T3 Env](https://env.t3.gg/) - Streamlined environment variable management
-
-### Infrastructure & deployments
-
-#### Vercel
-
-Easily deploy your Next.js app with [Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=github&utm_campaign=next-enterprise) by clicking the button below:
-
-[![Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/Blazity/next-enterprise)
-
-#### Custom cloud infrastructure
-
-**next-enterprise** offers dedicated infrastructure as code (IaC) solutions built with Terraform, designed specifically for deploying Next.js applications based on our extensive experience working with enterprise clients.
-
-Learn more in our [documentation (docs.blazity.com)][docs] how to quickstart with the deployments using simple CLI.
-
-#### Available cloud providers and theirs features:
-
-- **AWS (Amazon Web Services)**
-  - Automated provisioning of AWS infrastructure
-  - Scalable & secure setup using:
-    - VPC - Isolated network infrastructure
-    - Elastic Container Service (ECS) - Container orchestration
-    - Elastic Container Registry (ECR) - Container image storage
-    - Application Load Balancer - Traffic distribution
-    - S3 + CloudFront - Static asset delivery and caching
-    - AWS WAF - Web Application Firewall protection
-    - Redis Cluster - Caching
-  - CI/CD ready - Continuous integration and deployment pipeline
-
-_... more coming soon_
-
-### Team & maintenance
-
-**next-enterprise** is backed and maintained by [Blazity](https://blazity.com), providing up to date security features and integrated feature updates.
-
-#### Active maintainers
-
-- Igor Klepacki ([neg4n](https://github.com/neg4n)) - Open Source Software Developer
-- Tomasz Czechowski ([tomaszczechowski](https://github.com/tomaszczechowski)) - Solutions Architect & DevOps
-- Jakub Jabłoński ([jjablonski-it](https://github.com/jjablonski-it)) - Head of Integrations
-
-#### All-time contributors
-
-[bmstefanski](https://github.com/bmstefanski)
-
-## License
-
-MIT
-
-[docs]: https://docs.blazity.com/next-enterprise/deployments/enterprise-cli
+**Made with ❤️ by the StrangerChat Team**
