@@ -39,7 +39,7 @@ describe("AuthForm component", () => {
     it("renders submit button with correct text for login", () => {
       render(<AuthForm type="login" onSubmit={mockOnSubmit} />)
       expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument()
-    })C and ma
+    })
   })
 
   describe("Rendering - Register Form", () => {
@@ -337,7 +337,7 @@ describe("AuthForm component", () => {
       // Find the toggle button (eye icon button in password field)
       const passwordToggleButtons = screen.getAllByRole("button", { hidden: true })
       const passwordToggle = passwordToggleButtons.find((btn) => btn.getAttribute("tabIndex") === "-1")
-      
+
       if (passwordToggle) {
         await user.click(passwordToggle)
         expect(passwordInput.type).toBe("text")
@@ -357,7 +357,8 @@ describe("AuthForm component", () => {
       // Find toggle buttons with tabIndex -1
       const toggleButtons = screen.getAllByRole("button", { hidden: true })
       const confirmPasswordToggle = toggleButtons.find(
-        (btn) => btn.getAttribute("tabIndex") === "-1" && btn.closest('[aria-labelledby]')?.textContent?.includes("Confirm")
+        (btn) =>
+          btn.getAttribute("tabIndex") === "-1" && btn.closest("[aria-labelledby]")?.textContent?.includes("Confirm")
       )
 
       if (confirmPasswordToggle) {
@@ -526,13 +527,13 @@ describe("AuthForm component", () => {
       for (const email of validEmails) {
         const user = userEvent.setup()
         const { unmount } = render(<AuthForm type="login" onSubmit={mockOnSubmit} />)
-        
+
         const emailInput = screen.getByLabelText(/email/i)
         const passwordInput = screen.getByLabelText(/password/i)
-        
+
         await user.type(emailInput, email)
         await user.type(passwordInput, "password123")
-        
+
         const submitButton = screen.getByRole("button", { name: /sign in/i })
         await user.click(submitButton)
 
@@ -551,10 +552,10 @@ describe("AuthForm component", () => {
       for (const email of invalidEmails) {
         const user = userEvent.setup()
         const { unmount } = render(<AuthForm type="login" onSubmit={mockOnSubmit} />)
-        
+
         const emailInput = screen.getByLabelText(/email/i)
         await user.type(emailInput, email)
-        
+
         const submitButton = screen.getByRole("button", { name: /sign in/i })
         await user.click(submitButton)
 
@@ -595,7 +596,7 @@ describe("AuthForm component", () => {
       // Fill form with invalid data first
       const emailInput = screen.getByLabelText(/email/i)
       await user.type(emailInput, "invalid")
-      
+
       const submitButton = screen.getByRole("button", { name: /sign in/i })
       await user.click(submitButton)
 
