@@ -113,10 +113,6 @@ export const Required: Story = {
       if (v) setError("")
     }
 
-    const handleBlur = () => {
-      if (!value) setError("This field is required")
-    }
-
     return (
       <div className="w-80">
         <Select

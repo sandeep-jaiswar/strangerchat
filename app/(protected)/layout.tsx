@@ -1,7 +1,13 @@
 import { ReactNode } from "react"
+import { Metadata } from "next"
 import SessionProvider from "providers/SessionProvider"
 import { env } from "../../env.mjs"
 import "styles/tailwind.css"
+
+export const metadata: Metadata = {
+  title: "StrangerChat - Anonymous Random Chat",
+  description: "Connect with random strangers around the world instantly",
+}
 
 export default function RootLayout({
   children,

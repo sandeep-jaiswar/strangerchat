@@ -284,7 +284,7 @@ export const MultiStepForm: Story = {
   render: () => {
     const [step, setStep] = React.useState(1)
     const totalSteps = 4
-    const progress = (step / totalSteps) * 100
+    const _progress = (step / totalSteps) * 100
 
     return (
       <div className="w-96 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -324,7 +324,7 @@ export const MultiStepForm: Story = {
  */
 export const DownloadProgress: Story = {
   render: () => {
-    const [downloads, setDownloads] = React.useState([
+    const [downloads, _setDownloads] = React.useState([
       { id: 1, name: "Project-Report.pdf", progress: 45, status: "downloading" },
       { id: 2, name: "Presentation.pptx", progress: 100, status: "complete" },
       { id: 3, name: "Budget-2024.xlsx", progress: 12, status: "downloading" },
