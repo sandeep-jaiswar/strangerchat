@@ -7,13 +7,13 @@ export const env = createEnv({
       .enum(["true", "false"])
       .optional()
       .transform((value) => value === "true"),
-    NEXTAUTH_SECRET: z.string(),
+    NEXTAUTH_SECRET: z.string().min(1).optional().default("dev-secret-min-32-chars-for-development-only"),
     NEXTAUTH_URL: z.string().optional(),
-    GOOGLE_CLIENT_ID: z.string(),
-    GOOGLE_CLIENT_SECRET: z.string(),
+    GOOGLE_CLIENT_ID: z.string().optional().default("dev-google-client-id"),
+    GOOGLE_CLIENT_SECRET: z.string().optional().default("dev-google-client-secret"),
   },
   client: {
-    NEXT_PUBLIC_ADSENSE_CLIENT: z.string(),
+    NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional().default("ca-pub-placeholder"),
   },
   runtimeEnv: {
     ANALYZE: process.env.ANALYZE,

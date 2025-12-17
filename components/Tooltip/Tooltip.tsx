@@ -129,12 +129,7 @@ export function Tooltip({
 
   return (
     <>
-      <div
-        ref={triggerRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className="inline-block"
-      >
+      <div ref={triggerRef} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="inline-block">
         {children}
       </div>
       {open && (

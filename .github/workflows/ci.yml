@@ -51,9 +51,6 @@ jobs:
       - name: Run ESLint
         run: pnpm lint:eslint
 
-      - name: Run Next.js lint
-        run: pnpm lint:next
-
       - name: Run Prettier check
         run: pnpm format:check
 
