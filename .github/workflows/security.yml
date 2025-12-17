@@ -17,6 +17,12 @@ jobs:
       actions: read
       contents: read
       security-events: write
+    env:
+      # Mock environment variables for CodeQL build
+      NEXTAUTH_SECRET: 'mock-secret-for-codeql-min-32-chars-long-test-key'
+      GOOGLE_CLIENT_ID: 'mock-google-client-id'
+      GOOGLE_CLIENT_SECRET: 'mock-google-client-secret'
+      NEXT_PUBLIC_ADSENSE_CLIENT: 'ca-pub-placeholder'
 
     strategy:
       fail-fast: false
