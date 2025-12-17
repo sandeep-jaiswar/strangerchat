@@ -79,17 +79,9 @@ function LoginForm() {
 
         {/* Footer Links */}
         <div className="flex items-center justify-center gap-6 text-xs text-neutral-500">
-          <a href="#" className="hover:text-neutral-700">
-            Open in v0
-          </a>
+          <span>StrangerChat</span>
           <span>•</span>
-          <a href="#" className="hover:text-neutral-700">
-            how it works
-          </a>
-          <span>•</span>
-          <a href="#" className="hover:text-neutral-700">
-            @sandeepjaiswar23
-          </a>
+          <span>Anonymous Chat</span>
         </div>
       </div>
     </div>
