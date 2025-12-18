@@ -15,13 +15,14 @@ export async function proxy(request: NextRequest) {
   // Check if the user is trying to access a protected route
   const isLoginPage = request.nextUrl.pathname.startsWith("/login")
   const isAuthRoute = request.nextUrl.pathname.startsWith("/api/auth")
+  const isDemoPage = request.nextUrl.pathname.startsWith("/demo")
   const isPublicFile =
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon.ico") ||
     request.nextUrl.pathname.startsWith("/assets")
 
   // If user is not logged in and trying to access a protected route
-  if (!token && !isLoginPage && !isAuthRoute && !isPublicFile) {
+  if (!token && !isLoginPage && !isAuthRoute && !isPublicFile && !isDemoPage) {
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname)
     return NextResponse.redirect(loginUrl)

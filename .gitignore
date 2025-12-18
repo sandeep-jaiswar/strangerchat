@@ -36,3 +36,6 @@ storybook-static/
 /.npm-only-allow
 
 .env
+
+# TypeScript build info
+tsconfig.tsbuildinfo
