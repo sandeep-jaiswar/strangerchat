@@ -3,10 +3,10 @@
 import { useState } from "react"
 import { Avatar } from "@/components/Avatar/Avatar"
 import { ChatList, type Message } from "@/components/ChatList/ChatList"
+import { type Contact, ContactList } from "@/components/ContactList/ContactList"
+import { FriendList } from "@/components/FriendList/FriendList"
 import { IconButton } from "@/components/IconButton/IconButton"
 import { MessageComposer } from "@/components/MessageComposer/MessageComposer"
-import { ContactList, type Contact } from "@/components/ContactList/ContactList"
-import { FriendList } from "@/components/FriendList/FriendList"
 import { SearchBar } from "@/components/SearchBar"
 import { TabGroup, TabPanel } from "@/components/TabGroup"
 
