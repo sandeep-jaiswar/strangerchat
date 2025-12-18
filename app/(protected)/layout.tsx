@@ -10,12 +10,18 @@ export default function ProtectedLayout({
   sidebar: ReactNode
 }) {
   return (
-    <main className="flex min-h-screen flex-col">
-      <header className="w-full p-4 shadow">{navbar}</header>
-      <main className="flex flex-1 flex-row shadow">
-        <aside className="w-2/8 p-4 shadow">{sidebar}</aside>
-        <section className="w-6/8 p-4">{children}</section>
-      </main>
-    </main>
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Top Navbar */}
+      <header className="shrink-0 border-b border-neutral-200 bg-white p-4 shadow-sm">{navbar}</header>
+
+      {/* Main Content Area with Sidebar and Chat */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <aside className="w-80 shrink-0 overflow-y-auto border-r border-neutral-200 bg-white p-4">{sidebar}</aside>
+
+        {/* Main Chat Area */}
+        <section className="flex-1 overflow-hidden">{children}</section>
+      </div>
+    </div>
   )
 }
