@@ -6,9 +6,9 @@ test("has title", async ({ page }) => {
   await expect(page).toHaveTitle(/StrangerChat/)
 })
 
-test("homepage has welcome heading", async ({ page }) => {
-  await page.goto("./")
+test("demo page has messages heading", async ({ page }) => {
+  await page.goto("./demo")
 
-  const heading = page.locator("h1")
-  await expect(heading).toContainText("Welcome")
+  const heading = page.getByRole("heading", { name: "Messages" })
+  await expect(heading).toBeVisible()
 })
