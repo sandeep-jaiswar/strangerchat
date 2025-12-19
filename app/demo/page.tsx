@@ -168,7 +168,7 @@ export default function DemoPage() {
       {/* Top Navbar - Shows current chat partner */}
       <header className="shrink-0 border-b border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex-1 text-lg font-semibold text-neutral-900">Messages</div>
+          <div className="flex-1"></div>
           <div className="flex items-center gap-3">
             <Avatar src={undefined} alt="Alice Johnson" initials="AJ" status="online" size="sm" />
             <div>
@@ -176,7 +176,7 @@ export default function DemoPage() {
               <p className="text-xs text-neutral-500">Active now</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center justify-end gap-2">
             <IconButton variant="plain" intent="secondary" size="sm" aria-label="Voice call">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path
