@@ -147,9 +147,9 @@ export const ChatBubble = React.forwardRef<HTMLDivElement, ChatBubbleProps>(
 
     const bubbleColors = {
       own: {
-        default: "bg-[#0071e3] text-white shadow-sm",
-        minimal: "bg-[#0071e3] text-white",
-        elevated: "bg-[#0071e3] text-white shadow-md",
+        default: "bg-neutral-900 text-white shadow-sm",
+        minimal: "bg-neutral-900 text-white",
+        elevated: "bg-neutral-900 text-white shadow-md",
       },
       other: {
         default: "bg-neutral-100 text-neutral-900 shadow-sm",
