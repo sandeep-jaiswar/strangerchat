@@ -18,8 +18,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "5m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -37,8 +37,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "3m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -56,8 +56,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "1m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -75,19 +75,19 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "Just now",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
 ]
 
 const mockFriends = [
-  { id: "1", name: "Alice Johnson", avatar: undefined },
-  { id: "2", name: "Bob Smith", avatar: undefined },
-  { id: "3", name: "Charlie Brown", avatar: undefined },
-  { id: "4", name: "Diana Prince", avatar: undefined },
-  { id: "5", name: "Ethan Hunt", avatar: undefined },
+  { id: "1", name: "Alice Johnson", avatar: undefined, status: "online", timestamp: "Active now" },
+  { id: "2", name: "Bob Smith", avatar: undefined, status: "online", timestamp: "2h ago" },
+  { id: "3", name: "Charlie Brown", avatar: undefined, status: "away", timestamp: "1d ago" },
+  { id: "4", name: "Diana Prince", avatar: undefined, status: "online", timestamp: "3d ago" },
+  { id: "5", name: "Ethan Hunt", avatar: undefined, status: "offline", timestamp: "1w ago" },
 ]
 
 const mockContacts = [
@@ -165,23 +165,56 @@ export default function DemoPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Top Navbar */}
+      {/* Top Navbar - Shows current chat partner */}
       <header className="shrink-0 border-b border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex-1 text-2xl font-bold uppercase">StrangerChat</div>
-          <div className="text-sm text-neutral-600">Demo Mode</div>
+          <div className="flex-1"></div>
+          <div className="flex items-center gap-3">
+            <Avatar src={undefined} alt="Alice Johnson" initials="AJ" status="online" size="sm" />
+            <div>
+              <h2 className="text-base font-semibold text-neutral-900">Alice Johnson</h2>
+              <p className="text-xs text-neutral-500">Active now</p>
+            </div>
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <IconButton variant="plain" intent="secondary" size="sm" aria-label="Voice call">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path
+                  d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </IconButton>
+            <IconButton variant="plain" intent="secondary" size="sm" aria-label="Video call">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path
+                  d="M23 7l-7 5 7 5V7zM16 5H2a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V6a1 1 0 00-1-1z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </IconButton>
+            <IconButton variant="plain" intent="secondary" size="sm" aria-label="More options">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </IconButton>
+          </div>
         </div>
       </header>
 
       {/* Main Content Area with Sidebar and Chat */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
-        <aside className="w-80 shrink-0 overflow-y-auto border-r border-neutral-200 bg-white p-4">
-          <div className="flex h-full flex-col gap-4">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-neutral-900">Messages</h2>
+        <aside className="w-60 shrink-0 overflow-y-auto border-r border-neutral-200 bg-white p-3">
+          <div className="flex h-full flex-col gap-3">
+            <div className="space-y-3">
+              <h2 className="text-base font-semibold text-neutral-900">Messages</h2>
               <SearchBar
-                placeholder={activeTab === "friends" ? "Search friends..." : "Search strangers..."}
+                placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={setSearchQuery}
               />
@@ -214,8 +247,8 @@ export default function DemoPage() {
               </TabPanel>
             </div>
 
-            <div className="border-t border-neutral-200 pt-4">
-              <button className="w-full rounded-lg bg-[#0071e3] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0077ed] focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none">
+            <div className="border-t border-neutral-200 pt-3">
+              <button className="w-full rounded-lg bg-[#0071e3] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#0077ed] focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-2 focus:outline-none">
                 {activeTab === "friends" ? "Add Friend" : "New Anonymous Chat"}
               </button>
             </div>
@@ -224,39 +257,8 @@ export default function DemoPage() {
 
         {/* Main Chat Area */}
         <section className="flex flex-1 flex-col overflow-hidden">
-          {/* Chat Header */}
-          <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Avatar src={undefined} alt="Muhammad Ismail" initials="MI" status="online" size="md" />
-              <div>
-                <h2 className="text-lg font-semibold text-neutral-900">Muhammad Ismail</h2>
-                <p className="text-sm text-neutral-500">Active 5m Ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <IconButton variant="plain" intent="secondary" size="md" aria-label="Voice call">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path
-                    d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </IconButton>
-              <IconButton variant="plain" intent="secondary" size="md" aria-label="Video call">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path
-                    d="M23 7l-7 5 7 5V7zM16 5H2a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V6a1 1 0 00-1-1z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </IconButton>
-            </div>
-          </div>
-
           {/* Chat Messages */}
-          <div className="flex-1 overflow-hidden bg-neutral-50">
+          <div className="flex-1 overflow-hidden bg-white">
             <ChatList
               messages={messages}
               showDates={false}
@@ -264,17 +266,17 @@ export default function DemoPage() {
               showNames={false}
               groupMessages={true}
               isTyping={isTyping}
-              typingUser={{ name: "Muhammad Ismail", avatar: undefined }}
+              typingUser={{ name: "Alice Johnson", avatar: undefined }}
               variant="default"
             />
           </div>
 
           {/* Message Input */}
-          <div className="border-t border-neutral-200 bg-white px-6 py-4">
+          <div className="border-t border-neutral-200 bg-white px-4 py-3">
             <MessageComposer
               onSend={handleSendMessage}
               onTyping={handleTyping}
-              placeholder="Type a message"
+              placeholder="Type a message..."
               showAttachment={true}
               showEmoji={true}
               showVoice={false}
