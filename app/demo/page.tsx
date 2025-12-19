@@ -83,7 +83,7 @@ const initialMessages: Message[] = [
 ]
 
 const mockFriends = [
-  { id: "1", name: "Alice Johnson", avatar: undefined, status: "Active now", timestamp: "Active now" },
+  { id: "1", name: "Alice Johnson", avatar: undefined, status: "online", timestamp: "Active now" },
   { id: "2", name: "Bob Smith", avatar: undefined, status: "online", timestamp: "2h ago" },
   { id: "3", name: "Charlie Brown", avatar: undefined, status: "away", timestamp: "1d ago" },
   { id: "4", name: "Diana Prince", avatar: undefined, status: "online", timestamp: "3d ago" },
