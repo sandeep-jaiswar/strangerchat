@@ -18,8 +18,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "5m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -37,8 +37,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "3m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -56,8 +56,8 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "1m ago",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
@@ -75,19 +75,19 @@ const initialMessages: Message[] = [
     isOwn: false,
     timestamp: "Just now",
     date: new Date(),
-    name: "Muhammad Ismail",
-    initials: "MI",
+    name: "Alice Johnson",
+    initials: "AJ",
     status: "online",
     deliveryStatus: "delivered",
   },
 ]
 
 const mockFriends = [
-  { id: "1", name: "Alice Johnson", avatar: undefined },
-  { id: "2", name: "Bob Smith", avatar: undefined },
-  { id: "3", name: "Charlie Brown", avatar: undefined },
-  { id: "4", name: "Diana Prince", avatar: undefined },
-  { id: "5", name: "Ethan Hunt", avatar: undefined },
+  { id: "1", name: "Alice Johnson", avatar: undefined, status: "Active now", timestamp: "Active now" },
+  { id: "2", name: "Bob Smith", avatar: undefined, status: "online", timestamp: "2h ago" },
+  { id: "3", name: "Charlie Brown", avatar: undefined, status: "away", timestamp: "1d ago" },
+  { id: "4", name: "Diana Prince", avatar: undefined, status: "online", timestamp: "3d ago" },
+  { id: "5", name: "Ethan Hunt", avatar: undefined, status: "offline", timestamp: "1w ago" },
 ]
 
 const mockContacts = [
@@ -227,10 +227,10 @@ export default function DemoPage() {
           {/* Chat Header */}
           <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <Avatar src={undefined} alt="Muhammad Ismail" initials="MI" status="online" size="md" />
+              <Avatar src={undefined} alt="Alice Johnson" initials="AJ" status="online" size="md" />
               <div>
-                <h2 className="text-lg font-semibold text-neutral-900">Muhammad Ismail</h2>
-                <p className="text-sm text-neutral-500">Active 5m Ago</p>
+                <h2 className="text-lg font-semibold text-neutral-900">Alice Johnson</h2>
+                <p className="text-sm text-neutral-500">Active now</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export default function DemoPage() {
               showNames={false}
               groupMessages={true}
               isTyping={isTyping}
-              typingUser={{ name: "Muhammad Ismail", avatar: undefined }}
+              typingUser={{ name: "Alice Johnson", avatar: undefined }}
               variant="default"
             />
           </div>
