@@ -28,8 +28,8 @@
       "node"
     ],
     "paths": {
-      "@/components/*": [
-        "./components/*"
+      "@/*": [
+        "./*"
       ]
     },
     "plugins": [

@@ -1,97 +1,69 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { Suspense } from "react"
-import { Button } from "@/components/Button"
+import { useState } from "react"
+import { MessageCircle, Loader2 } from "lucide-react"
 
-function LoginForm() {
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
+export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleGoogleSignIn = async () => {
-    await signIn("google", { callbackUrl })
+    setIsLoading(true)
+    try {
+      await signIn("google", { callbackUrl: "/chat" })
+    } catch (error) {
+      console.error("Login error", error)
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white">
-      <div className="w-full max-w-md space-y-8 px-4">
-        {/* Google Icon */}
-        <div className="flex justify-center">
-          <svg className="h-12 w-12" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="flex flex-col items-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+            <MessageCircle size={32} />
+          </div>
+          <h2 className="mt-2 text-center text-3xl font-bold tracking-tight text-white">
+            Welcome to StrangerChat
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-400">
+            Sign in to start connecting instantly
+          </p>
         </div>
 
-        {/* Title */}
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-neutral-900">Login with Google</h1>
-          <p className="mt-2 text-sm text-neutral-600">Add Google login to your v0 app in minutes</p>
-        </div>
-
-        {/* Login Button */}
-        <div className="space-y-4">
-          <Button
-            variant="filled"
-            intent="secondary"
-            fullWidth
-            size="lg"
+        <div className="mt-8 space-y-6">
+          <button
             onClick={handleGoogleSignIn}
-            leftIcon={
-              <svg className="h-5 w-5" viewBox="0 0 24 24">
+            disabled={isLoading}
+            className="group relative flex w-full justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
-                  fill="currentColor"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
                 />
                 <path
-                  fill="currentColor"
                   d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
                 />
                 <path
-                  fill="currentColor"
                   d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
                 />
                 <path
-                  fill="currentColor"
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
                 />
               </svg>
-            }
-          >
-            Login with Google
-          </Button>
-        </div>
-
-        {/* Footer Links */}
-        <div className="flex items-center justify-center gap-6 text-xs text-neutral-500">
-          <span>StrangerChat</span>
-          <span>•</span>
-          <span>Anonymous Chat</span>
+            )}
+            {isLoading ? "Signing in..." : "Continue with Google"}
+          </button>
         </div>
       </div>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-white">Loading...</div>}>
-      <LoginForm />
-    </Suspense>
   )
 }
