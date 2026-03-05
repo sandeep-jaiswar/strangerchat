@@ -1,8 +1,8 @@
 "use client"
 
+import { Loader2, MessageCircle } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { useState } from "react"
-import { MessageCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -24,19 +24,15 @@ export default function LoginPage() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
             <MessageCircle size={32} />
           </div>
-          <h2 className="mt-2 text-center text-3xl font-bold tracking-tight text-white">
-            Welcome to StrangerChat
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
-            Sign in to start connecting instantly
-          </p>
+          <h2 className="mt-2 text-center text-3xl font-bold tracking-tight text-white">Welcome to StrangerChat</h2>
+          <p className="mt-2 text-center text-sm text-slate-400">Sign in to start connecting instantly</p>
         </div>
 
         <div className="mt-8 space-y-6">
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="group relative flex w-full justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="group relative flex w-full justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-slate-100 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
