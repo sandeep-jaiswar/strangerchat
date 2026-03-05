@@ -1,6 +1,7 @@
 "use client"
 
-import { Loader2, Users } from "lucide-react"
+import { Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/Button"
 
 interface MatchMakerProps {
   onFindMatch: () => void
@@ -12,43 +13,47 @@ interface MatchMakerProps {
 export function MatchMaker({ onFindMatch, isConnecting, isMatching, onlineCount }: MatchMakerProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-      <div className="relative mb-8">
-        <div className="absolute -inset-4 animate-pulse rounded-full bg-indigo-500/20 blur-xl"></div>
-        <div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-indigo-500/30 bg-slate-900 shadow-[0_0_40px_-10px_rgba(99,102,241,0.5)]">
+      <div className="relative mb-12 flex h-48 w-48 items-center justify-center">
+        {/* Radar Waves */}
+        {(isConnecting || isMatching) && (
+          <>
+            <div className="animation-delay-[0ms] absolute inset-0 animate-ping rounded-full border border-indigo-500/50 bg-indigo-500/10 opacity-75" />
+            <div className="animation-delay-[500ms] absolute inset-4 animate-ping rounded-full border border-indigo-500/40 bg-indigo-500/10 opacity-50" />
+            <div className="animation-delay-[1000ms] absolute inset-8 animate-ping rounded-full border border-indigo-500/30 bg-indigo-500/10 opacity-25" />
+          </>
+        )}
+
+        {/* Central Core */}
+        <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600 shadow-[0_0_40px_-5px_rgba(79,70,229,0.5)]">
           {isConnecting || isMatching ? (
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
           ) : (
-            <Users className="h-12 w-12 text-indigo-400" />
+            <div className="h-8 w-8 rounded-full border-4 border-white/80 bg-transparent" />
           )}
         </div>
       </div>
 
-      <h2 className="mb-2 text-2xl font-bold tracking-tight text-white md:text-3xl">
-        {isConnecting ? "Connecting to Server..." : isMatching ? "Looking for Someone..." : "Ready to Chat!"}
+      <h2 className="mb-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
+        {isConnecting ? "Connecting to Server..." : isMatching ? "Scanning for Strangers..." : "Ready to Chat!"}
       </h2>
 
-      <p className="mb-8 text-slate-400">
+      <p className="mb-10 max-w-sm text-lg text-slate-400">
         {isConnecting
           ? "Establishing a secure connection."
           : isMatching
-          ? "Finding a random stranger to connect you with."
+          ? "Finding a random stranger to connect you with instantly."
           : `There are currently ${onlineCount} users online.`}
       </p>
 
-      <button
+      <Button
+        size="lg"
         onClick={onFindMatch}
         disabled={isConnecting || isMatching}
-        className="group relative flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:bg-indigo-500 hover:shadow-indigo-500/25 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+        isLoading={isConnecting || isMatching}
+        className="rounded-full shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)]"
       >
-        {isConnecting || isMatching ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Please wait...</span>
-          </>
-        ) : (
-          <span>Find a Stranger</span>
-        )}
-      </button>
+        {isConnecting || isMatching ? "Please wait..." : "Find a Stranger"}
+      </Button>
     </div>
   )
 }
