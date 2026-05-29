@@ -37,7 +37,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "tailwind-merge": "^2.6.0",
-    "ws": "^8.18.3",
+    "ws": "^8.20.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
