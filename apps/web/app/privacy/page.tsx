@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = pageMetadata({
+  path: "/privacy",
+  title: "Privacy Policy",
+  description:
+    "What StrangerChat collects, why, and how your anonymous chats stay private.",
+});
 
 export default function PrivacyPage() {
   return (

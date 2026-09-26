@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { authOptions } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Chat" };
+export const metadata: Metadata = {
+  title: "Chat",
+  robots: { index: false, follow: false },
+};
 
 export default async function ChatPage() {
   const session = await getServerSession(authOptions);

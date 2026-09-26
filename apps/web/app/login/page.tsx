@@ -13,7 +13,10 @@ import { Logo } from "@/components/logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { authOptions } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = {
+  title: "Sign in",
+  robots: { index: false, follow: true },
+};
 
 const errorMessages: Record<string, string> = {
   OAuthAccountNotLinked: "This email is already linked to another sign-in.",
