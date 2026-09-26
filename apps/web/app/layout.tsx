@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "@repo/ui/globals.css";
 import { Providers } from "@/components/providers";
 import { ADSENSE_CLIENT } from "@/lib/ads";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -53,6 +54,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
