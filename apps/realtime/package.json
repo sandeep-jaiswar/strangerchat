@@ -1,0 +1,23 @@
+{
+  "name": "realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/protocol": "workspace:*",
+    "jose": "^6.2.12",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "26.4.1",
+    "@types/ws": "^8.18.1",
+    "typescript": "7.0.2"
+  }
+}

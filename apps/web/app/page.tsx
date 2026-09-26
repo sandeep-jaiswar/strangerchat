@@ -1,102 +1,97 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import styles from "./page.module.css";
+import { getServerSession } from "next-auth";
+import Link from "next/link";
+import { ArrowRight, EyeOff, ShieldCheck, Shuffle } from "lucide-react";
+import { Button } from "@repo/ui/components/button";
+import { AdSlot } from "@/components/ads/ad-slot";
+import { SignInButton } from "@/components/sign-in-button";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import { AD_SLOTS } from "@/lib/ads";
+import { authOptions } from "@/lib/auth";
 
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
+const features = [
+  {
+    icon: Shuffle,
+    title: "Instant matching",
+    body: "One tap pairs you with a random person who's online right now.",
+  },
+  {
+    icon: EyeOff,
+    title: "Stay anonymous",
+    body: "Strangers never see your name, photo or email — just your words.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Real people only",
+    body: "Google sign-in keeps bots and spam accounts out of the queue.",
+  },
+];
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
 
   return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
 
-export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+      <main className="flex-1">
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -top-40 mx-auto h-80 max-w-3xl rounded-full bg-primary/20 blur-3xl"
+          />
+          <div className="relative mx-auto flex max-w-3xl flex-col items-center px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
+            <span className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
+              <span className="size-2 animate-pulse rounded-full bg-success" />
+              People are chatting right now
+            </span>
+            <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-6xl">
+              Talk to a stranger.
+              <br />
+              <span className="text-primary">Instantly.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
+              Sign in with Google, tap start, and get matched one-on-one with
+              someone new. Not vibing? Skip to the next person in a second.
+            </p>
+            <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+              {session ? (
+                <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link href="/chat">
+                    Start chatting
+                    <ArrowRight />
+                  </Link>
+                </Button>
+              ) : (
+                <SignInButton className="w-full sm:w-auto" />
+              )}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Free forever. Be kind — chats are one-on-one and anonymous.
+            </p>
+          </div>
+        </section>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
+        <section className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {features.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-xl border bg-card p-5">
+                <span className="mb-3 flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Icon className="size-4" />
+                </span>
+                <h2 className="font-semibold">{title}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+          <AdSlot slot={AD_SLOTS.banner} format="horizontal" />
+        </section>
       </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.dev →
-        </a>
-      </footer>
+
+      <SiteFooter />
     </div>
   );
 }
