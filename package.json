@@ -1,5 +1,5 @@
 {
-  "name": "strangerchat",
+  "name": "Strangerchat",
   "private": true,
   "scripts": {
     "build": "turbo run build",

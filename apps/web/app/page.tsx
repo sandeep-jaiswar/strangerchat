@@ -136,7 +136,7 @@ export default async function HomePage() {
           className="mx-auto max-w-5xl px-4 pb-16 sm:px-6"
         >
           <h2 id="features-heading" className="sr-only">
-            Why chat with strangers on StrangerChat
+            Why chat with strangers on Strangerchat
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map(({ icon: Icon, title, body }) => (
@@ -194,7 +194,7 @@ export default async function HomePage() {
           </h2>
           <div className="mt-4 space-y-4 text-muted-foreground">
             <p>
-              StrangerChat is a free stranger chat site for meeting new people
+              Strangerchat is a free stranger chat site for meeting new people
               through quick, anonymous one-on-one text conversations. Whether
               you&apos;re bored, want to practise your English, need to vent to
               someone who doesn&apos;t know you, or just enjoy random
@@ -213,7 +213,7 @@ export default async function HomePage() {
                 href="/omegle-alternative"
                 className="text-foreground underline underline-offset-2"
               >
-                why StrangerChat is the best Omegle alternative
+                why Strangerchat is the best Omegle alternative
               </Link>
               , and read our{" "}
               <Link

@@ -12,7 +12,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6">
-        <p>© {new Date().getFullYear()} StrangerChat · Free anonymous chat</p>
+        <p>© {new Date().getFullYear()} Strangerchat · Free anonymous chat</p>
         <nav
           aria-label="Footer"
           className="flex flex-wrap justify-center gap-x-4 gap-y-2"

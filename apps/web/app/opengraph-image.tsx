@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/lib/brand-mark";
 
-export const alt = "StrangerChat — free anonymous chat with strangers";
+export const alt = "Strangerchat - free anonymous chat with strangers";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -23,7 +23,7 @@ export default function OpengraphImage() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <BrandMark size={96} rounded />
-        <div style={{ fontSize: 48, fontWeight: 700 }}>StrangerChat</div>
+        <div style={{ fontSize: 48, fontWeight: 700 }}>Strangerchat</div>
       </div>
       <div
         style={{

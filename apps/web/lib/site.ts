@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 
 /** Canonical origin used for metadata, sitemap and structured data. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://strangerchat.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://Strangerchat.vercel.app"
 ).replace(/\/$/, "");
 
-export const SITE_NAME = "StrangerChat";
+export const SITE_NAME = "Strangerchat";
 
-export const SITE_TITLE = "StrangerChat — Free Anonymous Chat with Strangers";
+export const SITE_TITLE = "Strangerchat — Free Anonymous Chat with Strangers";
 
 export const SITE_DESCRIPTION =
-  "Talk to strangers online for free. StrangerChat instantly matches you with a random person for an anonymous one-on-one text chat — no bots, no profiles, no messages stored. A safer Omegle alternative.";
+  "Talk to strangers online for free. Strangerchat instantly matches you with a random person for an anonymous one-on-one text chat — no bots, no profiles, no messages stored. A safer Omegle alternative.";
 
 export const SITE_KEYWORDS = [
   "stranger chat",
@@ -30,7 +30,7 @@ const OG_IMAGE = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: "StrangerChat — free anonymous chat with strangers",
+  alt: "Strangerchat — free anonymous chat with strangers",
 };
 
 /**

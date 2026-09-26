@@ -6,7 +6,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/terms",
   title: "Terms of Service",
   description:
-    "The rules for using StrangerChat: 18+ only, be respectful, and chat at your own risk.",
+    "The rules for using Strangerchat: 18+ only, be respectful, and chat at your own risk.",
 });
 
 export default function TermsPage() {
@@ -14,7 +14,7 @@ export default function TermsPage() {
     <LegalPage title="Terms of Service">
       <p>These terms are a starting point. Have them reviewed before launch.</p>
       <h2>Eligibility</h2>
-      <p>You must be at least 18 years old to use StrangerChat.</p>
+      <p>You must be at least 18 years old to use Strangerchat.</p>
       <h2>Be respectful</h2>
       <p>
         Do not harass, threaten, or send sexual, hateful or illegal content. Do

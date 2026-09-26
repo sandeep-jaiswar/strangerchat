@@ -10,7 +10,7 @@ export function Logo() {
       <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <MessagesSquare className="size-4" />
       </span>
-      <span className="text-base">StrangerChat</span>
+      <span className="text-base">Strangerchat</span>
     </Link>
   );
 }

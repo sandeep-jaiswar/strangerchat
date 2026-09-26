@@ -6,14 +6,14 @@ export const metadata: Metadata = pageMetadata({
   path: "/privacy",
   title: "Privacy Policy",
   description:
-    "What StrangerChat collects, why, and how your anonymous chats stay private.",
+    "What Strangerchat collects, why, and how your anonymous chats stay private.",
 });
 
 export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy">
       <p>
-        This page explains what StrangerChat collects and why. Replace it with a
+        This page explains what Strangerchat collects and why. Replace it with a
         policy reviewed for your jurisdiction before launch.
       </p>
       <h2>Account information</h2>

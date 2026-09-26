@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
 import { pageMetadata } from "@/lib/site";
 
-const title = "About StrangerChat";
+const title = "About Strangerchat";
 const description =
-  "StrangerChat is a free, anonymous random chat site that connects you one-on-one with strangers from around the world. Here's what we're building and why.";
+  "Strangerchat is a free, anonymous random chat site that connects you one-on-one with strangers from around the world. Here's what we're building and why.";
 
 export const metadata: Metadata = pageMetadata({
   path: "/about",
@@ -19,7 +19,7 @@ export default function AboutPage() {
     <ContentPage
       title={title}
       path="/about"
-      lead="StrangerChat is a free place to talk to someone new. One tap matches you with a random stranger for an anonymous, one-on-one text conversation — no profiles, no feeds, no pressure."
+      lead="Strangerchat is a free place to talk to someone new. One tap matches you with a random stranger for an anonymous, one-on-one text conversation — no profiles, no feeds, no pressure."
     >
       <h2>Why we built it</h2>
       <p>
@@ -29,7 +29,7 @@ export default function AboutPage() {
         you&apos;d never otherwise meet.
       </p>
       <p>
-        When Omegle closed in 2023, millions of people lost that. StrangerChat
+        When Omegle closed in 2023, millions of people lost that. Strangerchat
         is our take on bringing it back — with the problems fixed. Read more
         about{" "}
         <Link href="/omegle-alternative">
@@ -58,7 +58,7 @@ export default function AboutPage() {
         </li>
       </ul>
 
-      <h2>Who uses StrangerChat</h2>
+      <h2>Who uses Strangerchat</h2>
       <p>
         People come to kill time, practise a language, get a stranger&apos;s
         honest opinion, vent without judgement or just see who&apos;s out there.
@@ -67,7 +67,7 @@ export default function AboutPage() {
 
       <h2>Stay safe</h2>
       <p>
-        StrangerChat is for adults 18 and over. Before you start, take two
+        Strangerchat is for adults 18 and over. Before you start, take two
         minutes to read our <Link href="/safety">safety tips</Link>, our{" "}
         <Link href="/terms">terms of service</Link> and our{" "}
         <Link href="/privacy">privacy policy</Link>.

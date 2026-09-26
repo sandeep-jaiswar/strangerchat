@@ -1,9 +1,9 @@
 /** Shown on the home page and emitted as FAQPage structured data, so keep both in sync by editing here. */
 export const HOME_FAQ = [
   {
-    question: "Is StrangerChat free?",
+    question: "Is Strangerchat free?",
     answer:
-      "Yes. StrangerChat is completely free with no premium tier, no coins and no limits on how many strangers you can talk to.",
+      "Yes. Strangerchat is completely free with no premium tier, no coins and no limits on how many strangers you can talk to.",
   },
   {
     question: "Is it really anonymous?",
@@ -21,17 +21,17 @@ export const HOME_FAQ = [
       "Requiring a real account keeps spam bots and throwaway trolls out of the queue, so you're matched with real people. Your Google details stay private.",
   },
   {
-    question: "Is StrangerChat a good Omegle alternative?",
+    question: "Is Strangerchat a good Omegle alternative?",
     answer:
-      "Since Omegle shut down in 2023, StrangerChat offers the same instant one-on-one random chat, with sign-in to block bots, no chat logs and a one-tap skip button.",
+      "Since Omegle shut down in 2023, Strangerchat offers the same instant one-on-one random chat, with sign-in to block bots, no chat logs and a one-tap skip button.",
   },
   {
     question: "Does it work on my phone?",
     answer:
-      "Yes. StrangerChat runs in any modern mobile or desktop browser — no app to download. You can also add it to your home screen.",
+      "Yes. Strangerchat runs in any modern mobile or desktop browser — no app to download. You can also add it to your home screen.",
   },
   {
     question: "How old do I have to be?",
-    answer: "You must be at least 18 years old to use StrangerChat.",
+    answer: "You must be at least 18 years old to use Strangerchat.",
   },
 ];

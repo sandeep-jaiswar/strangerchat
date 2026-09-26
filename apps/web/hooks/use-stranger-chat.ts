@@ -145,7 +145,7 @@ function socketUrl(sid: string) {
   return url;
 }
 
-export function useStrangerChat() {
+export function useStrangerchat() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef(state.phase);

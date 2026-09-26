@@ -1,4 +1,4 @@
-# StrangerChat
+# Strangerchat
 
 Sign in with Google and chat one-on-one with a random stranger. Works on phones and desktops.
 
@@ -29,7 +29,7 @@ The rules live in `packages/chat-server/src/scripts.ts` as Lua scripts, so each 
 ```sh
 pnpm install
 cp apps/web/.env.example apps/web/.env.local
-docker run -d --name strangerchat-redis -p 6379:6379 redis:7-alpine
+docker run -d --name Strangerchat-redis -p 6379:6379 redis:7-alpine
 ```
 
 1. Create an OAuth client at <https://console.cloud.google.com/apis/credentials> (type "Web application") with the redirect URI `http://localhost:3000/api/auth/callback/google`, and put its id and secret in `apps/web/.env.local`.

@@ -19,7 +19,7 @@ export default function SafetyPage() {
     <ContentPage
       title={title}
       path="/safety"
-      lead="Talking to strangers can be fun, eye-opening and a great way to beat boredom. These simple habits help keep every conversation on StrangerChat — or anywhere online — safe and enjoyable."
+      lead="Talking to strangers can be fun, eye-opening and a great way to beat boredom. These simple habits help keep every conversation on Strangerchat — or anywhere online — safe and enjoyable."
     >
       <h2>Protect your identity</h2>
       <ul>
@@ -34,7 +34,7 @@ export default function SafetyPage() {
           think.
         </li>
         <li>
-          <strong>Use StrangerChat&apos;s anonymity.</strong> Your partner never
+          <strong>Use Strangerchat&apos;s anonymity.</strong> Your partner never
           sees your Google name, email or photo. Don&apos;t undo that by
           volunteering them.
         </li>
@@ -79,7 +79,7 @@ export default function SafetyPage() {
         </li>
       </ul>
 
-      <h2>How StrangerChat helps</h2>
+      <h2>How Strangerchat helps</h2>
       <ul>
         <li>
           <strong>Verified sign-in</strong> keeps bots and spam accounts out of

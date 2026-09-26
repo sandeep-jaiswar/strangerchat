@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu, type UserSummary } from "@/components/user-menu";
 import {
   type ConnectionStatus,
-  useStrangerChat,
+  useStrangerchat,
 } from "@/hooks/use-stranger-chat";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { AD_SLOTS } from "@/lib/ads";
@@ -16,7 +16,7 @@ import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";
 
 export function ChatRoom({ user }: { user: UserSummary }) {
-  const chat = useStrangerChat();
+  const chat = useStrangerchat();
   const height = useViewportHeight();
 
   return (
