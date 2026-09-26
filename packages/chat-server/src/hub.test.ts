@@ -309,3 +309,44 @@ test("a newer socket for the same session on one instance replaces the old one",
   second.deliver({ type: "find" });
   await until(() => last(second) === "searching", "new socket works");
 });
+
+test("a socket closed during attach preserves claimed messages for the next reconnect", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+  alice.close();
+  await sleep(TICK_MS);
+  bob.deliver({ type: "message", text: "held message" });
+  await sleep(TICK_MS);
+
+  const closed = new FakeSocket();
+  closed.close();
+  await hubA.attach(closed as unknown as WebSocket, "alice", alice.sid);
+  const resumed = await connect(hubB, "alice", alice.sid);
+  assert.deepEqual(resumed.events[0], { type: "state", phase: "chatting" });
+  const messages = resumed.events.filter((event) => event.type === "message");
+  assert.deepEqual(
+    messages.map((event) => event.text),
+    ["held message"],
+  );
+});
+
+test("a stale bye cannot end a replacement connection's chat", async () => {
+  const [hubA, hubB] = cluster();
+  const stale = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(stale, bob);
+  const replacement = await connect(hubB, "alice", stale.sid);
+
+  stale.deliver({ type: "bye" });
+  await until(() => stale.readyState !== stale.OPEN, "stale bye handled");
+  bob.deliver({ type: "message", text: "still chatting" });
+  await until(
+    () => last(replacement) === "message",
+    "replacement receives message",
+  );
+  assert.ok(!bob.types().includes("partner_left"));
+  replacement.deliver({ type: "bye" });
+  await until(() => last(bob) === "partner_left", "current bye ends chat");
+});

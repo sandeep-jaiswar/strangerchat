@@ -133,14 +133,13 @@ export class Hub {
       ws.close(CloseCode.SessionConflict, "Session belongs to another user");
       return;
     }
+    const [phase, online, ...held] = claim;
     if (ws.readyState !== ws.OPEN) {
       // The socket closed while we were claiming; undo so the session isn't marked connected.
       if (!previous) await this.subscriber.unsubscribe(channel);
-      await this.redis.scDetach(...this.common(now), sid, id);
+      await this.redis.scDetach(...this.common(now), sid, id, ...held);
       return;
     }
-    const [phase, online, ...held] = claim;
-
     const connection: Connection = {
       id,
       sid,
@@ -242,7 +241,7 @@ export class Hub {
         await this.redis.scLeave(...common, sid);
         return;
       case "bye":
-        await this.redis.scBye(...common, sid);
+        await this.redis.scBye(...common, sid, connection.id);
         connection.ws.close(1000, "Bye");
         return;
       case "typing":

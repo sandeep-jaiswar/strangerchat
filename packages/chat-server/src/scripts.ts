@@ -12,6 +12,9 @@
  *   P..owner         hash        sid -> user id
  *   P..conn          hash        sid -> id of the connection serving it. Absent while the session is reconnecting.
  *   P..queue         list        connected sessions waiting for a partner, oldest first
+ *   P..scan           hash        sid -> next candidate offset in the queue
+ *   P..fallback       hash        sid -> previous partner considered during a paginated scan
+ *   P..retry          string      next queue offset for the periodic retry pass
  *   P..pair:<sid>    string      partner's sid
  *   P..inbox:<sid>   list        messages that arrived while the session was reconnecting
  *   P..ended:<u>:<v> string      when users u and v (sorted) last stopped chatting (ms), for the rematch rule
@@ -53,9 +56,15 @@ local function unpair(sid)
   end
 end
 
+local function removeQueued(sid)
+  redis.call('LREM', P .. 'queue', 0, sid)
+  redis.call('HDEL', P .. 'scan', sid)
+  redis.call('HDEL', P .. 'fallback', sid)
+end
+
 local function makePair(a, b)
-  redis.call('LREM', P .. 'queue', 0, a)
-  redis.call('LREM', P .. 'queue', 0, b)
+  removeQueued(a)
+  removeQueued(b)
   redis.call('SET', P .. 'pair:' .. a, b)
   redis.call('SET', P .. 'pair:' .. b, a)
   redis.call('PUBLISH', P .. 'to:' .. a, '${MATCHED}')
@@ -65,19 +74,25 @@ end
 -- Pairs a queued session with the longest-waiting eligible session. Eligible: connected,
 -- a different user, and not someone this user stopped chatting with less than
 -- REMATCH_BLOCK ago. Within REMATCH_WINDOW a previous partner is only chosen when nobody
--- new is waiting. Returns true when paired.
+-- new is waiting. Scans at most 100 candidates per call, continuing on the next retry.
+-- A previous partner is only picked after reaching the end. Returns true when paired.
 local function matchOne(sid)
   local uid = redis.call('HGET', P .. 'owner', sid)
   if not uid or not isConnected(sid) then
-    redis.call('LREM', P .. 'queue', 0, sid)
+    removeQueued(sid)
     return false
   end
-  local fallback
-  for _, candidate in ipairs(redis.call('LRANGE', P .. 'queue', 0, 99)) do
+  local size = redis.call('LLEN', P .. 'queue')
+  local offset = tonumber(redis.call('HGET', P .. 'scan', sid)) or 0
+  local fallback = redis.call('HGET', P .. 'fallback', sid)
+  local candidates = redis.call('LRANGE', P .. 'queue', offset, offset + 99)
+  local removed = 0
+  for _, candidate in ipairs(candidates) do
     if candidate ~= sid then
       local other = redis.call('HGET', P .. 'owner', candidate)
       if not other or not isConnected(candidate) then
-        redis.call('LREM', P .. 'queue', 0, candidate)
+        removeQueued(candidate)
+        removed = removed + 1
       elseif other ~= uid then
         local ended = redis.call('GET', endedKey(uid, other))
         if not ended then
@@ -90,9 +105,23 @@ local function matchOne(sid)
       end
     end
   end
-  if fallback then
-    makePair(sid, fallback)
-    return true
+  if offset + #candidates < size then
+    redis.call('HSET', P .. 'scan', sid, offset + #candidates - removed)
+    if fallback then redis.call('HSET', P .. 'fallback', sid, fallback) end
+    return false
+  end
+  redis.call('HDEL', P .. 'scan', sid)
+  redis.call('HDEL', P .. 'fallback', sid)
+  -- The fallback may have left or matched while we scanned later pages.
+  if fallback and isConnected(fallback) and redis.call('LPOS', P .. 'queue', fallback) then
+    local other = redis.call('HGET', P .. 'owner', fallback)
+    if other and other ~= uid then
+      local ended = redis.call('GET', endedKey(uid, other))
+      if not ended or NOW - tonumber(ended) >= REMATCH_BLOCK then
+        makePair(sid, fallback)
+        return true
+      end
+    end
   end
   return false
 end
@@ -113,7 +142,7 @@ end
 -- Removes every trace of a session, ending its chat first.
 local function endSession(sid)
   unpair(sid)
-  redis.call('LREM', P .. 'queue', 0, sid)
+  removeQueued(sid)
   redis.call('ZREM', P .. 'sess', sid)
   redis.call('HDEL', P .. 'owner', sid)
   redis.call('HDEL', P .. 'conn', sid)
@@ -151,19 +180,27 @@ return result
 /**
  * A connection closed without saying goodbye. The session stays (and its chat stays open)
  * until it reconnects or its expiry lapses, but it stops waiting in the queue.
- * Ignored when a newer connection already took the session over.
- * ARGV[5..6]: sid, connectionId
+ * Restores undelivered CLAIM messages even if a newer connection took over.
+ * Only the current connection can remove connection and queue state.
+ * ARGV[5..6]: sid, connectionId; ARGV[7..]: undelivered messages
  */
 export const DETACH = `${LIB}
 local sid, connectionId = ARGV[5], ARGV[6]
+if #ARGV >= 7 and redis.call('ZSCORE', P .. 'sess', sid) then
+  local inbox = P .. 'inbox:' .. sid
+  -- Claimed messages precede anything queued since CLAIM drained the inbox.
+  for i = #ARGV, 7, -1 do redis.call('LPUSH', inbox, ARGV[i]) end
+  redis.call('LTRIM', inbox, -50, -1)
+end
 if redis.call('HGET', P .. 'conn', sid) ~= connectionId then return 0 end
 redis.call('HDEL', P .. 'conn', sid)
-redis.call('LREM', P .. 'queue', 0, sid)
+removeQueued(sid)
 return 1
 `;
 
-/** The tab closed: end the session now. ARGV[5]: sid */
+/** The current connection said goodbye: end the session now. ARGV[5..6]: sid, connectionId */
 export const BYE = `${LIB}
+if redis.call('HGET', P .. 'conn', ARGV[5]) ~= ARGV[6] then return 0 end
 endSession(ARGV[5])
 return 1
 `;
@@ -174,7 +211,7 @@ return 1
  */
 export const FIND = `${LIB}
 local sid = ARGV[5]
-redis.call('LREM', P .. 'queue', 0, sid)
+removeQueued(sid)
 unpair(sid)
 redis.call('RPUSH', P .. 'queue', sid)
 if matchOne(sid) then return 1 end
@@ -184,7 +221,7 @@ return 0
 /** Leave the current chat or queue. ARGV[5]: sid */
 export const LEAVE = `${LIB}
 local sid = ARGV[5]
-redis.call('LREM', P .. 'queue', 0, sid)
+removeQueued(sid)
 unpair(sid)
 return 1
 `;
@@ -234,8 +271,15 @@ export const TICK = `${LIB}
 for _, sid in ipairs(redis.call('ZRANGEBYSCORE', P .. 'sess', '-inf', '(' .. NOW, 'LIMIT', 0, 200)) do
   endSession(sid)
 end
-for _, sid in ipairs(redis.call('LRANGE', P .. 'queue', 0, 99)) do
+local offset = tonumber(redis.call('GET', P .. 'retry')) or 0
+local size = redis.call('LLEN', P .. 'queue')
+if offset >= size then offset = 0 end
+local waiting = redis.call('LRANGE', P .. 'queue', offset, offset + 99)
+for _, sid in ipairs(waiting) do
   if redis.call('LPOS', P .. 'queue', sid) then matchOne(sid) end
 end
+local nextOffset = offset + #waiting
+if nextOffset >= redis.call('LLEN', P .. 'queue') then nextOffset = 0 end
+redis.call('SET', P .. 'retry', nextOffset)
 return countOnline()
 `;
