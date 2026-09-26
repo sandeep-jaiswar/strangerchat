@@ -11,9 +11,18 @@ Sign in with Google and chat one-on-one with a random stranger. Works on phones 
 | `packages/ui` | shadcn/ui components and the shared Tailwind v4 theme |
 | `packages/protocol` | Message types shared by the client and the server |
 
-The chat socket runs as a Vercel Function (`apps/web/app/api/ws/route.ts`) and authenticates with the NextAuth session cookie. Function instances share the queue, pairs and presence through Redis, and deliver events to each other with Redis pub/sub. Messages are relayed and never stored.
+The chat socket runs as a Vercel Function (`apps/web/app/api/ws/route.ts`) and authenticates with the NextAuth session cookie. Function instances share the queue, pairs and presence through Redis, and deliver events to each other with Redis pub/sub. Messages are relayed live when the partner is connected; messages sent while the partner is disconnected are temporarily queued in Redis for delivery after reconnect.
 
-Vercel closes each socket when the function reaches its max duration (5 minutes on Hobby). Each browser tab has a session id, so it reconnects and resumes the same chat; a partner is only told "left" if the session doesn't come back within ~20 seconds, or immediately when the tab is closed.
+### Chat rules
+
+The rules live in `packages/chat-server/src/scripts.ts` as Lua scripts, so each change is atomic across function instances.
+
+- **Online** = distinct Google accounts with at least one connected tab. Several tabs count once, and a closed tab stops counting immediately.
+- **Sessions:** each tab has a session. When a socket drops (Vercel recycles sockets every 5 minutes on Hobby, or the network blips), the session is kept for ~20 seconds so the tab can reconnect and continue its chat. Messages sent in the meantime are temporarily queued for delivery after reconnect. On `pagehide`, the client attempts to send `bye` only if its socket is open. The session ends immediately only if the server receives `bye` from the current connection; otherwise, a dropped socket leaves the session available during the reconnect grace period.
+- **Matching** considers connected, waiting tabs in queue order, using bounded scans that continue on later retries. A user is never matched with themselves.
+- **Rematching:** two people who just stopped chatting can't be matched again for 15 seconds. For the next 10 minutes, someone new is preferred, and the previous partner is only picked if nobody else is waiting.
+- **Waiting users are re-checked in bounded batches every 5 seconds**, so the 15-second block lifting (or anything else changing) is picked up without anyone pressing Start. Scans continue across the queue over successive passes, so large queues can take multiple ticks to revisit every session.
+- **A dropped socket** takes its tab out of the queue; the tab re-joins when it reconnects.
 
 ## Setup
 
