@@ -42,5 +42,5 @@ Ads appear on the landing page, the lobby (on mobile), and the chat sidebar (on 
 ## Deploying
 
 - **Web**: any Next.js host (e.g. Vercel). Update `NEXTAUTH_URL` and add the production redirect URI to the Google OAuth client.
-- **Realtime**: needs a host that keeps long-lived WebSocket connections open (Fly.io, Railway, Render, a VPS) — not a serverless function. Run `pnpm --filter realtime start`, set `ALLOWED_ORIGINS` to the web app's URL, and point `NEXT_PUBLIC_REALTIME_URL` at it with `wss://`.
+- **Realtime**: needs a host that keeps long-lived WebSocket connections open — not a serverless function. `apps/realtime/Dockerfile` and `fly.toml` are ready for Fly.io: from the repo root run `fly deploy --config apps/realtime/fly.toml --ha=false`. Set `REALTIME_JWT_SECRET` and `ALLOWED_ORIGINS` (the web app's URL) with `fly secrets set`, and point `NEXT_PUBLIC_REALTIME_URL` at the app with `wss://`.
 - The matchmaking queue lives in memory, so run a single realtime instance. Scaling past one needs a shared queue (e.g. Redis pub/sub).
