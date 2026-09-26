@@ -15,6 +15,8 @@ import type { ChatItem, ChatPhase } from "@/hooks/use-stranger-chat";
 
 interface ConversationProps {
   phase: Extract<ChatPhase, "chatting" | "ended">;
+  /** False while the socket is reconnecting; the chat itself is kept alive server-side. */
+  connected: boolean;
   messages: ChatItem[];
   partnerTyping: boolean;
   onSend: (text: string) => boolean;
@@ -27,6 +29,7 @@ const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
 
 export function Conversation({
   phase,
+  connected,
   messages,
   partnerTyping,
   onSend,
@@ -73,14 +76,24 @@ export function Conversation({
           <span
             className={cn(
               "absolute right-0 bottom-0 size-2.5 rounded-full ring-2 ring-background",
-              ended ? "bg-muted-foreground" : "bg-success",
+              ended
+                ? "bg-muted-foreground"
+                : connected
+                  ? "bg-success"
+                  : "animate-pulse bg-amber-500",
             )}
           />
         </span>
         <div className="min-w-0 leading-tight">
           <p className="text-sm font-medium">Stranger</p>
           <p className="truncate text-xs text-muted-foreground">
-            {ended ? "Left the chat" : partnerTyping ? "Typing…" : "Online"}
+            {ended
+              ? "Left the chat"
+              : !connected
+                ? "Reconnecting…"
+                : partnerTyping
+                  ? "Typing…"
+                  : "Online"}
           </p>
         </div>
       </div>
@@ -98,13 +111,19 @@ export function Conversation({
                 <ArrowLeft />
                 <span className="sr-only sm:not-sr-only">Lobby</span>
               </Button>
-              <Button size="lg" className="flex-1" onClick={onNext}>
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={!connected}
+                onClick={onNext}
+              >
                 <SkipForward />
                 Find a new stranger
               </Button>
             </div>
           ) : (
             <Composer
+              connected={connected}
               confirmingNext={confirmingNext}
               onNext={handleNext}
               onSend={onSend}
@@ -118,11 +137,13 @@ export function Conversation({
 }
 
 function Composer({
+  connected,
   confirmingNext,
   onNext,
   onSend,
   onTyping,
 }: {
+  connected: boolean;
   confirmingNext: boolean;
   onNext: () => void;
   onSend: (text: string) => boolean;
@@ -153,6 +174,7 @@ function Composer({
         size="lg"
         variant={confirmingNext ? "destructive" : "outline"}
         className="h-10 shrink-0 px-3"
+        disabled={!connected}
         onClick={onNext}
         aria-label={confirmingNext ? "Confirm skip" : "Skip to next stranger"}
       >
@@ -193,7 +215,7 @@ function Composer({
         type="submit"
         size="icon"
         className="size-10 shrink-0"
-        disabled={!text.trim()}
+        disabled={!connected || !text.trim()}
         aria-label="Send message"
         // Keep focus in the textarea so the mobile keyboard stays open after sending.
         onPointerDown={(event) => event.preventDefault()}

@@ -1,17 +1,20 @@
 {
-  "name": "realtime",
+  "name": "@repo/chat-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
-    "start": "node --env-file-if-exists=.env src/index.ts",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "dev": "node --watch --env-file-if-exists=../../apps/web/.env.local src/dev-server.ts",
+    "test": "node --env-file-if-exists=../../apps/web/.env.local --test \"src/**/*.test.ts\"",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/protocol": "workspace:*",
-    "jose": "^6.2.12",
+    "ioredis": "^6.0.0",
+    "next-auth": "^4.24.15",
     "ws": "^8.21.3"
   },
   "devDependencies": {

@@ -40,6 +40,7 @@ export function ChatRoom({ user }: { user: UserSummary }) {
           {chat.phase === "chatting" || chat.phase === "ended" ? (
             <Conversation
               phase={chat.phase}
+              connected={chat.connection === "open"}
               messages={chat.messages}
               partnerTyping={chat.partnerTyping}
               onSend={chat.sendMessage}

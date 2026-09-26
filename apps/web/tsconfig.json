@@ -14,7 +14,8 @@
       "@repo/ui/*": [
         "../../packages/ui/src/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*.ts",

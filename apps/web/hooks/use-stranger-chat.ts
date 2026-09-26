@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { toast } from "sonner";
-import type { ClientEvent, ServerEvent } from "@repo/protocol";
+import {
+  CHAT_SOCKET_PATH,
+  CloseCode,
+  type ClientEvent,
+  type ServerEvent,
+} from "@repo/protocol";
 
 export type ChatPhase = "idle" | "searching" | "chatting" | "ended";
 export type ConnectionStatus = "connecting" | "open" | "reconnecting";
@@ -44,19 +49,13 @@ function systemItem(text: string): ChatItem {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "connection":
-      // Losing the socket also loses the partner, so drop back to the lobby.
-      return action.status === "reconnecting" && state.phase !== "idle"
-        ? {
-            ...state,
-            connection: action.status,
-            phase: state.phase === "chatting" ? "ended" : "idle",
-            partnerTyping: false,
-            messages:
-              state.phase === "chatting"
-                ? [...state.messages, systemItem("Connection lost.")]
-                : state.messages,
-          }
-        : { ...state, connection: action.status };
+      // The server keeps the chat alive while we reconnect; its "state" event says
+      // whether it survived.
+      return {
+        ...state,
+        connection: action.status,
+        partnerTyping: action.status === "open" && state.partnerTyping,
+      };
     case "sent":
       return { ...state, messages: [...state.messages, action.item] };
     case "partnerTypingTimeout":
@@ -66,6 +65,25 @@ function reducer(state: State, action: Action): State {
     case "server": {
       const event = action.event;
       switch (event.type) {
+        case "state":
+          if (event.phase === "chatting" && state.phase !== "chatting") {
+            return {
+              ...state,
+              phase: "chatting",
+              messages: [systemItem("Reconnected to your chat.")],
+            };
+          }
+          if (event.phase === "idle" && state.phase === "chatting") {
+            return {
+              ...state,
+              phase: "ended",
+              messages: [
+                ...state.messages,
+                systemItem("Stranger has left the chat."),
+              ],
+            };
+          }
+          return state;
         case "online":
           return { ...state, online: event.count };
         case "searching":
@@ -117,6 +135,16 @@ const TYPING_IDLE_MS = 3_000;
 const PARTNER_TYPING_TIMEOUT_MS = 6_000;
 const MAX_RECONNECT_DELAY_MS = 15_000;
 
+function socketUrl(sid: string) {
+  // In development the socket is served by a separate dev server (see packages/chat-server).
+  const base =
+    process.env.NEXT_PUBLIC_WS_URL ||
+    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}${CHAT_SOCKET_PATH}`;
+  const url = new URL(base);
+  url.searchParams.set("sid", sid);
+  return url;
+}
+
 export function useStrangerChat() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<WebSocket | null>(null);
@@ -140,36 +168,24 @@ export function useStrangerChat() {
     let disposed = false;
     let attempt = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    // Identifies this tab's chat to the server so a dropped socket can resume it.
+    let sid = crypto.randomUUID();
 
     const scheduleReconnect = () => {
       if (disposed) return;
       dispatch({ type: "connection", status: "reconnecting" });
-      const delay = Math.min(1000 * 2 ** attempt, MAX_RECONNECT_DELAY_MS);
+      // Vercel recycles sockets routinely, so retry the first time almost immediately.
+      const delay =
+        attempt === 0
+          ? 250
+          : Math.min(1000 * 2 ** (attempt - 1), MAX_RECONNECT_DELAY_MS);
       attempt++;
       retryTimer = setTimeout(connect, delay);
     };
 
-    async function connect() {
-      let token: string;
-      try {
-        const res = await fetch("/api/realtime-token", { cache: "no-store" });
-        if (res.status === 401) {
-          window.location.href = "/login?callbackUrl=/chat";
-          return;
-        }
-        if (!res.ok) throw new Error(`Token request failed: ${res.status}`);
-        ({ token } = (await res.json()) as { token: string });
-      } catch {
-        scheduleReconnect();
-        return;
-      }
+    function connect() {
       if (disposed) return;
-
-      const url = new URL(
-        process.env.NEXT_PUBLIC_REALTIME_URL ?? "ws://localhost:4000",
-      );
-      url.searchParams.set("token", token);
-      const socket = new WebSocket(url);
+      const socket = new WebSocket(socketUrl(sid));
       socketRef.current = socket;
 
       socket.onopen = () => {
@@ -188,24 +204,49 @@ export function useStrangerChat() {
               PARTNER_TYPING_TIMEOUT_MS,
             );
           }
+        } else if (
+          event.type === "state" &&
+          event.phase === "idle" &&
+          phaseRef.current === "searching"
+        ) {
+          // We fell out of the queue while disconnected; rejoin it.
+          socket.send(JSON.stringify({ type: "find" } satisfies ClientEvent));
         }
         dispatch({ type: "server", event });
       };
-      socket.onclose = () => {
-        if (socketRef.current === socket) socketRef.current = null;
+      socket.onclose = (event) => {
+        // A socket we already replaced has nothing more to tell us.
+        if (socketRef.current !== socket) return;
+        socketRef.current = null;
+        if (event.code === CloseCode.Unauthorized) {
+          window.location.href = "/login?callbackUrl=/chat";
+          return;
+        }
+        if (event.code === CloseCode.SessionConflict) sid = crypto.randomUUID();
         scheduleReconnect();
       };
     }
 
-    void connect();
+    // Tell the partner right away when the tab closes instead of after the grace period.
+    const onPageHide = () => {
+      const socket = socketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "leave" } satisfies ClientEvent));
+      }
+    };
+    window.addEventListener("pagehide", onPageHide);
+
+    connect();
 
     return () => {
       disposed = true;
+      window.removeEventListener("pagehide", onPageHide);
       clearTimeout(retryTimer);
       clearTimeout(typingIdleTimer.current);
       clearTimeout(partnerTypingTimer.current);
-      socketRef.current?.close();
+      const socket = socketRef.current;
       socketRef.current = null;
+      socket?.close();
     };
   }, []);
 

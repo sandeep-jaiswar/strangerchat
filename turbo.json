@@ -20,7 +20,8 @@
         "NEXTAUTH_SECRET",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
-        "REALTIME_JWT_SECRET",
+        "REDIS_URL",
+        "KV_URL",
         "NEXT_PUBLIC_*"
       ]
     },
@@ -38,9 +39,10 @@
       "cache": false,
       "persistent": true,
       "env": [
-        "PORT",
-        "REALTIME_JWT_SECRET",
-        "ALLOWED_ORIGINS"
+        "NEXTAUTH_URL",
+        "NEXTAUTH_SECRET",
+        "REDIS_URL",
+        "WS_DEV_PORT"
       ]
     },
     "test": {
