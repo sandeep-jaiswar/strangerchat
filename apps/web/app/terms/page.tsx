@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Terms of Service" };
+export const metadata: Metadata = pageMetadata({
+  path: "/terms",
+  title: "Terms of Service",
+  description:
+    "The rules for using StrangerChat: 18+ only, be respectful, and chat at your own risk.",
+});
 
 export default function TermsPage() {
   return (
