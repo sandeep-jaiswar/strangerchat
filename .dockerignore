@@ -1,7 +1,0 @@
-**/node_modules
-**/.next
-**/.turbo
-**/.env
-**/.env.*
-!**/.env.example
-.git

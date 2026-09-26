@@ -11,16 +11,18 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@repo/chat-server": "workspace:*",
     "@repo/protocol": "workspace:*",
     "@repo/ui": "workspace:*",
-    "jose": "^6.2.12",
+    "@vercel/functions": "^3.9.9",
     "lucide-react": "^1.48.0",
     "next": "16.3.4",
     "next-auth": "^4.24.15",
     "next-themes": "^0.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -29,9 +31,13 @@
     "@types/node": "26.4.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
+    "@types/ws": "^8.18.1",
     "eslint": "10.9.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

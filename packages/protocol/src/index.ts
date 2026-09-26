@@ -1,15 +1,31 @@
 /**
- * Wire protocol shared by the web client and the realtime server.
+ * Wire protocol shared by the web client and the chat server.
  * Every frame is a single JSON object with a `type` discriminator.
  */
 
 export const MAX_MESSAGE_LENGTH = 1000;
 
-/** Audience claim for tokens minted by the web app for the realtime server. */
-export const REALTIME_TOKEN_AUDIENCE = "strangerchat-realtime";
+/** Path of the WebSocket endpoint, relative to the site origin. */
+export const CHAT_SOCKET_PATH = "/api/ws";
+
+/**
+ * Close codes the server uses. The client reacts to each differently:
+ * re-authenticate, start a fresh session, or quietly reconnect.
+ */
+export const CloseCode = {
+  /** The session was taken over by a newer socket for the same tab. */
+  Replaced: 4000,
+  /** The server forgot this session (it was offline too long); reconnect to resync. */
+  Expired: 4001,
+  Unauthorized: 4401,
+  /** The session id belongs to another user; pick a new one. */
+  SessionConflict: 4403,
+} as const;
+
+export type ChatPhase = "idle" | "searching" | "chatting";
 
 export type ClientEvent =
-  /** Join the matchmaking queue. */
+  /** Join the matchmaking queue, leaving any current chat. */
   | { type: "find" }
   /** Send a chat message to the current partner. */
   | { type: "message"; text: string }
@@ -18,6 +34,8 @@ export type ClientEvent =
   | { type: "leave" };
 
 export type ServerEvent =
+  /** Sent on every (re)connect so the client can resume where the server left off. */
+  | { type: "state"; phase: ChatPhase }
   | { type: "online"; count: number }
   | { type: "searching" }
   | { type: "matched" }
