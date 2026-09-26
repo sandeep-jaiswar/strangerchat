@@ -14,6 +14,7 @@
     "@repo/chat-server": "workspace:*",
     "@repo/protocol": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.9.9",
     "lucide-react": "^1.48.0",
     "next": "16.3.4",
