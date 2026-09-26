@@ -30,8 +30,10 @@ export type ClientEvent =
   /** Send a chat message to the current partner. */
   | { type: "message"; text: string }
   | { type: "typing"; isTyping: boolean }
-  /** Leave the current chat or queue. */
-  | { type: "leave" };
+  /** Leave the current chat or queue, staying online. */
+  | { type: "leave" }
+  /** The tab is closing: end this session now instead of after the reconnect grace period. */
+  | { type: "bye" };
 
 export type ServerEvent =
   /** Sent on every (re)connect so the client can resume where the server left off. */

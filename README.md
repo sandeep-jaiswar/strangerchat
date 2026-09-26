@@ -13,7 +13,16 @@ Sign in with Google and chat one-on-one with a random stranger. Works on phones 
 
 The chat socket runs as a Vercel Function (`apps/web/app/api/ws/route.ts`) and authenticates with the NextAuth session cookie. Function instances share the queue, pairs and presence through Redis, and deliver events to each other with Redis pub/sub. Messages are relayed and never stored.
 
-Vercel closes each socket when the function reaches its max duration (5 minutes on Hobby). Each browser tab has a session id, so it reconnects and resumes the same chat; a partner is only told "left" if the session doesn't come back within ~20 seconds, or immediately when the tab is closed.
+### Chat rules
+
+The rules live in `packages/chat-server/src/scripts.ts` as Lua scripts, so each change is atomic across function instances.
+
+- **Online** = distinct Google accounts with at least one connected tab. Several tabs count once, and a closed tab stops counting immediately.
+- **Sessions:** each tab has a session. When a socket drops (Vercel recycles sockets every 5 minutes on Hobby, or the network blips), the session is kept for ~20 seconds so the tab can reconnect and continue its chat. Messages sent in the meantime are delivered when it's back. Closing the tab ends the session at once.
+- **Matching** is first come, first served among connected, waiting tabs. A user is never matched with themselves.
+- **Rematching:** two people who just stopped chatting can't be matched again for 15 seconds. For the next 10 minutes, someone new is preferred, and the previous partner is only picked if nobody else is waiting.
+- **Waiting users are re-checked every 5 seconds**, so the 15-second block lifting (or anything else changing) is picked up without anyone pressing Start.
+- **A dropped socket** takes its tab out of the queue; the tab re-joins when it reconnects.
 
 ## Setup
 

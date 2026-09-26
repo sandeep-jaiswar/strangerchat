@@ -10,6 +10,7 @@ import { Hub } from "./hub.ts";
 const REDIS_URL = process.env.TEST_REDIS_URL ?? "redis://localhost:6379";
 const TICK_MS = 50;
 const SESSION_TTL_MS = 300;
+const REMATCH_BLOCK_MS = 400;
 
 class FakeSocket extends EventEmitter {
   readonly OPEN = 1;
@@ -41,25 +42,30 @@ class FakeSocket extends EventEmitter {
       .map((event) => event.type)
       .filter((type) => type !== "online");
   }
+  lastOnline() {
+    const online = this.events.filter((event) => event.type === "online");
+    return online.at(-1)?.count;
+  }
 }
 
 const hubs: Hub[] = [];
-function newHub(prefix: string) {
-  const hub = new Hub({
-    redisUrl: REDIS_URL,
-    prefix,
-    tickMs: TICK_MS,
-    sessionTtlMs: SESSION_TTL_MS,
-  });
-  hubs.push(hub);
-  return hub;
-}
 after(() => Promise.all(hubs.map((hub) => hub.close())));
 
 /** Two hubs sharing one Redis namespace stand in for two Vercel function instances. */
 function cluster() {
   const prefix = `test:${randomUUID()}:`;
-  return [newHub(prefix), newHub(prefix)] as const;
+  const make = () => {
+    const hub = new Hub({
+      redisUrl: REDIS_URL,
+      prefix,
+      tickMs: TICK_MS,
+      sessionTtlMs: SESSION_TTL_MS,
+      rematchBlockMs: REMATCH_BLOCK_MS,
+    });
+    hubs.push(hub);
+    return hub;
+  };
+  return [make(), make()] as const;
 }
 
 async function connect(hub: Hub, userId: string, sid: string = randomUUID()) {
@@ -72,11 +78,25 @@ async function until(check: () => boolean, message: string, timeoutMs = 2000) {
   const deadline = Date.now() + timeoutMs;
   while (!check()) {
     if (Date.now() > deadline) assert.fail(`Timed out waiting for: ${message}`);
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await sleep(10);
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const last = (socket: FakeSocket) => socket.types().at(-1);
+
+async function chatting(a: FakeSocket, b: FakeSocket) {
+  a.deliver({ type: "find" });
+  await until(
+    () => last(a) === "searching" || last(a) === "matched",
+    "first joins queue",
+  );
+  b.deliver({ type: "find" });
+  await until(
+    () => last(a) === "matched" && last(b) === "matched",
+    "both matched",
+  );
+}
 
 test("matches and relays between instances", async () => {
   const [hubA, hubB] = cluster();
@@ -84,14 +104,7 @@ test("matches and relays between instances", async () => {
   const bob = await connect(hubB, "bob");
   assert.deepEqual(alice.events[0], { type: "state", phase: "idle" });
 
-  alice.deliver({ type: "find" });
-  await until(() => last(alice) === "searching", "alice searching");
-  bob.deliver({ type: "find" });
-  await until(
-    () => last(alice) === "matched" && last(bob) === "matched",
-    "both matched",
-  );
-
+  await chatting(alice, bob);
   alice.deliver({ type: "typing", isTyping: true });
   alice.deliver({ type: "message", text: "  hi bob  " });
   await until(() => last(bob) === "message", "bob receives message");
@@ -106,71 +119,177 @@ test("never pairs two tabs of the same user", async () => {
   const tab2 = await connect(hubB, "alice");
   tab1.deliver({ type: "find" });
   tab2.deliver({ type: "find" });
+  await sleep(TICK_MS * 4);
+  assert.equal(last(tab1), "searching");
+  assert.equal(last(tab2), "searching");
+});
+
+test("counts people, not tabs, and drops a closed tab right away", async () => {
+  const [hubA, hubB] = cluster();
+  const aliceTab1 = await connect(hubA, "alice");
+  await connect(hubB, "alice");
+  const bob = await connect(hubB, "bob");
+  await until(() => aliceTab1.lastOnline() === 2, "two people online");
+
+  bob.deliver({ type: "bye" });
   await until(
-    () => last(tab1) === "searching" && last(tab2) === "searching",
-    "both searching",
+    () => aliceTab1.lastOnline() === 1,
+    "one person online after bob closes his tab",
   );
 });
 
-test("resumes a chat when the socket reconnects to another instance", async () => {
+test("a reloaded tab is not counted twice", async () => {
+  const [hubA] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubA, "bob");
+  alice.close(); // dropped without "bye": the session lingers for its grace period
+  await connect(hubA, "alice"); // the reloaded page opens a new session
+  await sleep(TICK_MS * 3);
+  assert.equal(bob.lastOnline(), 2);
+});
+
+test("resumes a chat on another instance and delivers messages sent meanwhile", async () => {
   const [hubA, hubB] = cluster();
   const alice = await connect(hubA, "alice");
   const bob = await connect(hubB, "bob");
-  alice.deliver({ type: "find" });
-  bob.deliver({ type: "find" });
-  await until(() => last(bob) === "matched", "matched");
+  await chatting(alice, bob);
 
   alice.close(); // e.g. Vercel reached the function's max duration
+  await sleep(TICK_MS);
+  bob.deliver({ type: "message", text: "are you there?" });
+  await sleep(TICK_MS);
+
   const aliceAgain = await connect(hubB, "alice", alice.sid);
   assert.deepEqual(aliceAgain.events[0], { type: "state", phase: "chatting" });
+  const held = aliceAgain.events.find((event) => event.type === "message");
+  assert.equal(held?.type === "message" && held.text, "are you there?");
 
-  bob.deliver({ type: "message", text: "still there?" });
+  bob.deliver({ type: "message", text: "welcome back" });
   await until(
-    () => last(aliceAgain) === "message",
-    "resumed socket receives message",
+    () => aliceAgain.events.filter((e) => e.type === "message").length === 2,
+    "live message",
   );
-  await new Promise((resolve) => setTimeout(resolve, SESSION_TTL_MS * 2));
-  assert.notEqual(last(bob), "partner_left", "a resumed chat must not end");
+  await sleep(SESSION_TTL_MS * 2);
+  assert.ok(
+    !bob.types().includes("partner_left"),
+    "a resumed chat must not end",
+  );
 });
 
 test("ends the chat once a dropped session's grace period lapses", async () => {
   const [hubA, hubB] = cluster();
   const alice = await connect(hubA, "alice");
   const bob = await connect(hubB, "bob");
-  alice.deliver({ type: "find" });
-  bob.deliver({ type: "find" });
-  await until(() => last(bob) === "matched", "matched");
+  await chatting(alice, bob);
 
   alice.close();
   await until(() => last(bob) === "partner_left", "bob told alice left");
-
   const aliceLater = await connect(hubA, "alice", alice.sid);
   assert.deepEqual(aliceLater.events[0], { type: "state", phase: "idle" });
 });
 
-test("leaving and skipping notify the partner immediately and avoid rematches", async () => {
+test("closing the tab ends the chat immediately", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+
+  const started = Date.now();
+  alice.deliver({ type: "bye" });
+  await until(() => last(bob) === "partner_left", "bob told alice left");
+  assert.ok(
+    Date.now() - started < SESSION_TTL_MS,
+    "did not wait for the grace period",
+  );
+});
+
+test("two people who skip each other are rematched after the block, not before", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "find" }); // alice skips bob
+  await until(() => last(bob) === "partner_left", "bob notified");
+  const skippedAt = Date.now();
+  bob.deliver({ type: "find" });
+  await until(() => last(bob) === "searching", "bob searching");
+
+  await until(
+    () => last(alice) === "matched" && last(bob) === "matched",
+    "rematched",
+    3000,
+  );
+  const waited = Date.now() - skippedAt;
+  assert.ok(
+    waited >= REMATCH_BLOCK_MS - TICK_MS,
+    `rematched too soon (${waited}ms)`,
+  );
+});
+
+test("someone new is preferred over a previous partner", async () => {
   const [hubA, hubB] = cluster();
   const alice = await connect(hubA, "alice");
   const bob = await connect(hubB, "bob");
   const carol = await connect(hubA, "carol");
-  alice.deliver({ type: "find" });
-  bob.deliver({ type: "find" });
-  await until(() => last(bob) === "matched", "matched");
 
-  alice.deliver({ type: "find" }); // alice skips bob
-  await until(() => last(bob) === "partner_left", "bob notified");
-  bob.deliver({ type: "find" });
-  await until(
-    () => last(bob) === "searching",
-    "bob searching, not rematched with alice",
-  );
+  await chatting(alice, bob);
+  alice.deliver({ type: "leave" });
+  await until(() => last(bob) === "partner_left", "alice and bob done");
+  await sleep(REMATCH_BLOCK_MS + TICK_MS); // alice may rematch bob now, but only as a fallback
 
-  carol.deliver({ type: "find" });
-  await until(() => last(carol) === "matched", "carol matched");
+  await chatting(bob, carol);
   carol.deliver({ type: "leave" });
+  await until(() => last(bob) === "partner_left", "bob and carol done");
+
+  // bob and carol are blocked from each other, so both wait. bob has waited longer,
+  // but alice gets carol because bob is her previous partner.
+  bob.deliver({ type: "find" });
+  carol.deliver({ type: "find" });
   await until(
-    () => last(alice) === "partner_left" || last(bob) === "partner_left",
-    "carol's partner notified",
+    () => last(bob) === "searching" && last(carol) === "searching",
+    "both waiting",
+  );
+  alice.deliver({ type: "find" });
+  await until(
+    () => last(alice) === "matched" && last(carol) === "matched",
+    "alice matched carol",
+  );
+  assert.equal(last(bob), "searching");
+});
+
+test("a disconnected searcher is not matched and leaves the queue", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  alice.deliver({ type: "find" });
+  await until(() => last(alice) === "searching", "alice searching");
+  alice.close();
+  await sleep(TICK_MS);
+
+  const bob = await connect(hubB, "bob");
+  bob.deliver({ type: "find" });
+  await sleep(TICK_MS * 3);
+  assert.equal(last(bob), "searching");
+
+  const aliceAgain = await connect(hubA, "alice", alice.sid);
+  assert.deepEqual(aliceAgain.events[0], { type: "state", phase: "idle" });
+});
+
+test("a late close from a replaced connection doesn't disturb the new one", async () => {
+  const [hubA, hubB] = cluster();
+  const oldSocket = await connect(hubA, "alice");
+  oldSocket.deliver({ type: "find" });
+  await until(() => last(oldSocket) === "searching", "searching");
+
+  const newSocket = await connect(hubB, "alice", oldSocket.sid); // reconnect lands elsewhere first
+  oldSocket.close(); // the old instance only notices now
+  await sleep(TICK_MS);
+
+  const bob = await connect(hubA, "bob");
+  bob.deliver({ type: "find" });
+  await until(
+    () => last(newSocket) === "matched" && last(bob) === "matched",
+    "still matchable",
   );
 });
 
@@ -182,24 +301,11 @@ test("rejects a session id owned by another user", async () => {
   assert.equal(alice.readyState, 1);
 });
 
-test("a newer socket for the same session replaces the old one", async () => {
+test("a newer socket for the same session on one instance replaces the old one", async () => {
   const [hubA] = cluster();
   const first = await connect(hubA, "alice");
   const second = await connect(hubA, "alice", first.sid);
   assert.equal(first.closeCode, CloseCode.Replaced);
   second.deliver({ type: "find" });
   await until(() => last(second) === "searching", "new socket works");
-});
-
-test("reports how many sessions are online", async () => {
-  const [hubA, hubB] = cluster();
-  const alice = await connect(hubA, "alice");
-  await connect(hubB, "bob");
-  await until(
-    () =>
-      alice.events.some(
-        (event) => event.type === "online" && event.count === 2,
-      ),
-    "count of 2",
-  );
 });

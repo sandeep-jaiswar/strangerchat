@@ -227,11 +227,12 @@ export function useStrangerChat() {
       };
     }
 
-    // Tell the partner right away when the tab closes instead of after the grace period.
+    // End the session when the tab closes, so the partner and the online count update
+    // right away instead of after the reconnect grace period.
     const onPageHide = () => {
       const socket = socketRef.current;
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "leave" } satisfies ClientEvent));
+        socket.send(JSON.stringify({ type: "bye" } satisfies ClientEvent));
       }
     };
     window.addEventListener("pagehide", onPageHide);
