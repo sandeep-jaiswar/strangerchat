@@ -7,7 +7,7 @@ export const SITE_URL = (
 
 export const SITE_NAME = "Strangerchat";
 
-export const SITE_TITLE = "Strangerchat — Free Anonymous Chat with Strangers";
+export const SITE_TITLE = "Strangerchat - Free Anonymous Chat with Strangers";
 
 export const SITE_DESCRIPTION =
   "Talk to strangers online for free. Strangerchat instantly matches you with a random person for an anonymous one-on-one text chat — no bots, no profiles, no messages stored. A safer Omegle alternative.";
@@ -30,7 +30,7 @@ const OG_IMAGE = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: "Strangerchat — free anonymous chat with strangers",
+  alt: "Strangerchat - free anonymous chat with strangers",
 };
 
 /**
