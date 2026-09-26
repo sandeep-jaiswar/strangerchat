@@ -6,7 +6,15 @@
         "name": "next"
       }
     ],
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@repo/ui/*": [
+        "../../packages/ui/src/*"
+      ]
+    }
   },
   "include": [
     "**/*.ts",
@@ -15,5 +23,7 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -1,159 +1,46 @@
-# Turborepo starter
+# StrangerChat
 
-This Turborepo starter is maintained by the Turborepo core team.
+Sign in with Google and chat one-on-one with a random stranger. Works on phones and desktops.
 
-## Using this example
+## Structure
 
-Run the following command:
+| Path | What |
+| --- | --- |
+| `apps/web` | Next.js app: landing page, Google sign-in (NextAuth), chat UI, AdSense |
+| `apps/realtime` | WebSocket server: matchmaking queue and message relay (Node, `ws`) |
+| `packages/ui` | shadcn/ui components and the shared Tailwind v4 theme |
+| `packages/protocol` | Message types shared by the client and the server |
 
-```sh
-npx create-turbo@latest
-```
+The web app mints a 2-minute JWT at `/api/realtime-token` for the signed-in user; the browser presents it when opening the socket, and the realtime server verifies it with the shared `REALTIME_JWT_SECRET`. Messages are relayed and never stored.
 
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Setup
 
 ```sh
-cd my-turborepo
-turbo build
+pnpm install
+cp apps/web/.env.example apps/web/.env.local
+cp apps/realtime/.env.example apps/realtime/.env
 ```
 
-Without global `turbo`, use your package manager:
+1. Create an OAuth client at <https://console.cloud.google.com/apis/credentials> (type "Web application") with the redirect URI `http://localhost:3000/api/auth/callback/google`, and put its id and secret in `apps/web/.env.local`.
+2. Generate `NEXTAUTH_SECRET` and `REALTIME_JWT_SECRET` with `openssl rand -base64 32`. Use the **same** `REALTIME_JWT_SECRET` in both env files.
+3. `pnpm dev` starts the web app on :3000 and the realtime server on :4000.
+
+## Adding shadcn components
 
 ```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+cd apps/web && pnpm dlx shadcn@latest add <component>
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Components land in `packages/ui/src/components` and are imported as `@repo/ui/components/<name>`. The CLI sometimes rewrites the `cn` import to `from "cn"`; change it back to `@repo/ui/lib/utils`.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## AdSense
 
-```sh
-turbo build --filter=docs
-```
+Set `NEXT_PUBLIC_ADSENSE_CLIENT` (`ca-pub-…`) and create two ad units in AdSense for `NEXT_PUBLIC_ADSENSE_SLOT_BANNER` (responsive) and `NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR` (vertical). `/ads.txt` is generated from the client id. Without these variables no ad code loads; in development dashed placeholders mark where ads go.
 
-Without global `turbo`:
+Ads appear on the landing page, the lobby (on mobile), and the chat sidebar (on desktop). They are kept away from the message composer on purpose — AdSense penalises placements that invite accidental clicks.
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Deploying
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- **Web**: any Next.js host (e.g. Vercel). Update `NEXTAUTH_URL` and add the production redirect URI to the Google OAuth client.
+- **Realtime**: needs a host that keeps long-lived WebSocket connections open (Fly.io, Railway, Render, a VPS) — not a serverless function. Run `pnpm --filter realtime start`, set `ALLOWED_ORIGINS` to the web app's URL, and point `NEXT_PUBLIC_REALTIME_URL` at it with `wss://`.
+- The matchmaking queue lives in memory, so run a single realtime instance. Scaling past one needs a shared queue (e.g. Redis pub/sub).
