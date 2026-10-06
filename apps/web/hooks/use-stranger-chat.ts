@@ -1,10 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { Chess } from "chess.js";
 import { toast } from "sonner";
 import {
   CHAT_SOCKET_PATH,
   CloseCode,
+  type ChatMode,
+  type ChessClock,
+  type ChessEndReason,
+  type ChessGame,
+  type ChessOffer,
+  type ChessResult,
   type ClientEvent,
   type ServerEvent,
 } from "@repo/protocol";
@@ -19,31 +26,136 @@ export interface ChatItem {
   sentAt: number;
 }
 
+/** A chess game as shown on this client. */
+export interface ChessView extends ChessGame {
+  fen: string;
+  /** Squares of the last move, for highlighting. */
+  lastMove: { from: string; to: string } | null;
+  /** When `clock` was received (client time), so the running side can count down. */
+  clockAt: number;
+}
+
 interface State {
   connection: ConnectionStatus;
   phase: ChatPhase;
+  /** The mode of the current (or last) search. */
+  mode: ChatMode;
   online: number;
   messages: ChatItem[];
   partnerTyping: boolean;
+  game: ChessView | null;
 }
 
 type Action =
   | { type: "connection"; status: ConnectionStatus }
   | { type: "server"; event: ServerEvent }
   | { type: "sent"; item: ChatItem }
+  | { type: "find"; mode: ChatMode }
+  | { type: "localMove"; san: string }
+  | { type: "localOffer"; offer: ChessOffer }
   | { type: "partnerTypingTimeout" }
   | { type: "left" };
 
 const initialState: State = {
   connection: "connecting",
   phase: "idle",
+  mode: "chat",
   online: 0,
   messages: [],
   partnerTyping: false,
+  game: null,
 };
 
 function systemItem(text: string): ChatItem {
   return { id: crypto.randomUUID(), from: "system", text, sentAt: Date.now() };
+}
+
+/** Replays SAN moves from the start into a position. */
+function replay(moves: string[]) {
+  const chess = new Chess();
+  for (const san of moves) chess.move(san);
+  return chess;
+}
+
+/** Plays one more move on a game, or returns undefined if it doesn't fit. */
+function withMove(game: ChessView, san: string): ChessView | undefined {
+  const chess = new Chess(game.fen);
+  try {
+    const move = chess.move(san);
+    const mine = (move.color === "w") === (game.color === "white");
+    return {
+      ...game,
+      fen: chess.fen(),
+      moves: [...game.moves, move.san],
+      lastMove: { from: move.from, to: move.to },
+      // Moving declines the other side's draw offer.
+      offers: {
+        ...game.offers,
+        draw:
+          game.offers.draw === (mine ? "them" : "me") ? null : game.offers.draw,
+      },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function fromServer(game: ChessGame): ChessView {
+  const chess = replay(game.moves);
+  const last = chess.history({ verbose: true }).at(-1);
+  return {
+    ...game,
+    fen: chess.fen(),
+    lastMove: last ? { from: last.from, to: last.to } : null,
+    clockAt: Date.now(),
+  };
+}
+
+const REASONS: Record<ChessEndReason, string> = {
+  checkmate: "by checkmate",
+  resignation: "by resignation",
+  timeout: "on time",
+  abandoned: "— opponent left",
+  aborted: "",
+  stalemate: "by stalemate",
+  insufficient_material: "— insufficient material",
+  threefold_repetition: "by threefold repetition",
+  fifty_moves: "by the fifty-move rule",
+  agreement: "by agreement",
+};
+
+/** A one-line summary of how the game ended, from this player's side. */
+export function describeResult(
+  game: Pick<ChessView, "color" | "result" | "reason">,
+) {
+  if (!game.result || !game.reason) return "";
+  if (game.result === "aborted") return "Game aborted";
+  if (game.result === "1/2-1/2") return `Draw ${REASONS[game.reason]}`;
+  const won = (game.result === "1-0") === (game.color === "white");
+  const reason =
+    game.reason === "abandoned"
+      ? won
+        ? "— opponent left"
+        : "— you left"
+      : REASONS[game.reason];
+  return `${won ? "You won" : "You lost"} ${reason}`;
+}
+
+function gameOver(
+  game: ChessView,
+  result: ChessResult,
+  reason: ChessEndReason,
+  clock: ChessClock,
+): ChessView {
+  return {
+    ...game,
+    status: "over",
+    result,
+    reason,
+    clock,
+    clockAt: Date.now(),
+    offers: { ...game.offers, draw: null },
+  };
 }
 
 function reducer(state: State, action: Action): State {
@@ -58,6 +170,21 @@ function reducer(state: State, action: Action): State {
       };
     case "sent":
       return { ...state, messages: [...state.messages, action.item] };
+    case "find":
+      return { ...state, mode: action.mode };
+    case "localMove": {
+      const game = state.game && withMove(state.game, action.san);
+      return game ? { ...state, game } : state;
+    }
+    case "localOffer":
+      if (!state.game || state.game.offers[action.offer]) return state;
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          offers: { ...state.game.offers, [action.offer]: "me" },
+        },
+      };
     case "partnerTypingTimeout":
       return { ...state, partnerTyping: false };
     case "left":
@@ -87,16 +214,87 @@ function reducer(state: State, action: Action): State {
         case "online":
           return { ...state, online: event.count };
         case "searching":
-          return { ...state, phase: "searching", messages: [] };
+          return { ...state, phase: "searching", messages: [], game: null };
         case "matched":
           return {
             ...state,
             phase: "chatting",
+            mode: event.mode,
             partnerTyping: false,
+            game: null,
             messages: [
-              systemItem("You're now chatting with a random stranger. Say hi!"),
+              systemItem(
+                event.mode === "chess"
+                  ? "You're now playing chess with a random stranger. Say hi!"
+                  : "You're now chatting with a random stranger. Say hi!",
+              ),
             ],
           };
+        case "chess_game": {
+          const rematch =
+            state.game !== null && state.game.id !== event.game.id;
+          return {
+            ...state,
+            mode: "chess",
+            game: fromServer(event.game),
+            messages: rematch
+              ? [
+                  ...state.messages,
+                  systemItem(
+                    `Rematch started — you're playing ${event.game.color}.`,
+                  ),
+                ]
+              : state.messages,
+          };
+        }
+        case "chess_move": {
+          const game = state.game;
+          if (!game) return state;
+          // Our own moves are already on the board; only the clock is news.
+          const next =
+            event.ply <= game.moves.length
+              ? game
+              : event.ply === game.moves.length + 1
+                ? withMove(game, event.san)
+                : undefined;
+          if (!next) return state;
+          return {
+            ...state,
+            game: { ...next, clock: event.clock, clockAt: Date.now() },
+          };
+        }
+        case "chess_over": {
+          if (!state.game) return state;
+          const game = gameOver(
+            state.game,
+            event.result,
+            event.reason,
+            event.clock,
+          );
+          return {
+            ...state,
+            game,
+            messages: [...state.messages, systemItem(describeResult(game))],
+          };
+        }
+        case "chess_offer": {
+          if (!state.game) return state;
+          return {
+            ...state,
+            game: {
+              ...state.game,
+              offers: { ...state.game.offers, [event.offer]: "them" },
+            },
+            messages: [
+              ...state.messages,
+              systemItem(
+                event.offer === "draw"
+                  ? "Stranger offers a draw."
+                  : "Stranger wants a rematch.",
+              ),
+            ],
+          };
+        }
         case "message":
           return {
             ...state,
@@ -149,9 +347,13 @@ export function useStrangerchat() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef(state.phase);
+  const modeRef = useRef(state.mode);
+  const gameRef = useRef(state.game);
   useEffect(() => {
     phaseRef.current = state.phase;
-  }, [state.phase]);
+    modeRef.current = state.mode;
+    gameRef.current = state.game;
+  }, [state.phase, state.mode, state.game]);
 
   const typingSentAt = useRef(0);
   const typingIdleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -210,7 +412,12 @@ export function useStrangerchat() {
           phaseRef.current === "searching"
         ) {
           // We fell out of the queue while disconnected; rejoin it.
-          socket.send(JSON.stringify({ type: "find" } satisfies ClientEvent));
+          socket.send(
+            JSON.stringify({
+              type: "find",
+              mode: modeRef.current,
+            } satisfies ClientEvent),
+          );
         }
         dispatch({ type: "server", event });
       };
@@ -291,16 +498,67 @@ export function useStrangerchat() {
     [send, stopTyping],
   );
 
-  /** Start searching, or skip the current partner and search again. */
-  const findStranger = useCallback(() => {
-    stopTyping();
-    send({ type: "find" });
-  }, [send, stopTyping]);
+  /** Start searching (in `mode`, or the last one), or skip the current partner and search again. */
+  const findStranger = useCallback(
+    (mode: ChatMode = modeRef.current) => {
+      stopTyping();
+      if (send({ type: "find", mode })) {
+        modeRef.current = mode;
+        dispatch({ type: "find", mode });
+      }
+    },
+    [send, stopTyping],
+  );
+
+  /** Plays a move if it's legal on our board; returns whether it was sent. */
+  const playMove = useCallback(
+    (from: string, to: string, promotion?: string) => {
+      const game = gameRef.current;
+      if (!game || game.status !== "playing") return false;
+      const chess = new Chess(game.fen);
+      if ((chess.turn() === "w") !== (game.color === "white")) return false;
+      let san: string;
+      try {
+        san = chess.move({ from, to, promotion }).san;
+      } catch {
+        return false;
+      }
+      if (!send({ type: "chess_move", from, to, promotion })) return false;
+      dispatch({ type: "localMove", san });
+      return true;
+    },
+    [send],
+  );
+
+  const resign = useCallback(() => send({ type: "chess_resign" }), [send]);
+
+  /** Offer a draw or rematch, or accept the stranger's. */
+  const offer = useCallback(
+    (kind: ChessOffer) => {
+      if (send({ type: "chess_offer", offer: kind })) {
+        dispatch({ type: "localOffer", offer: kind });
+      }
+    },
+    [send],
+  );
+
+  /** Asks the server to end the game if a clock looks out of time. */
+  const claimFlag = useCallback(() => send({ type: "chess_flag" }), [send]);
 
   const leave = useCallback(() => {
     stopTyping();
     if (send({ type: "leave" })) dispatch({ type: "left" });
   }, [send, stopTyping]);
 
-  return { ...state, findStranger, leave, sendMessage, notifyTyping };
+  return {
+    ...state,
+    findStranger,
+    leave,
+    sendMessage,
+    notifyTyping,
+    playMove,
+    resign,
+    offer,
+    claimFlag,
+  };
 }

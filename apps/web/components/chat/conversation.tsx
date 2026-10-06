@@ -19,6 +19,8 @@ interface ConversationProps {
   connected: boolean;
   messages: ChatItem[];
   partnerTyping: boolean;
+  /** Label of the button that finds someone new once the chat has ended. */
+  nextLabel?: string;
   onSend: (text: string) => boolean;
   onTyping: () => void;
   onNext: () => void;
@@ -32,6 +34,7 @@ export function Conversation({
   connected,
   messages,
   partnerTyping,
+  nextLabel = "Find a new stranger",
   onSend,
   onTyping,
   onNext,
@@ -118,7 +121,7 @@ export function Conversation({
                 onClick={onNext}
               >
                 <SkipForward />
-                Find a new stranger
+                {nextLabel}
               </Button>
             </div>
           ) : (
