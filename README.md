@@ -65,7 +65,8 @@ Ads appear on the landing page, the lobby (on mobile), and the chat sidebar (on 
 
 1. Import the repo into Vercel with **Root Directory** `apps/web`. Fluid compute must be on (the default for new projects); WebSockets are in beta on Vercel.
 2. Add Redis from the Vercel Marketplace (project → Storage), e.g. Upstash, and connect it to the project. It sets `REDIS_URL` (or `KV_URL`, which also works). Pick the region your functions run in.
-3. Set `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and the AdSense variables. Do **not** set `NEXT_PUBLIC_WS_URL` in production — the socket is served from the same domain.
-4. Add `https://<your-domain>/api/auth/callback/google` as a redirect URI on the Google OAuth client, then deploy.
+3. Preview deployments keep their chat state under `sc:preview:`, separate from production's `sc:`, so they can share the Redis without testers showing up as online (or getting matched) on the live site. To share a Redis between other environments, give each its own `CHAT_REDIS_PREFIX`.
+4. Set `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and the AdSense variables. Do **not** set `NEXT_PUBLIC_WS_URL` in production — the socket is served from the same domain.
+5. Add `https://<your-domain>/api/auth/callback/google` as a redirect URI on the Google OAuth client, then deploy.
 
 On a Pro plan you can raise `maxDuration` in `app/api/ws/route.ts` to 800 seconds, so sockets are recycled less often.
