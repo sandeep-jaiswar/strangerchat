@@ -24,6 +24,15 @@ The rules live in `packages/chat-server/src/scripts.ts` as Lua scripts, so each 
 - **Waiting users are re-checked in bounded batches every 5 seconds**, so the 15-second block lifting (or anything else changing) is picked up without anyone pressing Start. Scans continue across the queue over successive passes, so large queues can take multiple ticks to revisit every session.
 - **A dropped socket** takes its tab out of the queue; the tab re-joins when it reconnects.
 
+### Chess Club
+
+"Play chess with a stranger" matches people from a separate queue (`queue:chess`) and gives them a casual 10+0 game next to the chat. The game state (moves, clocks, offers) lives in Redis next to the pair, and the same scripts manage it.
+
+- **The server is the referee.** Each move is replayed with [chess.js](https://github.com/jhlywa/chess.js) on the server before a Lua script applies it. That script refuses the move if the game has moved on, so two function instances can't both play a move. The board is [react-chessboard](https://github.com/Clariity/react-chessboard) (MIT). Chessground is avoided because it is GPL.
+- **Clocks are server-side** and stored as "time left as of the last move", so socket recycling and reconnects don't pause or reset them. Each side must make its first move within 30 seconds or the game is aborted. After that the side to move is on the clock. The tick ends games whose clock ran out, and a client whose clock reaches zero asks the server to check right away.
+- **Leaving ends the game.** Next, Lobby, closing the tab, or a reconnect grace period that lapses all count. After both first moves the leaver loses by abandonment; before that the game is aborted. A reconnecting player gets the whole game back.
+- **Draws and rematches** are offers that the other player accepts by making the same offer. A move declines the opponent's draw offer. A rematch swaps colours.
+
 ## Setup
 
 ```sh

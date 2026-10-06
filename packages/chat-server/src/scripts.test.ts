@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test, type TestContext } from "node:test";
 import { Redis } from "ioredis";
-import { BYE, CLAIM, DETACH, FIND, TICK } from "./scripts.ts";
+import { BYE, CLAIM, DETACH, FIND, MOVE, TICK } from "./scripts.ts";
 
 async function fixture(t: TestContext) {
   const redis = new Redis(
@@ -32,13 +32,13 @@ test("DETACH restores held messages in order without removing a newer connection
   const result = (await claim("alice", "alice", "failed")) as (
     string | number
   )[];
-  assert.deepEqual(result.slice(2), ["first", "second"]);
+  assert.deepEqual(result.slice(3), ["first", "second"]);
   await claim("alice", "alice", "new");
   await run(FIND, 1_000, "alice");
   await redis.rpush(`${prefix}inbox:alice`, "third");
 
   assert.equal(
-    await run(DETACH, 1_000, "alice", "failed", ...result.slice(2)),
+    await run(DETACH, 1_000, "alice", "failed", ...result.slice(3)),
     0,
   );
   assert.equal(await redis.hget(`${prefix}conn`, "alice"), "new");
@@ -51,7 +51,7 @@ test("DETACH restores held messages in order without removing a newer connection
   const resumed = (await claim("alice", "alice", "next")) as (
     string | number
   )[];
-  assert.deepEqual(resumed.slice(2), ["first", "second", "third"]);
+  assert.deepEqual(resumed.slice(3), ["first", "second", "third"]);
 });
 
 test("DETACH does not restore an inbox after the session ended", async (t) => {
@@ -115,4 +115,66 @@ test("a new partner on a later page is preferred over an earlier rematch fallbac
   await redis.set(`${prefix}retry`, 106);
   await run(TICK, 16_000);
   assert.equal(await redis.get(`${prefix}pair:alice`), "new");
+});
+
+async function chessGame(t: TestContext) {
+  const f = await fixture(t);
+  await f.claim("a");
+  await f.claim("b");
+  await f.run(FIND, 1_000, "a", "chess");
+  await f.run(FIND, 1_000, "b", "chess");
+  const gid = await f.redis.get(`${f.prefix}game:a`);
+  assert.ok(gid, "a game started");
+  const white = (await f.redis.hget(`${f.prefix}g:${gid}`, "w"))!;
+  const black = white === "a" ? "b" : "a";
+  const game = () => f.redis.hgetall(`${f.prefix}g:${gid}`);
+  return { ...f, gid, white, black, game };
+}
+
+test("a game is aborted when the first move doesn't come in time", async (t) => {
+  const { run, game } = await chessGame(t);
+  await run(TICK, 30_999);
+  assert.equal((await game()).status, "playing");
+  await run(TICK, 31_000);
+  assert.deepEqual(
+    [(await game()).status, (await game()).result],
+    ["over", "aborted"],
+  );
+});
+
+test("clocks run from both first moves on, and running out loses", async (t) => {
+  const { run, game, gid, white, black } = await chessGame(t);
+  assert.equal(await run(MOVE, 5_000, white, gid, 0, "e4", "", ""), 1);
+  assert.equal(await run(MOVE, 9_000, black, gid, 1, "e5", "", ""), 1);
+  // Neither first move cost any time.
+  assert.deepEqual(
+    [(await game()).wt, (await game()).bt],
+    ["600000", "600000"],
+  );
+  // A stale or out-of-turn move is refused.
+  assert.equal(await run(MOVE, 10_000, black, gid, 2, "Nf6", "", ""), 0);
+  assert.equal(await run(MOVE, 10_000, white, gid, 1, "Nf3", "", ""), 0);
+
+  assert.equal(await run(MOVE, 69_000, white, gid, 2, "Nf3", "", ""), 1);
+  assert.equal((await game()).wt, "540000");
+
+  await run(TICK, 69_000 + 600_000 - 1);
+  assert.equal((await game()).status, "playing");
+  await run(TICK, 69_000 + 600_000);
+  const over = await game();
+  assert.deepEqual(
+    [over.result, over.reason, over.bt],
+    ["1-0", "timeout", "0"],
+  );
+});
+
+test("a move after the mover's flag fell ends the game instead", async (t) => {
+  const { run, game, gid, white, black } = await chessGame(t);
+  await run(MOVE, 1_000, white, gid, 0, "e4", "", "");
+  await run(MOVE, 1_000, black, gid, 1, "e5", "", "");
+  assert.equal(await run(MOVE, 601_000, white, gid, 2, "Nf3", "", ""), 0);
+  assert.deepEqual(
+    [(await game()).result, (await game()).reason],
+    ["0-1", "timeout"],
+  );
 });

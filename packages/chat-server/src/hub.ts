@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { Chess } from "chess.js";
 import { Redis } from "ioredis";
 import type { WebSocket } from "ws";
 import {
   CloseCode,
   MAX_MESSAGE_LENGTH,
   type ChatPhase,
+  type ChessEndReason,
+  type ChessResult,
   type ClientEvent,
   type ServerEvent,
 } from "@repo/protocol";
@@ -14,8 +17,14 @@ import {
   CLAIM,
   DETACH,
   FIND,
+  FLAG,
+  GAME,
   LEAVE,
+  MOVE,
+  OFFER,
   RELAY,
+  RESIGN,
+  SYNC,
   TICK,
   TOUCH,
 } from "./scripts.ts";
@@ -52,7 +61,7 @@ type Args = (string | number)[];
 interface ChatCommands {
   scClaim(
     ...args: Args
-  ): Promise<["forbidden"] | [ChatPhase, number, ...string[]]>;
+  ): Promise<["forbidden"] | [ChatPhase, number, string, ...string[]]>;
   scDetach(...args: Args): Promise<number>;
   scBye(...args: Args): Promise<number>;
   scFind(...args: Args): Promise<number>;
@@ -60,6 +69,12 @@ interface ChatCommands {
   scRelay(...args: Args): Promise<number>;
   scTouch(...args: Args): Promise<string[]>;
   scTick(...args: Args): Promise<number>;
+  scGame(...args: Args): Promise<string[]>;
+  scMove(...args: Args): Promise<number>;
+  scResign(...args: Args): Promise<number>;
+  scOffer(...args: Args): Promise<number>;
+  scFlag(...args: Args): Promise<number>;
+  scSync(...args: Args): Promise<string>;
 }
 
 /**
@@ -97,6 +112,12 @@ export class Hub {
       scRelay: RELAY,
       scTouch: TOUCH,
       scTick: TICK,
+      scGame: GAME,
+      scMove: MOVE,
+      scResign: RESIGN,
+      scOffer: OFFER,
+      scFlag: FLAG,
+      scSync: SYNC,
     };
     for (const [name, lua] of Object.entries(scripts)) {
       this.redis.defineCommand(name, { numberOfKeys: 0, lua });
@@ -133,7 +154,7 @@ export class Hub {
       ws.close(CloseCode.SessionConflict, "Session belongs to another user");
       return;
     }
-    const [phase, online, ...held] = claim;
+    const [phase, online, game, ...held] = claim;
     if (ws.readyState !== ws.OPEN) {
       // The socket closed while we were claiming; undo so the session isn't marked connected.
       if (!previous) await this.subscriber.unsubscribe(channel);
@@ -173,6 +194,7 @@ export class Hub {
 
     this.send(connection, { type: "state", phase });
     this.send(connection, { type: "online", count: online });
+    if (game) this.sendRaw(connection, game);
     for (const message of held) this.sendRaw(connection, message);
     this.startTicking();
   }
@@ -233,7 +255,11 @@ export class Hub {
     const common = this.common(Date.now());
     switch (event.type) {
       case "find": {
-        const matched = await this.redis.scFind(...common, sid);
+        const matched = await this.redis.scFind(
+          ...common,
+          sid,
+          event.mode ?? "chat",
+        );
         if (!matched) this.send(connection, { type: "searching" });
         return;
       }
@@ -279,7 +305,69 @@ export class Hub {
         }
         return;
       }
+      case "chess_move":
+        await this.move(connection, event);
+        return;
+      case "chess_resign":
+        await this.redis.scResign(...common, sid);
+        return;
+      case "chess_offer":
+        await this.redis.scOffer(...common, sid, event.offer);
+        return;
+      case "chess_flag":
+        await this.redis.scFlag(...common, sid);
+        return;
     }
+  }
+
+  /** Checks a move against the game so far, then plays it. */
+  private async move(
+    connection: Connection,
+    event: Extract<ClientEvent, { type: "chess_move" }>,
+  ) {
+    const { sid } = connection;
+    const [gid, color, ply, status, ...moves] = await this.redis.scGame(
+      ...this.common(Date.now()),
+      sid,
+    );
+    const turn = Number(ply) % 2 === 0 ? "white" : "black";
+    let played:
+      { san: string; result: ChessResult | ""; reason: string } | undefined;
+    if (gid && status === "playing" && color === turn) {
+      const chess = new Chess();
+      for (const san of moves) chess.move(san);
+      try {
+        const { san } = chess.move({
+          from: event.from,
+          to: event.to,
+          promotion: event.promotion,
+        });
+        played = { san, ...outcome(chess) };
+      } catch {
+        // Illegal move: fall through and resync the client.
+      }
+    }
+    const ok =
+      played &&
+      (await this.redis.scMove(
+        ...this.common(Date.now()),
+        sid,
+        gid!,
+        Number(ply),
+        played.san,
+        played.result,
+        played.reason,
+      ));
+    if (ok) return;
+
+    this.send(connection, {
+      type: "error",
+      code: "invalid_move",
+      message: "That move can't be played right now.",
+    });
+    // Put the client's board back to the server's position.
+    const game = await this.redis.scSync(...this.common(Date.now()), sid);
+    if (game) this.sendRaw(connection, game);
   }
 
   private startTicking() {
@@ -348,7 +436,6 @@ function parseEvent(raw: string): ClientEvent | undefined {
   if (typeof data !== "object" || data === null) return undefined;
   const event = data as Record<string, unknown>;
   switch (event.type) {
-    case "find":
     case "leave":
     case "bye":
       return { type: event.type };
@@ -358,7 +445,50 @@ function parseEvent(raw: string): ClientEvent | undefined {
       return typeof event.text === "string"
         ? { type: "message", text: event.text }
         : undefined;
+    case "find":
+      return event.mode === "chess"
+        ? { type: "find", mode: "chess" }
+        : { type: "find" };
+    case "chess_move":
+      return typeof event.from === "string" &&
+        typeof event.to === "string" &&
+        (event.promotion === undefined || typeof event.promotion === "string")
+        ? {
+            type: "chess_move",
+            from: event.from,
+            to: event.to,
+            promotion: event.promotion,
+          }
+        : undefined;
+    case "chess_resign":
+    case "chess_flag":
+      return { type: event.type };
+    case "chess_offer":
+      return event.offer === "draw" || event.offer === "rematch"
+        ? { type: "chess_offer", offer: event.offer }
+        : undefined;
     default:
       return undefined;
   }
+}
+
+/** How a game ends after the last move, if it does. */
+function outcome(chess: Chess): {
+  result: ChessResult | "";
+  reason: ChessEndReason | "";
+} {
+  if (chess.isCheckmate())
+    return {
+      result: chess.turn() === "w" ? "0-1" : "1-0",
+      reason: "checkmate",
+    };
+  const draw = (reason: ChessEndReason) => ({
+    result: "1/2-1/2" as const,
+    reason,
+  });
+  if (chess.isStalemate()) return draw("stalemate");
+  if (chess.isInsufficientMaterial()) return draw("insufficient_material");
+  if (chess.isThreefoldRepetition()) return draw("threefold_repetition");
+  if (chess.isDrawByFiftyMoves()) return draw("fifty_moves");
+  return { result: "", reason: "" };
 }

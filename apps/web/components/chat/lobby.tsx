@@ -1,23 +1,34 @@
-import { Loader2, Search, Users } from "lucide-react";
+import {
+  ChessKnight,
+  Loader2,
+  MessageCircle,
+  Search,
+  Users,
+} from "lucide-react";
+import type { ChatMode } from "@repo/protocol";
 import { Button } from "@repo/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { AD_SLOTS } from "@/lib/ads";
 
 interface LobbyProps {
   searching: boolean;
+  /** What we're searching for (or last searched for). */
+  mode: ChatMode;
   ready: boolean;
   online: number;
-  onStart: () => void;
+  onStart: (mode: ChatMode) => void;
   onCancel: () => void;
 }
 
 export function Lobby({
   searching,
+  mode,
   ready,
   online,
   onStart,
   onCancel,
 }: LobbyProps) {
+  const chess = mode === "chess";
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
@@ -30,7 +41,11 @@ export function Lobby({
           )}
           <span className="relative flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30">
             {searching ? (
-              <Search className="size-8 animate-pulse" />
+              chess ? (
+                <ChessKnight className="size-8 animate-pulse" />
+              ) : (
+                <Search className="size-8 animate-pulse" />
+              )
             ) : (
               <Users className="size-8" />
             )}
@@ -38,11 +53,17 @@ export function Lobby({
         </div>
 
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          {searching ? "Looking for a stranger…" : "Ready to meet someone new?"}
+          {searching
+            ? chess
+              ? "Looking for a chess partner…"
+              : "Looking for a stranger…"
+            : "Ready to meet someone new?"}
         </h1>
         <p className="mt-2 max-w-sm text-muted-foreground" aria-live="polite">
           {searching
-            ? "Hang tight — you'll be connected as soon as someone is free."
+            ? chess
+              ? "You'll play a casual 10-minute game and can chat while you play."
+              : "Hang tight — you'll be connected as soon as someone is free."
             : ready
               ? `${online.toLocaleString()} ${online === 1 ? "person is" : "people are"} online right now.`
               : "Connecting to the chat server…"}
@@ -59,15 +80,31 @@ export function Lobby({
               Cancel
             </Button>
           ) : (
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={!ready}
-              onClick={onStart}
-            >
-              {!ready && <Loader2 className="animate-spin" />}
-              Start chatting
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={!ready}
+                onClick={() => onStart("chat")}
+              >
+                {ready ? (
+                  <MessageCircle />
+                ) : (
+                  <Loader2 className="animate-spin" />
+                )}
+                Start chatting
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                disabled={!ready}
+                onClick={() => onStart("chess")}
+              >
+                <ChessKnight />
+                Play chess with a stranger
+              </Button>
+            </div>
           )}
         </div>
       </div>

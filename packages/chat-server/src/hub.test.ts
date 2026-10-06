@@ -71,7 +71,7 @@ function cluster() {
 async function connect(hub: Hub, userId: string, sid: string = randomUUID()) {
   const socket = new FakeSocket();
   await hub.attach(socket as unknown as WebSocket, userId, sid);
-  return Object.assign(socket, { sid });
+  return Object.assign(socket, { sid, userId });
 }
 
 async function until(check: () => boolean, message: string, timeoutMs = 2000) {
@@ -349,4 +349,207 @@ test("a stale bye cannot end a replacement connection's chat", async () => {
   assert.ok(!bob.types().includes("partner_left"));
   replacement.deliver({ type: "bye" });
   await until(() => last(bob) === "partner_left", "current bye ends chat");
+});
+
+type Event<T extends ServerEvent["type"]> = Extract<ServerEvent, { type: T }>;
+
+function lastOf<T extends ServerEvent["type"]>(socket: FakeSocket, type: T) {
+  return socket.events.filter((event) => event.type === type).at(-1) as
+    Event<T> | undefined;
+}
+
+type Player = Awaited<ReturnType<typeof connect>>;
+
+/** Matches two players in Chess Club; returns them as [white, black]. */
+async function playing(a: Player, b: Player) {
+  a.deliver({ type: "find", mode: "chess" });
+  await until(() => last(a) === "searching", "first joins the chess queue");
+  b.deliver({ type: "find", mode: "chess" });
+  await until(
+    () => !!lastOf(a, "chess_game") && !!lastOf(b, "chess_game"),
+    "both get a game",
+  );
+  return lastOf(a, "chess_game")!.game.color === "white"
+    ? ([a, b] as const)
+    : ([b, a] as const);
+}
+
+async function play(
+  white: FakeSocket,
+  black: FakeSocket,
+  moves: [string, string][],
+) {
+  for (const [index, [from, to]] of moves.entries()) {
+    const mover = index % 2 === 0 ? white : black;
+    mover.deliver({ type: "chess_move", from, to });
+    await until(
+      () => lastOf(white, "chess_move")?.ply === index + 1,
+      `move ${index + 1} is played`,
+    );
+  }
+}
+
+test("chess players are matched with each other, not with chatters", async () => {
+  const [hubA, hubB] = cluster();
+  const chatter = await connect(hubA, "carol");
+  chatter.deliver({ type: "find" });
+  await until(() => last(chatter) === "searching", "chatter waits");
+
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  const [white, black] = await playing(alice, bob);
+  assert.equal(last(chatter), "searching");
+  assert.deepEqual(lastOf(alice, "matched"), {
+    type: "matched",
+    mode: "chess",
+  });
+
+  const game = lastOf(black, "chess_game")!.game;
+  assert.equal(game.color, "black");
+  assert.deepEqual(game.moves, []);
+  assert.equal(game.status, "playing");
+  assert.equal(game.clock.running, false);
+  assert.ok(game.clock.firstMoveMs! > 0);
+
+  // Chatting still works alongside the board.
+  white.deliver({ type: "message", text: "good luck" });
+  await until(() => last(black) === "message", "black gets the message");
+});
+
+test("relays legal moves and rejects illegal or out-of-turn ones", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+
+  black.deliver({ type: "chess_move", from: "e7", to: "e5" });
+  await until(() => !!lastOf(black, "error"), "black is told off");
+  await until(() => last(black) === "chess_game", "black is resynced");
+  assert.deepEqual(black.types().slice(-2), ["error", "chess_game"]);
+  assert.equal(lastOf(black, "error")?.code, "invalid_move");
+
+  white.deliver({ type: "chess_move", from: "e2", to: "e5" });
+  await until(() => !!lastOf(white, "error"), "illegal move is rejected");
+
+  await play(white, black, [
+    ["e2", "e4"],
+    ["e7", "e5"],
+  ]);
+  const move = lastOf(black, "chess_move")!;
+  assert.equal(move.san, "e5");
+  assert.equal(move.clock.running, true);
+});
+
+test("checkmate ends the game", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+  await play(white, black, [
+    ["f2", "f3"],
+    ["e7", "e5"],
+    ["g2", "g4"],
+    ["d8", "h4"],
+  ]);
+  await until(() => !!lastOf(white, "chess_over"), "game over");
+  const over = lastOf(white, "chess_over")!;
+  assert.equal(over.result, "0-1");
+  assert.equal(over.reason, "checkmate");
+});
+
+test("draws by agreement, and a rematch swaps colours", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+  await play(white, black, [
+    ["e2", "e4"],
+    ["e7", "e5"],
+  ]);
+  white.deliver({ type: "chess_offer", offer: "draw" });
+  await until(() => last(black) === "chess_offer", "black sees the offer");
+  black.deliver({ type: "chess_offer", offer: "draw" });
+  await until(() => !!lastOf(white, "chess_over"), "game over");
+  assert.equal(lastOf(white, "chess_over")!.reason, "agreement");
+
+  const games = white.events.filter((e) => e.type === "chess_game").length;
+  black.deliver({ type: "chess_offer", offer: "rematch" });
+  await until(
+    () => last(white) === "chess_offer",
+    "white sees the rematch offer",
+  );
+  white.deliver({ type: "chess_offer", offer: "rematch" });
+  await until(
+    () => white.events.filter((e) => e.type === "chess_game").length > games,
+    "rematch starts",
+  );
+  assert.equal(lastOf(white, "chess_game")!.game.color, "black");
+  assert.equal(lastOf(black, "chess_game")!.game.color, "white");
+});
+
+test("resigning, and leaving mid-game, lose the game", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+  await play(white, black, [
+    ["e2", "e4"],
+    ["e7", "e5"],
+  ]);
+  black.deliver({ type: "chess_resign" });
+  await until(() => !!lastOf(white, "chess_over"), "game over");
+  assert.deepEqual(
+    [lastOf(white, "chess_over")!.result, lastOf(white, "chess_over")!.reason],
+    ["1-0", "resignation"],
+  );
+
+  const [white2, black2] = await playing(
+    await connect(hubA, "carol"),
+    await connect(hubB, "dave"),
+  );
+  await play(white2, black2, [
+    ["d2", "d4"],
+    ["d7", "d5"],
+  ]);
+  white2.deliver({ type: "leave" });
+  await until(() => last(black2) === "partner_left", "black sees white leave");
+  const over = lastOf(black2, "chess_over")!;
+  assert.deepEqual([over.result, over.reason], ["0-1", "abandoned"]);
+});
+
+test("leaving before both first moves aborts the game", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+  await play(white, black, [["e2", "e4"]]);
+  black.deliver({ type: "find", mode: "chess" });
+  await until(() => !!lastOf(white, "chess_over"), "game over");
+  assert.equal(lastOf(white, "chess_over")!.result, "aborted");
+});
+
+test("a reconnecting player gets the game back on another instance", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, "alice"),
+    await connect(hubB, "bob"),
+  );
+  await play(white, black, [
+    ["e2", "e4"],
+    ["c7", "c5"],
+  ]);
+  black.close();
+  white.deliver({ type: "chess_move", from: "g1", to: "f3" });
+  await until(() => lastOf(white, "chess_move")?.ply === 3, "white moves");
+
+  const back = await connect(hubA, black.userId, black.sid);
+  const game = lastOf(back, "chess_game")!.game;
+  assert.deepEqual(game.moves, ["e4", "c5", "Nf3"]);
+  assert.equal(game.color, "black");
+  assert.equal(game.clock.running, true);
 });

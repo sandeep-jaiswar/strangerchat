@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@repo/protocol": "workspace:*",
+    "chess.js": "^1.4.0",
     "ioredis": "^6.0.0",
     "next-auth": "^4.24.15",
     "ws": "^8.21.3"

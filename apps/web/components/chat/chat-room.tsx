@@ -12,12 +12,16 @@ import {
 } from "@/hooks/use-stranger-chat";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { AD_SLOTS } from "@/lib/ads";
+import { cn } from "@repo/ui/lib/utils";
+import { ChessPanel } from "../chess/chess-panel";
 import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";
 
 export function ChatRoom({ user }: { user: UserSummary }) {
   const chat = useStrangerchat();
   const height = useViewportHeight();
+  const inChat = chat.phase === "chatting" || chat.phase === "ended";
+  const game = inChat ? chat.game : null;
 
   return (
     <div
@@ -36,21 +40,49 @@ export function ChatRoom({ user }: { user: UserSummary }) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-w-0 flex-1 flex-col lg:flex-row">
+          {game && (
+            <section
+              aria-label="Chess board"
+              className="shrink-0 border-b px-3 py-2 lg:flex lg:min-w-0 lg:flex-1 lg:items-center lg:border-r lg:border-b-0 lg:p-6"
+            >
+              <ChessPanel
+                game={game}
+                partnerGone={chat.phase === "ended"}
+                connected={chat.connection === "open"}
+                viewportHeight={height}
+                onMove={chat.playMove}
+                onResign={chat.resign}
+                onOffer={chat.offer}
+                onFlag={chat.claimFlag}
+              />
+            </section>
+          )}
           {chat.phase === "chatting" || chat.phase === "ended" ? (
-            <Conversation
-              phase={chat.phase}
-              connected={chat.connection === "open"}
-              messages={chat.messages}
-              partnerTyping={chat.partnerTyping}
-              onSend={chat.sendMessage}
-              onTyping={chat.notifyTyping}
-              onNext={chat.findStranger}
-              onLeave={chat.leave}
-            />
+            <div
+              className={cn(
+                "flex min-h-0 min-w-0 flex-1 flex-col",
+                game && "lg:w-96 lg:flex-none",
+              )}
+            >
+              <Conversation
+                phase={chat.phase}
+                connected={chat.connection === "open"}
+                messages={chat.messages}
+                partnerTyping={chat.partnerTyping}
+                nextLabel={
+                  chat.mode === "chess" ? "Find a new opponent" : undefined
+                }
+                onSend={chat.sendMessage}
+                onTyping={chat.notifyTyping}
+                onNext={() => chat.findStranger()}
+                onLeave={chat.leave}
+              />
+            </div>
           ) : (
             <Lobby
               searching={chat.phase === "searching"}
+              mode={chat.mode}
               ready={chat.connection === "open"}
               online={chat.online}
               onStart={chat.findStranger}
@@ -59,7 +91,13 @@ export function ChatRoom({ user }: { user: UserSummary }) {
           )}
         </main>
 
-        <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l p-4 lg:flex">
+        {/* With a board on screen there's only room for the sidebar on wide screens. */}
+        <aside
+          className={cn(
+            "hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l p-4",
+            game ? "2xl:flex" : "lg:flex",
+          )}
+        >
           <div className="rounded-xl border bg-card p-4 text-sm">
             <p className="mb-2 flex items-center gap-2 font-medium">
               <ShieldAlert className="size-4 text-primary" />
