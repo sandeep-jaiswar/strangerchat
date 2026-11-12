@@ -12,6 +12,7 @@ import {
   listFriendsAndRequests,
   removeFriend,
   respondFriendRequest,
+  userExists,
 } from "@funstranger/db";
 import { authOptions } from "@/lib/auth";
 
@@ -72,6 +73,9 @@ export async function POST(request: Request) {
       await removeFriend(userId, body.targetId);
       return NextResponse.json({ ok: true });
     case "block":
+      if (body.targetId === userId || !(await userExists(body.targetId))) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
       await blockUser(userId, body.targetId);
       await syncBlockedUser(
         process.env.REDIS_URL ?? process.env.KV_URL,

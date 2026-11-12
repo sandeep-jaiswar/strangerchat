@@ -187,6 +187,17 @@ export async function updateUserHandle(
   }
 }
 
+export async function userExists(userId: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function isUserBanned(userId: string): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
@@ -331,35 +342,36 @@ export async function requestOrAcceptFriend(
   }
 
   const [low, high] = orderedPair(fromUserId, toUserId);
-  const existing = await db
-    .select()
-    .from(friendships)
-    .where(and(eq(friendships.userLow, low), eq(friendships.userHigh, high)))
-    .limit(1);
+  return db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(friendships)
+      .values({
+        userLow: low,
+        userHigh: high,
+        requestedBy: fromUserId,
+        status: "pending",
+      })
+      .onConflictDoNothing()
+      .returning({ id: friendships.id });
+    if (inserted.length > 0) return { status: "pending" as const };
 
-  const row = existing[0];
-  if (row) {
-    if (row.status === "accepted") return { status: "accepted" };
+    const [row] = await tx
+      .select()
+      .from(friendships)
+      .where(and(eq(friendships.userLow, low), eq(friendships.userHigh, high)))
+      .limit(1)
+      .for("update");
+    if (!row) return { status: "unavailable" as const };
+    if (row.status === "accepted") return { status: "accepted" as const };
     if (row.requestedBy !== fromUserId) {
-      await db
+      await tx
         .update(friendships)
         .set({ status: "accepted", updatedAt: new Date() })
         .where(eq(friendships.id, row.id));
-      return { status: "accepted" };
+      return { status: "accepted" as const };
     }
-    return { status: "pending" };
-  }
-
-  await db
-    .insert(friendships)
-    .values({
-      userLow: low,
-      userHigh: high,
-      requestedBy: fromUserId,
-      status: "pending",
-    })
-    .onConflictDoNothing();
-  return { status: "pending" };
+    return { status: "pending" as const };
+  });
 }
 
 export async function respondFriendRequest(
@@ -496,24 +508,26 @@ export async function listDirectMessages(
       eq(directMessages.recipientId, userA),
     ),
   );
-  const whereClause =
-    sinceMs !== undefined && Number.isFinite(sinceMs)
-      ? and(pairCondition, gte(directMessages.createdAt, new Date(sinceMs)))
-      : pairCondition;
+  const hasValidSince =
+    sinceMs !== undefined &&
+    Number.isFinite(sinceMs) &&
+    Math.abs(sinceMs) <= 8.64e15;
+  const whereClause = hasValidSince
+    ? and(pairCondition, gte(directMessages.createdAt, new Date(sinceMs)))
+    : pairCondition;
 
   const rows = await db
     .select()
     .from(directMessages)
     .where(whereClause)
     .orderBy(
-      sinceMs !== undefined && Number.isFinite(sinceMs)
+      hasValidSince
         ? asc(directMessages.createdAt)
         : desc(directMessages.createdAt),
     )
     .limit(limit);
 
-  const ordered =
-    sinceMs !== undefined && Number.isFinite(sinceMs) ? rows : rows.reverse();
+  const ordered = hasValidSince ? rows : rows.reverse();
 
   return ordered.map((r) => ({
     id: r.id,

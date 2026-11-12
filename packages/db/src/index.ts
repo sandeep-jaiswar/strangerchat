@@ -23,6 +23,7 @@ export {
   saveDirectMessage,
   unblockUser,
   updateUserHandle,
+  userExists,
   type DirectMessageItem,
   type FriendSummary,
   type LeaderboardData,

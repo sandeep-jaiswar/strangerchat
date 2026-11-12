@@ -215,16 +215,16 @@ export function ChessPanel({
       ? Math.max(0, game.clock.firstMoveMs - elapsed)
       : null;
 
-  // When a clock hits zero, ask the server to end the game (once per position).
+  // When a clock hits zero while connected, ask the server to end the game (once per position).
   const flaggedAt = useRef("");
   const outOfTime = firstMoveLeft === 0 || timeLeft(turn) === 0;
   useEffect(() => {
     const key = `${game.id}:${game.moves.length}`;
-    if (playing && outOfTime && flaggedAt.current !== key) {
+    if (playing && connected && outOfTime && flaggedAt.current !== key) {
       flaggedAt.current = key;
       onFlag();
     }
-  }, [playing, outOfTime, game.id, game.moves.length, onFlag]);
+  }, [playing, connected, outOfTime, game.id, game.moves.length, onFlag]);
 
   const isMine = (square: Square) =>
     chess.get(square)?.color === (game.color === "white" ? "w" : "b");
@@ -278,8 +278,20 @@ export function ChessPanel({
     };
   }
 
+  const analysisController = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      analysisController.current?.abort();
+      analysisController.current = null;
+    },
+    [game.id],
+  );
+
   const runAnalysis = async () => {
     if (reviewState.analyzing && reviewState.gameId === game.id) return;
+    analysisController.current?.abort();
+    const controller = new AbortController();
+    analysisController.current = controller;
     setReviewState({
       gameId: game.id,
       ply: viewPly,
@@ -288,13 +300,19 @@ export function ChessPanel({
       error: null,
     });
     try {
-      const analysis = await analyzeGameMoves(game.moves);
+      const analysis = await analyzeGameMoves(
+        game.moves,
+        undefined,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       setReviewState((prev) =>
         prev.gameId === game.id
           ? { ...prev, analysis, analyzing: false }
           : prev,
       );
     } catch {
+      if (controller.signal.aborted) return;
       setReviewState((prev) =>
         prev.gameId === game.id
           ? { ...prev, analyzing: false, error: "Engine unavailable." }

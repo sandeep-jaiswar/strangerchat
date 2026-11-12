@@ -9,7 +9,10 @@ import {
   CLAIM,
   DETACH,
   FIND,
+  HOLD,
+  LEAVE,
   MOVE,
+  OFFER,
   PAIR_DIRECT,
   RESIGN,
   TICK,
@@ -388,4 +391,42 @@ test("CLAIM delivers held chess_over when partner abandoned during brief disconn
     .slice(3)
     .map((raw) => JSON.parse(String(raw)) as { type: string; reason?: string });
   assert.ok(held.some((e) => e.type === "chess_over" && e.reason === "aborted"));
+});
+
+test("LEAVE/unpair clears active puzzle duel markers so new chats can duel immediately", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await run(FIND, 1_000, "alice", "chat");
+  await run(FIND, 1_000, "bob", "chat");
+
+  await redis.set(`${prefix}duel_active:alice`, "duel-1", "EX", 120);
+  await redis.set(`${prefix}duel_active:bob`, "duel-1", "EX", 120);
+  await redis.hset(`${prefix}duel:duel-1`, "sidA", "alice", "sidB", "bob");
+
+  await run(LEAVE, 2_000, "alice");
+  assert.equal(await redis.exists(`${prefix}duel_active:alice`), 0);
+  assert.equal(await redis.exists(`${prefix}duel_active:bob`), 0);
+  assert.equal(await redis.exists(`${prefix}duel:duel-1`), 0);
+  assert.equal(await redis.get(`${prefix}duel_done:duel-1`), "1");
+});
+
+test("HOLD queues events while detached and delivers them on CLAIM", async (t) => {
+  const { run, claim } = await fixture(t);
+  await claim("alice", "alice", "c-1");
+  await run(DETACH, 2_000, "alice", "c-1");
+
+  const payload = JSON.stringify({ type: "puzzle_duel_over", id: "duel-9" });
+  await run(HOLD, 2_500, "alice", payload);
+
+  const resumed = (await claim("alice", "alice", "c-2")) as (string | number)[];
+  assert.deepEqual(resumed.slice(3), [payload]);
+});
+
+test("OFFER safely returns 0 if the game hash is missing", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await redis.set(`${prefix}game:alice`, "missing-gid");
+  assert.equal(await run(OFFER, 2_000, "alice", "rematch"), 0);
+  assert.equal(await redis.exists(`${prefix}g:missing-gid`), 0);
 });

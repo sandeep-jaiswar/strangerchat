@@ -72,8 +72,14 @@ function outcomeOf(chess: Chess): {
 /** Runs an unrated client-side Stockfish WASM game using the shared ChessPanel contract. */
 export function useAiChessGame() {
   const [ai, setAi] = useState<AiGameState | null>(null);
+  const aiRef = useRef<AiGameState | null>(null);
   const engineRef = useRef<StockfishClient | null>(null);
   const thinkingGameId = useRef<string | null>(null);
+
+  const commitAi = useCallback((next: AiGameState | null) => {
+    aiRef.current = next;
+    setAi(next);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -95,7 +101,7 @@ export function useAiChessGame() {
     ) => {
       const pickedColor: ChessColor =
         color ?? (Math.random() < 0.5 ? "white" : "black");
-      setAi({
+      commitAi({
         difficulty,
         game: buildInitialView(pickedColor, timeControl),
       });
@@ -105,70 +111,67 @@ export function useAiChessGame() {
         time_control: timeControl,
       });
     },
-    [],
+    [commitAi],
   );
 
   const stopAiGame = useCallback(() => {
     thinkingGameId.current = null;
-    setAi(null);
-  }, []);
+    commitAi(null);
+  }, [commitAi]);
 
   const applyMove = useCallback(
     (from: string, to: string, promotion?: string, isBot = false) => {
-      let played = false;
-      setAi((prev) => {
-        if (!prev || prev.game.status !== "playing") return prev;
-        const g = prev.game;
-        const chess = new Chess(g.fen);
-        const turnColor: ChessColor = chess.turn() === "w" ? "white" : "black";
-        if (!isBot && turnColor !== g.color) return prev;
-        if (isBot && turnColor === g.color) return prev;
+      const prev = aiRef.current;
+      if (!prev || prev.game.status !== "playing") return false;
+      const g = prev.game;
+      const chess = new Chess(g.fen);
+      const turnColor: ChessColor = chess.turn() === "w" ? "white" : "black";
+      if (!isBot && turnColor !== g.color) return false;
+      if (isBot && turnColor === g.color) return false;
 
-        let move;
-        try {
-          move = chess.move({ from, to, promotion });
-        } catch {
-          return prev;
-        }
+      let move;
+      try {
+        move = chess.move({ from, to, promotion });
+      } catch {
+        return false;
+      }
 
-        const spec = getTimeControl(g.timeControl);
-        const now = Date.now();
-        const elapsed = g.clock.running ? Math.max(0, now - g.clockAt) : 0;
-        const nextWhite =
-          turnColor === "white" && g.clock.running
-            ? Math.max(0, g.clock.white - elapsed) + spec.incrementMs
-            : g.clock.white;
-        const nextBlack =
-          turnColor === "black" && g.clock.running
-            ? Math.max(0, g.clock.black - elapsed) + spec.incrementMs
-            : g.clock.black;
-        const over = outcomeOf(chess);
-        const nextMoves = [...g.moves, move.san];
+      const spec = getTimeControl(g.timeControl);
+      const now = Date.now();
+      const elapsed = g.clock.running ? Math.max(0, now - g.clockAt) : 0;
+      const nextWhite =
+        turnColor === "white" && g.clock.running
+          ? Math.max(0, g.clock.white - elapsed) + spec.incrementMs
+          : g.clock.white;
+      const nextBlack =
+        turnColor === "black" && g.clock.running
+          ? Math.max(0, g.clock.black - elapsed) + spec.incrementMs
+          : g.clock.black;
+      const over = outcomeOf(chess);
+      const nextMoves = [...g.moves, move.san];
 
-        played = true;
-        return {
-          ...prev,
-          game: {
-            ...g,
-            fen: chess.fen(),
-            moves: nextMoves,
-            lastMove: { from: move.from, to: move.to },
-            clock: {
-              white: nextWhite,
-              black: nextBlack,
-              running: over.result === null && nextMoves.length >= 2,
-              firstMoveMs: null,
-            },
-            clockAt: now,
-            status: over.result ? "over" : "playing",
-            result: over.result,
-            reason: over.reason,
+      commitAi({
+        ...prev,
+        game: {
+          ...g,
+          fen: chess.fen(),
+          moves: nextMoves,
+          lastMove: { from: move.from, to: move.to },
+          clock: {
+            white: nextWhite,
+            black: nextBlack,
+            running: over.result === null && nextMoves.length >= 2,
+            firstMoveMs: null,
           },
-        };
+          clockAt: now,
+          status: over.result ? "over" : "playing",
+          result: over.result,
+          reason: over.reason,
+        },
       });
-      return played;
+      return true;
     },
-    [],
+    [commitAi],
   );
 
   useEffect(() => {
@@ -206,60 +209,59 @@ export function useAiChessGame() {
   }, [ai, applyMove, getEngine]);
 
   const resignAiGame = useCallback(() => {
-    setAi((prev) => {
-      if (!prev || prev.game.status !== "playing") return prev;
-      const g = prev.game;
-      const aborted = g.moves.length < 2;
-      return {
-        ...prev,
-        game: {
-          ...g,
-          status: "over",
-          result: aborted ? "aborted" : g.color === "white" ? "0-1" : "1-0",
-          reason: aborted ? "aborted" : "resignation",
-          clock: { ...g.clock, running: false, firstMoveMs: null },
-          clockAt: Date.now(),
-        },
-      };
+    const prev = aiRef.current;
+    if (!prev || prev.game.status !== "playing") return;
+    const g = prev.game;
+    const aborted = g.moves.length < 2;
+    commitAi({
+      ...prev,
+      game: {
+        ...g,
+        status: "over",
+        result: aborted ? "aborted" : g.color === "white" ? "0-1" : "1-0",
+        reason: aborted ? "aborted" : "resignation",
+        clock: { ...g.clock, running: false, firstMoveMs: null },
+        clockAt: Date.now(),
+      },
     });
-  }, []);
+  }, [commitAi]);
 
-  const offerAi = useCallback((offer: ChessOffer) => {
-    if (offer === "rematch") {
-      setAi((prev) => {
-        if (!prev) return prev;
-        const nextColor: ChessColor =
-          prev.game.color === "white" ? "black" : "white";
-        return {
-          ...prev,
-          game: buildInitialView(
-            nextColor,
-            prev.game.timeControl ?? DEFAULT_TIME_CONTROL,
-          ),
-        };
+  const offerAi = useCallback(
+    (offer: ChessOffer) => {
+      if (offer !== "rematch") return;
+      const prev = aiRef.current;
+      if (!prev) return;
+      const nextColor: ChessColor =
+        prev.game.color === "white" ? "black" : "white";
+      commitAi({
+        ...prev,
+        game: buildInitialView(
+          nextColor,
+          prev.game.timeControl ?? DEFAULT_TIME_CONTROL,
+        ),
       });
-    }
-  }, []);
+    },
+    [commitAi],
+  );
 
   const flagAiGame = useCallback(() => {
-    setAi((prev) => {
-      if (!prev || prev.game.status !== "playing") return prev;
-      const g = prev.game;
-      const chess = new Chess(g.fen);
-      const turn: ChessColor = chess.turn() === "w" ? "white" : "black";
-      return {
-        ...prev,
-        game: {
-          ...g,
-          status: "over",
-          result: turn === "white" ? "0-1" : "1-0",
-          reason: "timeout",
-          clock: { ...g.clock, [turn]: 0, running: false, firstMoveMs: null },
-          clockAt: Date.now(),
-        },
-      };
+    const prev = aiRef.current;
+    if (!prev || prev.game.status !== "playing") return;
+    const g = prev.game;
+    const chess = new Chess(g.fen);
+    const turn: ChessColor = chess.turn() === "w" ? "white" : "black";
+    commitAi({
+      ...prev,
+      game: {
+        ...g,
+        status: "over",
+        result: turn === "white" ? "0-1" : "1-0",
+        reason: "timeout",
+        clock: { ...g.clock, [turn]: 0, running: false, firstMoveMs: null },
+        clockAt: Date.now(),
+      },
     });
-  }, []);
+  }, [commitAi]);
 
   return {
     ai,

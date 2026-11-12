@@ -108,6 +108,8 @@ export function FriendsDrawer({
   const [activeFriend, setActiveFriend] = useState<FriendEntry | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const lastMessageAtRef = useRef<number | null>(null);
+  const activeFriendIdRef = useRef<string | null>(null);
+  const loadSeqRef = useRef(0);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -133,13 +135,26 @@ export function FriendsDrawer({
 
   const loadMessages = useCallback(
     async (friendId: string, incremental = false) => {
+      const seq = ++loadSeqRef.current;
       const since = incremental ? lastMessageAtRef.current : null;
       const qs = since !== null ? `?since=${since}` : "";
       const res = await fetch(`/api/friends/${friendId}/messages${qs}`, {
         cache: "no-store",
       });
-      if (!res.ok) return;
+      if (
+        !res.ok ||
+        activeFriendIdRef.current !== friendId ||
+        seq !== loadSeqRef.current
+      ) {
+        return;
+      }
       const data = (await res.json()) as { messages: DirectMessage[] };
+      if (
+        activeFriendIdRef.current !== friendId ||
+        seq !== loadSeqRef.current
+      ) {
+        return;
+      }
       const incomingMsgs = data.messages ?? [];
       if (incomingMsgs.length > 0) {
         lastMessageAtRef.current =
@@ -182,11 +197,15 @@ export function FriendsDrawer({
   }, [open, loadFriends]);
 
   useEffect(() => {
+    loadSeqRef.current++;
+    lastMessageAtRef.current = null;
     if (!open || !activeFriend) {
-      lastMessageAtRef.current = null;
+      activeFriendIdRef.current = null;
+      setMessages([]);
       return;
     }
-    lastMessageAtRef.current = null;
+    activeFriendIdRef.current = activeFriend.id;
+    setMessages([]);
     void loadMessages(activeFriend.id, false);
     const onVisible = () => {
       if (!document.hidden) void loadMessages(activeFriend.id, true);
@@ -352,7 +371,11 @@ export function FriendsDrawer({
                 className="max-h-28 min-h-10 resize-none py-2"
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing
+                  ) {
                     e.preventDefault();
                     void sendDirectMessage();
                   }

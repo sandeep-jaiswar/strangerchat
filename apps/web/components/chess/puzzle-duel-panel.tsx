@@ -126,7 +126,9 @@ function PuzzleDuelInner({
         <div className="flex items-center justify-center gap-2 rounded-lg border bg-card px-3 py-3 text-xs text-muted-foreground">
           <CheckCircle2 className="size-4 text-success" />
           <span>
-            You solved {solved}/{puzzles.length}! Waiting for Stranger to finish…
+            {solved >= puzzles.length
+              ? `You solved ${solved}/${puzzles.length}! Waiting for Stranger to finish…`
+              : `Time’s up (${solved}/${puzzles.length} solved)! Waiting for final result…`}
           </span>
         </div>
       ) : (
