@@ -1,16 +1,23 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { Chess } from "chess.js";
 import { Redis } from "ioredis";
 import type { WebSocket } from "ws";
 import {
+  CHESS_PUZZLES,
   CloseCode,
   MAX_MESSAGE_LENGTH,
   MAX_TAGS,
   MAX_TAG_LENGTH,
+  PUZZLE_DUEL_COUNT,
+  PUZZLE_DUEL_DURATION_MS,
+  getTimeControl,
+  isTimeControlId,
+  normalizeInviteCode,
   type ChatPhase,
   type ChessEndReason,
   type ChessResult,
   type ClientEvent,
+  type PuzzleDuelPlayerState,
   type ServerEvent,
 } from "@repo/protocol";
 import {
@@ -31,10 +38,12 @@ import {
   CHESS_INVITE,
   CHESS_INVITE_RESPOND,
   CLAIM,
+  CREATE_INVITE,
   DETACH,
   FIND,
   FLAG,
   GAME,
+  JOIN_INVITE,
   LEAVE,
   MOVE,
   OFFER,
@@ -94,6 +103,10 @@ interface ChatCommands {
   scSync(...args: Args): Promise<string>;
   scChessInvite(...args: Args): Promise<number>;
   scChessInviteRespond(...args: Args): Promise<number>;
+  scCreateInvite(...args: Args): Promise<number>;
+  scJoinInvite(
+    ...args: Args
+  ): Promise<"ok" | "not_found" | "self" | "blocked">;
   scPartner(...args: Args): Promise<[string?, string?]>;
 }
 
@@ -111,6 +124,7 @@ export class Hub {
   private readonly rematchBlockMs: number;
   private readonly rematchWindowMs: number;
   private readonly connections = new Map<string, Connection>();
+  private readonly duelTimers = new Map<string, NodeJS.Timeout>();
   private timer: NodeJS.Timeout | undefined;
   private online = 0;
   private closed = false;
@@ -140,6 +154,8 @@ export class Hub {
       scSync: SYNC,
       scChessInvite: CHESS_INVITE,
       scChessInviteRespond: CHESS_INVITE_RESPOND,
+      scCreateInvite: CREATE_INVITE,
+      scJoinInvite: JOIN_INVITE,
       scPartner: PARTNER,
     };
     for (const [name, lua] of Object.entries(scripts)) {
@@ -251,6 +267,8 @@ export class Hub {
   async close(): Promise<void> {
     this.closed = true;
     this.stopTicking();
+    for (const timer of this.duelTimers.values()) clearTimeout(timer);
+    this.duelTimers.clear();
     for (const connection of this.connections.values())
       connection.ws.terminate();
     this.connections.clear();
@@ -307,21 +325,60 @@ export class Hub {
     const common = this.common(Date.now());
     switch (event.type) {
       case "find": {
+        const mode = event.mode ?? "chat";
+        const tc = getTimeControl(event.timeControl);
+        const modeKey = mode === "chess" ? `chess:${tc.id}` : "chat";
         const tags = normalizeTags(event.tags);
         const matched = await this.redis.scFind(
           ...common,
           sid,
-          event.mode ?? "chat",
+          modeKey,
           ...tags,
         );
         if (matched) {
           captureServerEvent(connection.userId, "chat_matched", {
-            mode: event.mode ?? "chat",
+            mode,
+            time_control: mode === "chess" ? tc.id : null,
             tags_count: tags.length,
           });
         } else {
           this.send(connection, { type: "searching" });
         }
+        return;
+      }
+      case "create_invite": {
+        const mode = event.mode ?? "chat";
+        const tc = getTimeControl(event.timeControl);
+        const modeKey = mode === "chess" ? `chess:${tc.id}` : "chat";
+        const code = randomBytes(6).toString("base64url");
+        await this.redis.scCreateInvite(...common, sid, code, modeKey);
+        this.send(connection, {
+          type: "invite_created",
+          code,
+          mode,
+          timeControl: mode === "chess" ? tc.id : undefined,
+        });
+        captureServerEvent(connection.userId, "invite_link_created", {
+          mode,
+          time_control: mode === "chess" ? tc.id : null,
+        });
+        return;
+      }
+      case "join_invite": {
+        const code = normalizeInviteCode(event.code);
+        if (!code) {
+          this.send(connection, {
+            type: "invite_failed",
+            reason: "not_found",
+          });
+          return;
+        }
+        const status = await this.redis.scJoinInvite(...common, sid, code);
+        if (status !== "ok") {
+          this.send(connection, { type: "invite_failed", reason: status });
+          return;
+        }
+        captureServerEvent(connection.userId, "invite_link_joined");
         return;
       }
       case "leave":
@@ -368,7 +425,11 @@ export class Hub {
         return;
       }
       case "chess_invite":
-        await this.redis.scChessInvite(...common, sid);
+        await this.redis.scChessInvite(
+          ...common,
+          sid,
+          getTimeControl(event.timeControl).id,
+        );
         return;
       case "chess_invite_response":
         await this.redis.scChessInviteRespond(
@@ -392,6 +453,15 @@ export class Hub {
       case "chess_flag":
         await this.redis.scFlag(...common, sid);
         void this.flushEndedGames();
+        return;
+      case "puzzle_duel_invite":
+        await this.handlePuzzleDuelInvite(connection);
+        return;
+      case "puzzle_duel_response":
+        await this.handlePuzzleDuelResponse(connection, event.accept);
+        return;
+      case "puzzle_duel_progress":
+        await this.handlePuzzleDuelProgress(connection, event);
         return;
       case "friend_request":
         await this.handleFriendRequest(connection);
@@ -616,11 +686,216 @@ export class Hub {
     });
   }
 
+  private async handlePuzzleDuelInvite(connection: Connection) {
+    const [partnerSid] = await this.redis.scPartner(
+      ...this.common(Date.now()),
+      connection.sid,
+    );
+    if (!partnerSid) return;
+
+    const invKey = `${this.prefix}duel_inv:${connection.sid}`;
+    const partnerInvKey = `${this.prefix}duel_inv:${partnerSid}`;
+    const reciprocal = await this.redis.get(partnerInvKey);
+    if (reciprocal === connection.sid) {
+      await this.redis.del(partnerInvKey);
+      await this.startPuzzleDuel(partnerSid, connection.sid);
+      return;
+    }
+
+    await this.redis.set(invKey, partnerSid, "EX", 120);
+    await Promise.all([
+      this.redis.publish(
+        this.channel(connection.sid),
+        JSON.stringify({ type: "puzzle_duel_invite", from: "me" } satisfies ServerEvent),
+      ),
+      this.redis.publish(
+        this.channel(partnerSid),
+        JSON.stringify({ type: "puzzle_duel_invite", from: "them" } satisfies ServerEvent),
+      ),
+    ]);
+  }
+
+  private async handlePuzzleDuelResponse(connection: Connection, accept: boolean) {
+    const [partnerSid] = await this.redis.scPartner(
+      ...this.common(Date.now()),
+      connection.sid,
+    );
+    if (!partnerSid) return;
+
+    const partnerInvKey = `${this.prefix}duel_inv:${partnerSid}`;
+    if ((await this.redis.get(partnerInvKey)) !== connection.sid) return;
+    await this.redis.del(partnerInvKey);
+
+    if (!accept) {
+      await this.redis.publish(
+        this.channel(partnerSid),
+        JSON.stringify({ type: "puzzle_duel_declined" } satisfies ServerEvent),
+      );
+      return;
+    }
+
+    await this.startPuzzleDuel(partnerSid, connection.sid);
+  }
+
+  private async startPuzzleDuel(sidA: string, sidB: string) {
+    const duelId = randomUUID();
+    const pool = [...CHESS_PUZZLES];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+    }
+    const puzzleIds = pool.slice(0, PUZZLE_DUEL_COUNT).map((p) => p.id);
+    const startedAt = Date.now();
+    const emptyState: PuzzleDuelPlayerState = {
+      solved: 0,
+      mistakes: 0,
+      finished: false,
+      finishedAt: null,
+    };
+
+    const key = `${this.prefix}duel:${duelId}`;
+    await this.redis.hset(key, {
+      sidA,
+      sidB,
+      startedAt: String(startedAt),
+      durationMs: String(PUZZLE_DUEL_DURATION_MS),
+      puzzleIds: JSON.stringify(puzzleIds),
+      stateA: JSON.stringify(emptyState),
+      stateB: JSON.stringify(emptyState),
+    });
+    await this.redis.expire(key, 600);
+
+    const startPayload = JSON.stringify({
+      type: "puzzle_duel_start",
+      id: duelId,
+      puzzleIds,
+      durationMs: PUZZLE_DUEL_DURATION_MS,
+      startedAt,
+    } satisfies ServerEvent);
+    await Promise.all([
+      this.redis.publish(this.channel(sidA), startPayload),
+      this.redis.publish(this.channel(sidB), startPayload),
+    ]);
+
+    const timer = setTimeout(() => {
+      this.duelTimers.delete(duelId);
+      void this.finishPuzzleDuel(duelId);
+    }, PUZZLE_DUEL_DURATION_MS + 250);
+    this.duelTimers.set(duelId, timer);
+  }
+
+  private async handlePuzzleDuelProgress(
+    connection: Connection,
+    event: Extract<ClientEvent, { type: "puzzle_duel_progress" }>,
+  ) {
+    const key = `${this.prefix}duel:${event.duelId}`;
+    const duel = await this.redis.hgetall(key);
+    if (!duel.sidA || !duel.sidB) return;
+
+    const isA = duel.sidA === connection.sid;
+    const isB = duel.sidB === connection.sid;
+    if (!isA && !isB) return;
+
+    const now = Date.now();
+    const nextState: PuzzleDuelPlayerState = {
+      solved: Math.max(0, Math.min(PUZZLE_DUEL_COUNT, Math.floor(event.solved))),
+      mistakes: Math.max(0, Math.floor(event.mistakes)),
+      finished: Boolean(event.finished || event.solved >= PUZZLE_DUEL_COUNT),
+      finishedAt: event.finished ? now : null,
+    };
+    const field = isA ? "stateA" : "stateB";
+    await this.redis.hset(key, field, JSON.stringify(nextState));
+    // Read both states after the write so concurrent finishes never miss each other.
+    const [rawA, rawB] = await this.redis.hmget(key, "stateA", "stateB");
+    const stateA = rawA
+      ? (JSON.parse(rawA) as PuzzleDuelPlayerState)
+      : nextState;
+    const stateB = rawB
+      ? (JSON.parse(rawB) as PuzzleDuelPlayerState)
+      : nextState;
+
+    await Promise.all([
+      this.redis.publish(
+        this.channel(duel.sidA),
+        JSON.stringify({
+          type: "puzzle_duel_state",
+          id: event.duelId,
+          me: stateA,
+          them: stateB,
+        } satisfies ServerEvent),
+      ),
+      this.redis.publish(
+        this.channel(duel.sidB),
+        JSON.stringify({
+          type: "puzzle_duel_state",
+          id: event.duelId,
+          me: stateB,
+          them: stateA,
+        } satisfies ServerEvent),
+      ),
+    ]);
+
+    const expired = now >= Number(duel.startedAt) + Number(duel.durationMs);
+    if ((stateA.finished && stateB.finished) || expired) {
+      await this.finishPuzzleDuel(event.duelId);
+    }
+  }
+
+  private async finishPuzzleDuel(duelId: string) {
+    const doneKey = `${this.prefix}duel_done:${duelId}`;
+    const wonLock = await this.redis.set(doneKey, "1", "EX", 600, "NX");
+    if (wonLock !== "OK") return;
+
+    const existingTimer = this.duelTimers.get(duelId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.duelTimers.delete(duelId);
+    }
+
+    const duel = await this.redis.hgetall(`${this.prefix}duel:${duelId}`);
+    if (!duel.sidA || !duel.sidB) return;
+
+    const stateA = JSON.parse(duel.stateA ?? "{}") as PuzzleDuelPlayerState;
+    const stateB = JSON.parse(duel.stateB ?? "{}") as PuzzleDuelPlayerState;
+    const winnerForA = compareDuelStates(stateA, stateB);
+    const winnerForB =
+      winnerForA === "draw" ? "draw" : winnerForA === "me" ? "them" : "me";
+
+    await Promise.all([
+      this.redis.publish(
+        this.channel(duel.sidA),
+        JSON.stringify({
+          type: "puzzle_duel_over",
+          id: duelId,
+          winner: winnerForA,
+          me: stateA,
+          them: stateB,
+        } satisfies ServerEvent),
+      ),
+      this.redis.publish(
+        this.channel(duel.sidB),
+        JSON.stringify({
+          type: "puzzle_duel_over",
+          id: duelId,
+          winner: winnerForB,
+          me: stateB,
+          them: stateA,
+        } satisfies ServerEvent),
+      ),
+    ]);
+  }
+
   private async flushEndedGames() {
-    if (!hasDatabase()) return;
+    if (this.closed || !hasDatabase()) return;
     const key = `${this.prefix}ended_games`;
     for (let i = 0; i < 10; i++) {
-      const raw = await this.redis.lpop(key);
+      if (this.closed) return;
+      let raw: string | null;
+      try {
+        raw = await this.redis.lpop(key);
+      } catch {
+        return;
+      }
       if (!raw) break;
       try {
         const game = JSON.parse(raw) as {
@@ -673,12 +948,31 @@ function parseEvent(raw: string): ClientEvent | undefined {
       const tags = Array.isArray(event.tags)
         ? event.tags.filter((t): t is string => typeof t === "string")
         : undefined;
+      const timeControl = isTimeControlId(event.timeControl)
+        ? event.timeControl
+        : undefined;
       return event.mode === "chess"
-        ? { type: "find", mode: "chess", tags }
+        ? { type: "find", mode: "chess", tags, timeControl }
         : { type: "find", tags };
     }
+    case "create_invite": {
+      const mode = event.mode === "chess" ? "chess" : "chat";
+      const timeControl = isTimeControlId(event.timeControl)
+        ? event.timeControl
+        : undefined;
+      return { type: "create_invite", mode, timeControl };
+    }
+    case "join_invite":
+      return typeof event.code === "string"
+        ? { type: "join_invite", code: event.code }
+        : undefined;
     case "chess_invite":
-      return { type: "chess_invite" };
+      return {
+        type: "chess_invite",
+        timeControl: isTimeControlId(event.timeControl)
+          ? event.timeControl
+          : undefined,
+      };
     case "chess_invite_response":
       return typeof event.accept === "boolean"
         ? { type: "chess_invite_response", accept: event.accept }
@@ -700,6 +994,25 @@ function parseEvent(raw: string): ClientEvent | undefined {
     case "chess_offer":
       return event.offer === "draw" || event.offer === "rematch"
         ? { type: "chess_offer", offer: event.offer }
+        : undefined;
+    case "puzzle_duel_invite":
+      return { type: "puzzle_duel_invite" };
+    case "puzzle_duel_response":
+      return typeof event.accept === "boolean"
+        ? { type: "puzzle_duel_response", accept: event.accept }
+        : undefined;
+    case "puzzle_duel_progress":
+      return typeof event.duelId === "string" &&
+        typeof event.solved === "number" &&
+        typeof event.mistakes === "number" &&
+        typeof event.finished === "boolean"
+        ? {
+            type: "puzzle_duel_progress",
+            duelId: event.duelId,
+            solved: event.solved,
+            mistakes: event.mistakes,
+            finished: event.finished,
+          }
         : undefined;
     case "friend_request":
       return { type: "friend_request" };
@@ -729,6 +1042,19 @@ function normalizeTags(raw?: string[]): string[] {
     if (unique.size >= MAX_TAGS) break;
   }
   return [...unique];
+}
+
+function compareDuelStates(
+  a: PuzzleDuelPlayerState,
+  b: PuzzleDuelPlayerState,
+): "me" | "them" | "draw" {
+  if (a.solved !== b.solved) return a.solved > b.solved ? "me" : "them";
+  if (a.mistakes !== b.mistakes) return a.mistakes < b.mistakes ? "me" : "them";
+  if (a.finishedAt !== null && b.finishedAt !== null && a.finishedAt !== b.finishedAt) {
+    return a.finishedAt < b.finishedAt ? "me" : "them";
+  }
+  if (a.finished !== b.finished) return a.finished ? "me" : "them";
+  return "draw";
 }
 
 /** How a game ends after the last move, if it does. */

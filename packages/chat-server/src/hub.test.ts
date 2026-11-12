@@ -402,6 +402,7 @@ test("chess players are matched with each other, not with chatters", async () =>
   assert.deepEqual(lastOf(alice, "matched"), {
     type: "matched",
     mode: "chess",
+    timeControl: "rapid_10_0",
   });
 
   const game = lastOf(black, "chess_game")!.game;
@@ -609,14 +610,16 @@ test("censors profanity in relayed messages", async () => {
 
   alice.deliver({ type: "message", text: "what the fuck is this" });
   await until(() => last(bob) === "message", "bob receives moderated message");
-  const msg = bob.events.at(-1);
+  const msg = lastOf(bob, "message");
   assert.equal(msg?.type === "message" && !msg.text.includes("fuck"), true);
 });
 
 test("blocking prevents matching with that user again", async () => {
   const [hubA, hubB] = cluster();
-  const alice = await connect(hubA, "alice");
-  const bob = await connect(hubB, "bob");
+  const aliceId = `block-alice-${randomUUID()}`;
+  const bobId = `block-bob-${randomUUID()}`;
+  const alice = await connect(hubA, aliceId);
+  const bob = await connect(hubB, bobId);
   await chatting(alice, bob);
 
   alice.deliver({ type: "safety_action", action: "block" });
@@ -630,4 +633,106 @@ test("blocking prevents matching with that user again", async () => {
   await sleep(REMATCH_BLOCK_MS + 120);
   assert.equal(last(alice), "searching");
   assert.equal(last(bob), "searching");
+});
+
+test("supports fast time controls with clock increment and rematch preservation", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, `tc-a-${randomUUID()}`);
+  const bob = await connect(hubB, `tc-b-${randomUUID()}`);
+
+  alice.deliver({ type: "find", mode: "chess", timeControl: "blitz_3_2" });
+  await until(() => last(alice) === "searching", "alice queued in 3+2");
+  bob.deliver({ type: "find", mode: "chess", timeControl: "blitz_3_2" });
+  await until(
+    () => !!lastOf(alice, "chess_game") && !!lastOf(bob, "chess_game"),
+    "3+2 game started",
+  );
+
+  const g = lastOf(alice, "chess_game")!.game;
+  assert.equal(g.timeControl, "blitz_3_2");
+  assert.equal(g.clock.white, 180_000);
+  assert.equal(g.clock.black, 180_000);
+
+  const [white, black] = g.color === "white" ? [alice, bob] : [bob, alice];
+  await play(white, black, [
+    ["e2", "e4"],
+    ["e7", "e5"],
+    ["g1", "f3"],
+  ]);
+  const move3 = lastOf(white, "chess_move")!;
+  // White gets +2000ms increment after move 3 (ply >= 2).
+  assert.ok(move3.clock.white > 180_000, "white clock received 2s increment");
+});
+
+test("direct invite links pair two users across instances and guard edge cases", async () => {
+  const [hubA, hubB] = cluster();
+  const aliceId = `inv-a-${randomUUID()}`;
+  const bobId = `inv-b-${randomUUID()}`;
+  const alice = await connect(hubA, aliceId);
+  const bob = await connect(hubB, bobId);
+
+  alice.deliver({ type: "create_invite", mode: "chess", timeControl: "bullet_1_0" });
+  await until(() => !!lastOf(alice, "invite_created"), "invite created");
+  const code = lastOf(alice, "invite_created")!.code;
+
+  // Same user cannot join their own invite.
+  alice.deliver({ type: "join_invite", code });
+  await until(() => lastOf(alice, "invite_failed")?.reason === "self", "self join rejected");
+
+  // Joiner on another instance pairs immediately into Bullet 1+0.
+  bob.deliver({ type: "join_invite", code });
+  await until(
+    () => !!lastOf(alice, "chess_game") && !!lastOf(bob, "chess_game"),
+    "invite paired into bullet game",
+  );
+  assert.equal(lastOf(bob, "chess_game")!.game.timeControl, "bullet_1_0");
+  assert.equal(lastOf(bob, "chess_game")!.game.clock.white, 60_000);
+
+  // Consumed invite fails cleanly.
+  const carol = await connect(hubA, `inv-c-${randomUUID()}`);
+  carol.deliver({ type: "join_invite", code });
+  await until(
+    () => lastOf(carol, "invite_failed")?.reason === "not_found",
+    "used invite reports not_found",
+  );
+});
+
+test("in-chat puzzle duel pairs, syncs progress, and declares winner", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, `duel-a-${randomUUID()}`);
+  const bob = await connect(hubB, `duel-b-${randomUUID()}`);
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "puzzle_duel_invite" });
+  await until(
+    () => lastOf(bob, "puzzle_duel_invite")?.from === "them",
+    "bob receives duel invite",
+  );
+  bob.deliver({ type: "puzzle_duel_response", accept: true });
+  await until(
+    () => !!lastOf(alice, "puzzle_duel_start") && !!lastOf(bob, "puzzle_duel_start"),
+    "puzzle duel starts",
+  );
+  const duelId = lastOf(alice, "puzzle_duel_start")!.id;
+
+  alice.deliver({
+    type: "puzzle_duel_progress",
+    duelId,
+    solved: 3,
+    mistakes: 0,
+    finished: true,
+  });
+  bob.deliver({
+    type: "puzzle_duel_progress",
+    duelId,
+    solved: 2,
+    mistakes: 1,
+    finished: true,
+  });
+  await until(
+    () => !!lastOf(alice, "puzzle_duel_over") && !!lastOf(bob, "puzzle_duel_over"),
+    "duel finishes",
+  );
+  assert.equal(lastOf(alice, "puzzle_duel_over")!.winner, "me");
+  assert.equal(lastOf(bob, "puzzle_duel_over")!.winner, "them");
 });

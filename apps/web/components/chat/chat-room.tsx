@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldAlert, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Bot, ChessKnight, ShieldAlert, Trophy, Users } from "lucide-react";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
@@ -12,22 +12,32 @@ import {
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu, type UserSummary } from "@/components/user-menu";
+import { useAiChessGame } from "@/hooks/use-ai-chess";
 import {
   type ConnectionStatus,
   useStrangerchat,
 } from "@/hooks/use-stranger-chat";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { AD_SLOTS } from "@/lib/ads";
+import { BOT_LEVELS } from "@/lib/stockfish";
 import { cn } from "@repo/ui/lib/utils";
 import { ChessPanel } from "../chess/chess-panel";
 import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";
 
-export function ChatRoom({ user }: { user: UserSummary }) {
-  const chat = useStrangerchat();
+export function ChatRoom({
+  user,
+  initialInviteCode,
+}: {
+  user: UserSummary;
+  initialInviteCode?: string | null;
+}) {
+  const chat = useStrangerchat(initialInviteCode);
+  const aiChess = useAiChessGame();
   const height = useViewportHeight();
   const inChat = chat.phase === "chatting" || chat.phase === "ended";
-  const game = inChat ? chat.game : null;
+  const showAi = !inChat && chat.phase !== "searching" && aiChess.ai !== null;
+  const game = inChat ? chat.game : showAi ? aiChess.ai!.game : null;
 
   const [friendsOpen, setFriendsOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -105,19 +115,33 @@ export function ChatRoom({ user }: { user: UserSummary }) {
               aria-label="Chess board"
               className="shrink-0 border-b px-3 py-2 lg:flex lg:min-w-0 lg:flex-1 lg:items-center lg:border-r lg:border-b-0 lg:p-6"
             >
-              <ChessPanel
-                game={game}
-                partnerGone={chat.phase === "ended"}
-                connected={chat.connection === "open"}
-                viewportHeight={height}
-                onMove={chat.playMove}
-                onResign={chat.resign}
-                onOffer={chat.offer}
-                onFlag={chat.claimFlag}
-              />
+              {showAi && aiChess.ai ? (
+                <ChessPanel
+                  game={aiChess.ai.game}
+                  partnerGone={false}
+                  connected={true}
+                  opponentLabel={`Stockfish ${BOT_LEVELS[aiChess.ai.difficulty].label}`}
+                  viewportHeight={height}
+                  onMove={aiChess.playAiMove}
+                  onResign={aiChess.resignAiGame}
+                  onOffer={aiChess.offerAi}
+                  onFlag={aiChess.flagAiGame}
+                />
+              ) : (
+                <ChessPanel
+                  game={game}
+                  partnerGone={chat.phase === "ended"}
+                  connected={chat.connection === "open"}
+                  viewportHeight={height}
+                  onMove={chat.playMove}
+                  onResign={chat.resign}
+                  onOffer={chat.offer}
+                  onFlag={chat.claimFlag}
+                />
+              )}
             </section>
           )}
-          {chat.phase === "chatting" || chat.phase === "ended" ? (
+          {inChat ? (
             <div
               className={cn(
                 "flex min-h-0 min-w-0 flex-1 flex-col",
@@ -125,12 +149,15 @@ export function ChatRoom({ user }: { user: UserSummary }) {
               )}
             >
               <Conversation
-                phase={chat.phase}
+                phase={chat.phase as "chatting" | "ended"}
                 connected={chat.connection === "open"}
                 messages={chat.messages}
                 partnerTyping={chat.partnerTyping}
-                hasGame={game !== null}
+                hasGame={chat.game !== null}
                 chessInvite={chat.chessInvite}
+                chessInviteTimeControl={chat.chessInviteTimeControl}
+                puzzleDuelInvite={chat.puzzleDuelInvite}
+                puzzleDuel={chat.puzzleDuel}
                 friendStatus={chat.friendStatus}
                 friendPartner={chat.friendPartner}
                 sharedTags={chat.sharedTags}
@@ -143,19 +170,91 @@ export function ChatRoom({ user }: { user: UserSummary }) {
                 onLeave={chat.leave}
                 onInviteChess={chat.inviteToChess}
                 onRespondChessInvite={chat.respondChessInvite}
+                onInvitePuzzleDuel={chat.invitePuzzleDuel}
+                onRespondPuzzleDuel={chat.respondPuzzleDuel}
+                onPuzzleDuelProgress={chat.reportPuzzleDuelProgress}
+                onDismissPuzzleDuel={chat.dismissPuzzleDuel}
                 onAddFriend={chat.sendFriendRequest}
                 onSafetyAction={chat.safetyAction}
               />
+            </div>
+          ) : showAi && aiChess.ai ? (
+            <div className="flex min-h-0 flex-1 flex-col justify-between p-4 lg:w-96 lg:flex-none">
+              <div className="space-y-4">
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Bot className="size-4 text-primary" />
+                    Unrated Bot Practice
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Playing locally in your browser with Stockfish 19 WASM. Real
+                    Elo ratings are only affected against human opponents.
+                  </p>
+                  <div className="mt-3 grid grid-cols-3 gap-1.5">
+                    {(["casual", "club", "master"] as const).map((level) => (
+                      <Button
+                        key={level}
+                        size="sm"
+                        variant={
+                          aiChess.ai?.difficulty === level
+                            ? "default"
+                            : "outline"
+                        }
+                        className="text-xs"
+                        onClick={() =>
+                          aiChess.startAiGame(level, chat.timeControl)
+                        }
+                      >
+                        ~{BOT_LEVELS[level].rating}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={chat.connection !== "open"}
+                  onClick={() => {
+                    aiChess.stopAiGame();
+                    chat.findStranger("chess", chat.tags, chat.timeControl);
+                  }}
+                >
+                  <ChessKnight />
+                  Find human chess opponent
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                onClick={aiChess.stopAiGame}
+                className="mt-4 w-full"
+              >
+                <ArrowLeft />
+                Back to Lobby
+              </Button>
             </div>
           ) : (
             <Lobby
               searching={chat.phase === "searching"}
               mode={chat.mode}
+              timeControl={chat.timeControl}
               tags={chat.tags}
               ready={chat.connection === "open"}
               online={chat.online}
+              inviteCode={chat.inviteCode}
+              inviteMode={chat.inviteMode}
               onTagsChange={chat.setTags}
-              onStart={chat.findStranger}
+              onTimeControlChange={chat.setTimeControl}
+              onStart={(mode, tc) => {
+                aiChess.stopAiGame();
+                chat.findStranger(mode, chat.tags, tc ?? chat.timeControl);
+              }}
+              onCreateInvite={(mode, tc) => {
+                aiChess.stopAiGame();
+                chat.createInvite(mode, tc ?? chat.timeControl);
+              }}
+              onStartAi={(difficulty, tc) =>
+                aiChess.startAiGame(difficulty, tc)
+              }
               onCancel={chat.leave}
             />
           )}

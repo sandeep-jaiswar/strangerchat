@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import {
   CHAT_SOCKET_PATH,
   CloseCode,
+  DEFAULT_TIME_CONTROL,
+  getTimeControl,
   type ChatMode,
   type ChessClock,
   type ChessEndReason,
@@ -14,7 +16,9 @@ import {
   type ChessResult,
   type ClientEvent,
   type PublicFriendProfile,
+  type PuzzleDuelPlayerState,
   type ServerEvent,
+  type TimeControlId,
 } from "@repo/protocol";
 import { captureEvent } from "@/lib/analytics";
 
@@ -44,11 +48,22 @@ export type FriendHandshakeStatus =
   | "accepted"
   | "unavailable";
 
+export interface PuzzleDuelView {
+  id: string;
+  puzzleIds: string[];
+  durationMs: number;
+  startedAt: number;
+  me: PuzzleDuelPlayerState;
+  them: PuzzleDuelPlayerState;
+  winner: "me" | "them" | "draw" | null;
+}
+
 interface State {
   connection: ConnectionStatus;
   phase: ChatPhase;
   /** The mode of the current (or last) search. */
   mode: ChatMode;
+  timeControl: TimeControlId;
   tags: string[];
   sharedTags: string[];
   online: number;
@@ -56,6 +71,11 @@ interface State {
   partnerTyping: boolean;
   game: ChessView | null;
   chessInvite: "me" | "them" | null;
+  chessInviteTimeControl: TimeControlId | null;
+  inviteCode: string | null;
+  inviteMode: ChatMode | null;
+  puzzleDuelInvite: "me" | "them" | null;
+  puzzleDuel: PuzzleDuelView | null;
   friendStatus: FriendHandshakeStatus;
   friendPartner: PublicFriendProfile | null;
 }
@@ -64,10 +84,17 @@ type Action =
   | { type: "connection"; status: ConnectionStatus }
   | { type: "server"; event: ServerEvent }
   | { type: "sent"; item: ChatItem }
-  | { type: "find"; mode: ChatMode; tags?: string[] }
+  | {
+      type: "find";
+      mode: ChatMode;
+      tags?: string[];
+      timeControl?: TimeControlId;
+    }
+  | { type: "setTimeControl"; timeControl: TimeControlId }
   | { type: "setTags"; tags: string[] }
   | { type: "localMove"; san: string }
   | { type: "localOffer"; offer: ChessOffer }
+  | { type: "dismissPuzzleDuel" }
   | { type: "partnerTypingTimeout" }
   | { type: "left" };
 
@@ -75,6 +102,7 @@ const initialState: State = {
   connection: "connecting",
   phase: "idle",
   mode: "chat",
+  timeControl: DEFAULT_TIME_CONTROL,
   tags: [],
   sharedTags: [],
   online: 0,
@@ -82,6 +110,11 @@ const initialState: State = {
   partnerTyping: false,
   game: null,
   chessInvite: null,
+  chessInviteTimeControl: null,
+  inviteCode: null,
+  inviteMode: null,
+  puzzleDuelInvite: null,
+  puzzleDuel: null,
   friendStatus: "none",
   friendPartner: null,
 };
@@ -194,10 +227,17 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         mode: action.mode,
+        timeControl: action.timeControl ?? state.timeControl,
         tags: action.tags ?? state.tags,
+        inviteCode: null,
+        inviteMode: null,
       };
+    case "setTimeControl":
+      return { ...state, timeControl: action.timeControl };
     case "setTags":
       return { ...state, tags: action.tags };
+    case "dismissPuzzleDuel":
+      return { ...state, puzzleDuel: null };
     case "localMove": {
       const game = state.game && withMove(state.game, action.san);
       return game ? { ...state, game } : state;
@@ -219,6 +259,11 @@ function reducer(state: State, action: Action): State {
         phase: "idle",
         partnerTyping: false,
         chessInvite: null,
+        chessInviteTimeControl: null,
+        inviteCode: null,
+        inviteMode: null,
+        puzzleDuelInvite: null,
+        puzzleDuel: null,
         sharedTags: [],
       };
     case "server": {
@@ -229,6 +274,8 @@ function reducer(state: State, action: Action): State {
             return {
               ...state,
               phase: "chatting",
+              inviteCode: null,
+              inviteMode: null,
               messages: [systemItem("Reconnected to your chat.")],
             };
           }
@@ -237,6 +284,8 @@ function reducer(state: State, action: Action): State {
               ...state,
               phase: "ended",
               chessInvite: null,
+              chessInviteTimeControl: null,
+              puzzleDuelInvite: null,
               messages: [
                 ...state.messages,
                 systemItem("Stranger has left the chat."),
@@ -254,14 +303,37 @@ function reducer(state: State, action: Action): State {
             game: null,
             sharedTags: [],
             chessInvite: null,
+            chessInviteTimeControl: null,
+            inviteCode: null,
+            inviteMode: null,
+            puzzleDuelInvite: null,
+            puzzleDuel: null,
             friendStatus: "none",
             friendPartner: null,
           };
+        case "invite_created":
+          return {
+            ...state,
+            phase: "idle",
+            inviteCode: event.code,
+            inviteMode: event.mode,
+            timeControl: event.timeControl ?? state.timeControl,
+          };
+        case "invite_failed":
+          return {
+            ...state,
+            inviteCode: null,
+            inviteMode: null,
+          };
         case "matched": {
           const shared = event.sharedTags ?? [];
+          const tcLabel =
+            event.mode === "chess"
+              ? ` (${getTimeControl(event.timeControl).label})`
+              : "";
           const baseMsg =
             event.mode === "chess"
-              ? "You're now playing chess with a random stranger. Say hi!"
+              ? `You're now playing${tcLabel} chess with a random stranger. Say hi!`
               : "You're now chatting with a random stranger. Say hi!";
           const tagMsg =
             shared.length > 0
@@ -271,10 +343,16 @@ function reducer(state: State, action: Action): State {
             ...state,
             phase: "chatting",
             mode: event.mode,
+            timeControl: event.timeControl ?? state.timeControl,
             sharedTags: shared,
             partnerTyping: false,
             game: null,
             chessInvite: null,
+            chessInviteTimeControl: null,
+            inviteCode: null,
+            inviteMode: null,
+            puzzleDuelInvite: null,
+            puzzleDuel: null,
             friendStatus: "none",
             friendPartner: null,
             messages: [systemItem(`${baseMsg}${tagMsg}`)],
@@ -284,11 +362,14 @@ function reducer(state: State, action: Action): State {
           return {
             ...state,
             chessInvite: event.from,
+            chessInviteTimeControl: event.timeControl ?? DEFAULT_TIME_CONTROL,
             messages:
               event.from === "them"
                 ? [
                     ...state.messages,
-                    systemItem("Stranger invited you to play chess while chatting."),
+                    systemItem(
+                      `Stranger invited you to play ${getTimeControl(event.timeControl).label} chess while chatting.`,
+                    ),
                   ]
                 : state.messages,
           };
@@ -296,6 +377,7 @@ function reducer(state: State, action: Action): State {
           return {
             ...state,
             chessInvite: null,
+            chessInviteTimeControl: null,
             messages: [
               ...state.messages,
               systemItem("Stranger declined the chess invite."),
@@ -389,12 +471,89 @@ function reducer(state: State, action: Action): State {
           };
         case "typing":
           return { ...state, partnerTyping: event.isTyping };
+        case "puzzle_duel_invite":
+          return {
+            ...state,
+            puzzleDuelInvite: event.from,
+            messages:
+              event.from === "them"
+                ? [
+                    ...state.messages,
+                    systemItem("Stranger challenged you to a 90s Puzzle Duel!"),
+                  ]
+                : state.messages,
+          };
+        case "puzzle_duel_declined":
+          return {
+            ...state,
+            puzzleDuelInvite: null,
+            messages: [
+              ...state.messages,
+              systemItem("Stranger declined the Puzzle Duel."),
+            ],
+          };
+        case "puzzle_duel_start": {
+          const empty = {
+            solved: 0,
+            mistakes: 0,
+            finished: false,
+            finishedAt: null,
+          };
+          return {
+            ...state,
+            puzzleDuelInvite: null,
+            puzzleDuel: {
+              id: event.id,
+              puzzleIds: event.puzzleIds,
+              durationMs: event.durationMs,
+              startedAt: Date.now(),
+              me: empty,
+              them: empty,
+              winner: null,
+            },
+            messages: [
+              ...state.messages,
+              systemItem("Puzzle Duel started! Solve 3 tactics faster than Stranger."),
+            ],
+          };
+        }
+        case "puzzle_duel_state":
+          if (!state.puzzleDuel || state.puzzleDuel.id !== event.id) return state;
+          return {
+            ...state,
+            puzzleDuel: {
+              ...state.puzzleDuel,
+              me: event.me,
+              them: event.them,
+            },
+          };
+        case "puzzle_duel_over": {
+          if (!state.puzzleDuel || state.puzzleDuel.id !== event.id) return state;
+          const summary =
+            event.winner === "me"
+              ? `Puzzle Duel complete — You won (${event.me.solved} vs ${event.them.solved})!`
+              : event.winner === "them"
+                ? `Puzzle Duel complete — Stranger won (${event.them.solved} vs ${event.me.solved}).`
+                : `Puzzle Duel ended in a draw (${event.me.solved}-${event.them.solved})!`;
+          return {
+            ...state,
+            puzzleDuel: {
+              ...state.puzzleDuel,
+              me: event.me,
+              them: event.them,
+              winner: event.winner,
+            },
+            messages: [...state.messages, systemItem(summary)],
+          };
+        }
         case "partner_left":
           return {
             ...state,
             phase: "ended",
             partnerTyping: false,
             chessInvite: null,
+            chessInviteTimeControl: null,
+            puzzleDuelInvite: null,
             messages: [
               ...state.messages,
               systemItem("Stranger has left the chat."),
@@ -422,6 +581,8 @@ function reducer(state: State, action: Action): State {
             phase: "ended",
             partnerTyping: false,
             chessInvite: null,
+            chessInviteTimeControl: null,
+            puzzleDuelInvite: null,
             messages: [...state.messages, systemItem(event.message)],
           };
         case "error":
@@ -446,19 +607,22 @@ function socketUrl(sid: string) {
   return url;
 }
 
-export function useStrangerchat() {
+export function useStrangerchat(initialInviteCode?: string | null) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef(state.phase);
   const modeRef = useRef(state.mode);
+  const timeControlRef = useRef(state.timeControl);
   const tagsRef = useRef(state.tags);
   const gameRef = useRef(state.game);
+  const pendingInviteRef = useRef<string | null>(initialInviteCode ?? null);
   useEffect(() => {
     phaseRef.current = state.phase;
     modeRef.current = state.mode;
+    timeControlRef.current = state.timeControl;
     tagsRef.current = state.tags;
     gameRef.current = state.game;
-  }, [state.phase, state.mode, state.tags, state.game]);
+  }, [state.phase, state.mode, state.timeControl, state.tags, state.game]);
 
   const typingSentAt = useRef(0);
   const typingIdleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -498,11 +662,29 @@ export function useStrangerchat() {
       socket.onopen = () => {
         attempt = 0;
         dispatch({ type: "connection", status: "open" });
+        if (pendingInviteRef.current) {
+          const code = pendingInviteRef.current;
+          pendingInviteRef.current = null;
+          socket.send(
+            JSON.stringify({ type: "join_invite", code } satisfies ClientEvent),
+          );
+          if (location.search.includes("invite=")) {
+            window.history.replaceState({}, "", "/chat");
+          }
+        }
       };
       socket.onmessage = (message) => {
         const event = JSON.parse(String(message.data)) as ServerEvent;
         if (event.type === "error") {
           toast.error(event.message);
+        } else if (event.type === "invite_failed") {
+          toast.info(
+            event.reason === "self"
+              ? "That is your own invite link — share it with someone else!"
+              : event.reason === "blocked"
+                ? "Unable to join this invite link."
+                : "That invite link expired or was already used.",
+          );
         } else if (event.type === "typing") {
           clearTimeout(partnerTypingTimer.current);
           if (event.isTyping) {
@@ -522,6 +704,7 @@ export function useStrangerchat() {
               type: "find",
               mode: modeRef.current,
               tags: tagsRef.current,
+              timeControl: timeControlRef.current,
             } satisfies ClientEvent),
           );
         } else if (event.type === "safety_ack") {
@@ -534,7 +717,8 @@ export function useStrangerchat() {
         if (socketRef.current !== socket) return;
         socketRef.current = null;
         if (event.code === CloseCode.Unauthorized) {
-          window.location.href = "/login?callbackUrl=/chat";
+          const target = encodeURIComponent(location.pathname + location.search);
+          window.location.href = `/login?callbackUrl=${target}`;
           return;
         }
         if (event.code === CloseCode.SessionConflict) sid = crypto.randomUUID();
@@ -608,14 +792,20 @@ export function useStrangerchat() {
 
   /** Start searching (in `mode`, or the last one), or skip the current partner and search again. */
   const findStranger = useCallback(
-    (mode: ChatMode = modeRef.current, tags: string[] = tagsRef.current) => {
+    (
+      mode: ChatMode = modeRef.current,
+      tags: string[] = tagsRef.current,
+      timeControl: TimeControlId = timeControlRef.current,
+    ) => {
       stopTyping();
-      if (send({ type: "find", mode, tags })) {
+      if (send({ type: "find", mode, tags, timeControl })) {
         modeRef.current = mode;
         tagsRef.current = tags;
-        dispatch({ type: "find", mode, tags });
+        timeControlRef.current = timeControl;
+        dispatch({ type: "find", mode, tags, timeControl });
         captureEvent("match_search_started", {
           mode,
+          time_control: mode === "chess" ? timeControl : null,
           tags_count: tags.length,
         });
       }
@@ -628,11 +818,38 @@ export function useStrangerchat() {
     dispatch({ type: "setTags", tags });
   }, []);
 
-  const inviteToChess = useCallback(() => {
-    if (send({ type: "chess_invite" })) {
-      captureEvent("chess_invite_sent");
-    }
-  }, [send]);
+  const setTimeControl = useCallback((timeControl: TimeControlId) => {
+    timeControlRef.current = timeControl;
+    dispatch({ type: "setTimeControl", timeControl });
+  }, []);
+
+  const createInvite = useCallback(
+    (
+      mode: ChatMode = "chess",
+      timeControl: TimeControlId = timeControlRef.current,
+    ) => {
+      stopTyping();
+      send({ type: "create_invite", mode, timeControl });
+    },
+    [send, stopTyping],
+  );
+
+  const joinInvite = useCallback(
+    (code: string) => {
+      stopTyping();
+      send({ type: "join_invite", code });
+    },
+    [send, stopTyping],
+  );
+
+  const inviteToChess = useCallback(
+    (timeControl: TimeControlId = timeControlRef.current) => {
+      if (send({ type: "chess_invite", timeControl })) {
+        captureEvent("chess_invite_sent", { time_control: timeControl });
+      }
+    },
+    [send],
+  );
 
   const respondChessInvite = useCallback(
     (accept: boolean) => {
@@ -641,6 +858,39 @@ export function useStrangerchat() {
       }
     },
     [send],
+  );
+
+  const invitePuzzleDuel = useCallback(() => {
+    if (send({ type: "puzzle_duel_invite" })) {
+      captureEvent("puzzle_duel_invited");
+    }
+  }, [send]);
+
+  const respondPuzzleDuel = useCallback(
+    (accept: boolean) => {
+      if (send({ type: "puzzle_duel_response", accept })) {
+        captureEvent("puzzle_duel_responded", { accepted: accept });
+      }
+    },
+    [send],
+  );
+
+  const reportPuzzleDuelProgress = useCallback(
+    (duelId: string, solved: number, mistakes: number, finished: boolean) => {
+      send({
+        type: "puzzle_duel_progress",
+        duelId,
+        solved,
+        mistakes,
+        finished,
+      });
+    },
+    [send],
+  );
+
+  const dismissPuzzleDuel = useCallback(
+    () => dispatch({ type: "dismissPuzzleDuel" }),
+    [],
   );
 
   const sendFriendRequest = useCallback(() => {
@@ -703,11 +953,18 @@ export function useStrangerchat() {
     ...state,
     findStranger,
     setTags,
+    setTimeControl,
+    createInvite,
+    joinInvite,
     leave,
     sendMessage,
     notifyTyping,
     inviteToChess,
     respondChessInvite,
+    invitePuzzleDuel,
+    respondPuzzleDuel,
+    reportPuzzleDuelProgress,
+    dismissPuzzleDuel,
     playMove,
     resign,
     offer,
