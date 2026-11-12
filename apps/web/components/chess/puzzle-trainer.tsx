@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarCheck2, CheckCircle2, Flame, Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -73,6 +73,7 @@ export function PuzzleTrainer() {
 
   const puzzle = CHESS_PUZZLES[index]!;
   const isDaily = puzzle.id === stats.dailyPuzzleId;
+  const solvedSet = useMemo(() => new Set(solvedIds), [solvedIds]);
 
   const handleSolved = async (solved: ChessPuzzle) => {
     setSolvedIds((prev) =>
@@ -178,7 +179,7 @@ export function PuzzleTrainer() {
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {CHESS_PUZZLES.map((item, i) => {
-              const done = solvedIds.includes(item.id);
+              const done = solvedSet.has(item.id);
               const active = i === index;
               const daily = item.id === stats.dailyPuzzleId;
               return (

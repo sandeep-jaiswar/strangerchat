@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import { test, type TestContext } from "node:test";
 import { Redis } from "ioredis";
 import { BYE, CLAIM, DETACH, FIND, MOVE, TICK } from "./scripts.ts";
+import {
+  closePresenceRedis,
+  filterOnlineUserIds,
+  getOnlineUserIds,
+} from "./presence.ts";
 
 async function fixture(t: TestContext) {
   const redis = new Redis(
@@ -20,7 +25,8 @@ async function fixture(t: TestContext) {
     run(CLAIM, 1_000, sid, uid, connection, 1_000_000);
   const queue = async (sid: string, uid = sid) => {
     await claim(sid, uid);
-    await redis.rpush(`${prefix}queue`, sid);
+    const seq = await redis.incr(`${prefix}qseq`);
+    await redis.zadd(`${prefix}queue`, seq, sid);
   };
   return { redis, prefix, run, claim, queue };
 }
@@ -42,7 +48,10 @@ test("DETACH restores held messages in order without removing a newer connection
     0,
   );
   assert.equal(await redis.hget(`${prefix}conn`, "alice"), "new");
-  assert.deepEqual(await redis.lrange(`${prefix}queue`, 0, -1), ["alice"]);
+  assert.deepEqual(
+    await redis.zrangebyscore(`${prefix}queue`, "-inf", "+inf"),
+    ["alice"],
+  );
   assert.deepEqual(await redis.lrange(`${prefix}inbox:alice`, 0, -1), [
     "first",
     "second",
@@ -68,14 +77,14 @@ test("candidate scans progress past 100 same-user sessions", async (t) => {
   await queue("bob");
   // Keep retrying the first page so bob cannot match by scanning the head himself.
   for (let i = 0; i < 2; i++) {
-    await redis.set(`${prefix}retry`, 0);
+    await redis.set(`${prefix}retry`, "-inf");
     await run(TICK, 1_000);
     assert.equal(await redis.get(`${prefix}pair:alice-0`), null);
   }
-  await redis.set(`${prefix}retry`, 0);
+  await redis.set(`${prefix}retry`, "-inf");
   await run(TICK, 1_000);
   assert.equal(await redis.get(`${prefix}pair:alice-0`), "bob");
-  assert.equal(await redis.llen(`${prefix}queue`), 204);
+  assert.equal(await redis.zcard(`${prefix}queue`), 204);
 });
 
 test("TICK eventually retries tail sessions after their rematch block expires", async (t) => {
@@ -97,7 +106,7 @@ test("TICK eventually retries tail sessions after their rematch block expires", 
   for (let i = 0; i < 12; i++) await run(TICK, 16_000);
   assert.equal(await redis.get(`${prefix}pair:alice`), "bob");
   assert.equal(await redis.get(`${prefix}pair:bob`), "alice");
-  assert.equal(await redis.llen(`${prefix}queue`), 205);
+  assert.equal(await redis.zcard(`${prefix}queue`), 205);
   assert.equal(await redis.hexists(`${prefix}scan`, "alice"), 0);
   assert.equal(await redis.hexists(`${prefix}fallback`, "alice"), 0);
 });
@@ -112,7 +121,8 @@ test("a new partner on a later page is preferred over an earlier rematch fallbac
   assert.equal(await run(FIND, 16_000, "alice"), 0);
   assert.equal(await redis.hget(`${prefix}fallback`, "alice"), "previous");
   // Start with alice's retry, before other queued users can consume her candidates.
-  await redis.set(`${prefix}retry`, 106);
+  const newScore = await redis.zscore(`${prefix}queue`, "new");
+  await redis.set(`${prefix}retry`, newScore!);
   await run(TICK, 16_000);
   assert.equal(await redis.get(`${prefix}pair:alice`), "new");
 });
@@ -177,4 +187,42 @@ test("a move after the mover's flag fell ends the game instead", async (t) => {
     [(await game()).result, (await game()).reason],
     ["0-1", "timeout"],
   );
+});
+
+test("inverted tag index matches tagged users past >200 front queue entries immediately", async (t) => {
+  const { redis, prefix, run, claim, queue } = await fixture(t);
+  for (let i = 0; i < 220; i++) await queue(`front-${i}`, `front-${i}`);
+  await claim("alice");
+  await run(FIND, 1_000, "alice", "chat", "chess");
+  await claim("bob");
+  assert.equal(await run(FIND, 1_000, "bob", "chat", "chess"), 1);
+  assert.equal(await redis.get(`${prefix}pair:alice`), "bob");
+  assert.equal(await redis.zcard(`${prefix}tagq:chat:chess`), 0);
+});
+
+test("online_users set tracks presence incrementally in O(1) and filters subsets in O(F)", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  t.after(() => closePresenceRedis());
+  const redisUrl = process.env.TEST_REDIS_URL ?? "redis://localhost:6379";
+
+  await claim("alice-1", "alice", "c1");
+  await claim("alice-2", "alice", "c2");
+  await claim("bob-1", "bob", "c3");
+
+  assert.equal(await redis.scard(`${prefix}online_users`), 2);
+  const subset = await filterOnlineUserIds(redisUrl, prefix, [
+    "alice",
+    "bob",
+    "carol",
+  ]);
+  assert.deepEqual([...subset].sort(), ["alice", "bob"]);
+
+  // Detaching one of two tabs keeps alice online; detaching the last removes her.
+  await run(DETACH, 1_000, "alice-1", "c1");
+  assert.equal(await redis.sismember(`${prefix}online_users`, "alice"), 1);
+  await run(DETACH, 1_000, "alice-2", "c2");
+  assert.equal(await redis.sismember(`${prefix}online_users`, "alice"), 0);
+
+  const allOnline = await getOnlineUserIds(redisUrl, prefix);
+  assert.deepEqual([...allOnline], ["bob"]);
 });

@@ -1,6 +1,10 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { getOnlineUserIds, redisPrefix, syncBlockedUser } from "@funstranger/chat-server";
+import {
+  filterOnlineUserIds,
+  redisPrefix,
+  syncBlockedUser,
+} from "@funstranger/chat-server";
 import {
   blockUser,
   ensureUser,
@@ -22,13 +26,12 @@ export async function GET() {
   }
 
   await ensureUser(userId);
-  const [data, onlineIds] = await Promise.all([
-    listFriendsAndRequests(userId),
-    getOnlineUserIds(
-      process.env.REDIS_URL ?? process.env.KV_URL,
-      redisPrefix(),
-    ).catch(() => new Set<string>()),
-  ]);
+  const data = await listFriendsAndRequests(userId);
+  const onlineIds = await filterOnlineUserIds(
+    process.env.REDIS_URL ?? process.env.KV_URL,
+    redisPrefix(),
+    data.friends.map((f) => f.id),
+  ).catch(() => new Set<string>());
 
   return NextResponse.json({
     friends: data.friends.map((f) => ({ ...f, online: onlineIds.has(f.id) })),

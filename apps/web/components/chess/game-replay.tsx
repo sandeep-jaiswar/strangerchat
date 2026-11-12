@@ -65,19 +65,24 @@ export function GameReplay({
 
   const tcSpec = getTimeControl(timeControl as TimeControlId);
 
-  const chess = useMemo(() => {
+  const snapshots = useMemo(() => {
     const c = new Chess();
-    for (let i = 0; i < ply; i++) {
-      const san = moves[i];
-      if (san) c.move(san);
+    const list: { fen: string; lastMove: { from: string; to: string } | null }[] = [
+      { fen: c.fen(), lastMove: null },
+    ];
+    for (const san of moves) {
+      try {
+        const m = c.move(san);
+        list.push({ fen: c.fen(), lastMove: { from: m.from, to: m.to } });
+      } catch {
+        break;
+      }
     }
-    return c;
-  }, [moves, ply]);
+    return list;
+  }, [moves]);
 
-  const lastMove = useMemo(() => {
-    const h = chess.history({ verbose: true }).at(-1);
-    return h ? { from: h.from, to: h.to } : null;
-  }, [chess]);
+  const current = snapshots[Math.min(ply, snapshots.length - 1)] ?? snapshots[0]!;
+  const lastMove = current.lastMove;
 
   const squareStyles: Record<string, CSSProperties> = {};
   if (lastMove) {
@@ -154,7 +159,7 @@ export function GameReplay({
           <Chessboard
             options={{
               id: "replay-board",
-              position: chess.fen(),
+              position: current.fen,
               boardOrientation: orientation,
               squareStyles,
               darkSquareStyle: { backgroundColor: "#7c94b4" },

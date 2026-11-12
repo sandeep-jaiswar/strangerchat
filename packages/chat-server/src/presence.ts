@@ -13,11 +13,29 @@ export async function getOnlineUserIds(
   prefix: string,
 ): Promise<Set<string>> {
   if (!redisUrl) return new Set();
-  const redis = getRedis(redisUrl);
-  const connSids = await redis.hkeys(`${prefix}conn`);
-  if (connSids.length === 0) return new Set();
-  const owners = await redis.hmget(`${prefix}owner`, ...connSids);
-  return new Set(owners.filter((id): id is string => Boolean(id)));
+  const ids = await getRedis(redisUrl).smembers(`${prefix}online_users`);
+  return new Set(ids);
+}
+
+/**
+ * Checks online status for a specific subset of user ids (e.g. a user's friend list)
+ * in O(F) instead of scanning all global connections.
+ */
+export async function filterOnlineUserIds(
+  redisUrl: string | undefined,
+  prefix: string,
+  userIds: string[],
+): Promise<Set<string>> {
+  if (!redisUrl || userIds.length === 0) return new Set();
+  const flags = await getRedis(redisUrl).smismember(
+    `${prefix}online_users`,
+    ...userIds,
+  );
+  const online = new Set<string>();
+  for (let i = 0; i < userIds.length; i++) {
+    if (flags[i] === 1) online.add(userIds[i]!);
+  }
+  return online;
 }
 
 /** Adds a blocked user id to the Redis matchmaking block set immediately. */
@@ -28,5 +46,17 @@ export async function syncBlockedUser(
   blockedId: string,
 ): Promise<void> {
   if (!redisUrl) return;
-  await getRedis(redisUrl).sadd(`${prefix}blocked:${userId}`, blockedId);
+  const redis = getRedis(redisUrl);
+  const key = `${prefix}blocked:${userId}`;
+  await redis.sadd(key, blockedId);
+  const isOnline = await redis.sismember(`${prefix}online_users`, userId);
+  if (!isOnline) await redis.expire(key, 300);
+}
+
+/** Closes the shared presence Redis client (useful for clean shutdown/tests). */
+export async function closePresenceRedis(): Promise<void> {
+  if (!sharedRedis) return;
+  const client = sharedRedis;
+  sharedRedis = undefined;
+  await client.quit();
 }

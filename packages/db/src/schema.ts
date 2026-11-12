@@ -9,25 +9,44 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  handle: text("handle").notNull().unique(),
-  avatarSeed: text("avatar_seed").notNull(),
-  chessRating: integer("chess_rating").notNull().default(1200),
-  chessWins: integer("chess_wins").notNull().default(0),
-  chessLosses: integer("chess_losses").notNull().default(0),
-  chessDraws: integer("chess_draws").notNull().default(0),
-  puzzleRating: integer("puzzle_rating").notNull().default(1200),
-  dailyStreak: integer("daily_streak").notNull().default(0),
-  bestStreak: integer("best_streak").notNull().default(0),
-  lastPuzzleDate: text("last_puzzle_date"),
-  puzzlesSolved: integer("puzzles_solved").notNull().default(0),
-  weekKey: text("week_key"),
-  weeklyEloGain: integer("weekly_elo_gain").notNull().default(0),
-  bannedUntil: timestamp("banned_until", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    handle: text("handle").notNull().unique(),
+    avatarSeed: text("avatar_seed").notNull(),
+    chessRating: integer("chess_rating").notNull().default(1200),
+    chessWins: integer("chess_wins").notNull().default(0),
+    chessLosses: integer("chess_losses").notNull().default(0),
+    chessDraws: integer("chess_draws").notNull().default(0),
+    puzzleRating: integer("puzzle_rating").notNull().default(1200),
+    dailyStreak: integer("daily_streak").notNull().default(0),
+    bestStreak: integer("best_streak").notNull().default(0),
+    lastPuzzleDate: text("last_puzzle_date"),
+    puzzlesSolved: integer("puzzles_solved").notNull().default(0),
+    weekKey: text("week_key"),
+    weeklyEloGain: integer("weekly_elo_gain").notNull().default(0),
+    bannedUntil: timestamp("banned_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("users_elo_rank_idx").on(
+      table.chessRating.desc(),
+      table.chessWins.desc(),
+    ),
+    index("users_weekly_gain_idx").on(
+      table.weekKey,
+      table.weeklyEloGain.desc(),
+      table.chessRating.desc(),
+    ),
+    index("users_streak_rank_idx").on(
+      table.lastPuzzleDate,
+      table.dailyStreak.desc(),
+      table.puzzleRating.desc(),
+    ),
+  ],
+);
 
 export const dailyPuzzleSolves = pgTable(
   "daily_puzzle_solves",
@@ -63,6 +82,7 @@ export const friendships = pgTable(
   },
   (table) => [
     uniqueIndex("friendships_pair_idx").on(table.userLow, table.userHigh),
+    index("friendships_high_idx").on(table.userHigh),
   ],
 );
 
@@ -99,21 +119,33 @@ export const userBlocks = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.blockerId, table.blockedId] })],
+  (table) => [
+    primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    index("user_blocks_blocked_idx").on(table.blockedId),
+  ],
 );
 
-export const userReports = pgTable("user_reports", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  reporterId: text("reporter_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  reportedId: text("reported_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason").notNull(),
-  details: text("details"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const userReports = pgTable(
+  "user_reports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    reporterId: text("reporter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reportedId: text("reported_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    details: text("details"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("user_reports_reported_time_idx").on(
+      table.reportedId,
+      table.createdAt,
+    ),
+  ],
+);
 
 export const chessGames = pgTable(
   "chess_games",
