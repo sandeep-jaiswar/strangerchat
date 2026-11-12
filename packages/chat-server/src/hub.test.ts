@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { after, test } from "node:test";
 import type { WebSocket } from "ws";
+import { Redis } from "ioredis";
 import { hasDatabase } from "@funstranger/db";
 import { CloseCode, type ServerEvent } from "@funstranger/protocol";
 import { Hub } from "./hub.ts";
@@ -823,3 +824,40 @@ test("detects threefold repetition draw in O(1) without replaying full history",
   assert.equal(over.result, "1/2-1/2");
   assert.equal(over.reason, "threefold_repetition");
 });
+
+for (const { online, cached } of [
+  { online: true, cached: false },
+  { online: false, cached: true },
+  { online: false, cached: false },
+]) {
+  test(`blocking updates partner cache when online=${online}, cached=${cached}`, async (t) => {
+    const prefix = `test:${randomUUID()}:`;
+    const redis = new Redis(REDIS_URL);
+    const hub = new Hub({ redisUrl: REDIS_URL, prefix });
+    t.after(async () => {
+      await hub.close();
+      const keys = await redis.keys(`${prefix}*`);
+      if (keys.length) await redis.del(...keys);
+      await redis.quit();
+    });
+    const alice = await connect(hub, `alice-${randomUUID()}`);
+    const bob = await connect(hub, `bob-${randomUUID()}`);
+    await chatting(alice, bob);
+    const blockKey = `${prefix}blocked:${bob.userId}`;
+    await redis.del(blockKey);
+    if (cached) await redis.sadd(blockKey, "existing-block");
+    if (!online) await redis.srem(`${prefix}online_users`, bob.userId);
+
+    alice.deliver({ type: "safety_action", action: "block" });
+    await until(
+      () => alice.types().includes("safety_ack"),
+      "block acknowledged",
+    );
+    assert.equal(
+      await redis.sismember(blockKey, alice.userId),
+      online || cached ? 1 : 0,
+    );
+    if (cached)
+      assert.equal(await redis.sismember(blockKey, "existing-block"), 1);
+  });
+}

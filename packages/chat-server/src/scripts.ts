@@ -428,7 +428,7 @@ local function matchOne(sid)
         end
       end
     end
-    if bestTagCand then
+    if bestTagCand and (not minSatScore or bestTagScore <= minSatScore) then
       makePair(sid, bestTagCand, mode)
       return true
     end

@@ -876,7 +876,10 @@ export class Hub {
       }
     }
     await this.redis.sadd(`${this.prefix}blocked:${connection.userId}`, partnerUid);
-    if (await this.redis.exists(`${this.prefix}blocked:${partnerUid}`)) {
+    if (
+      (await this.redis.exists(`${this.prefix}blocked:${partnerUid}`)) ||
+      (await this.redis.sismember(`${this.prefix}online_users`, partnerUid))
+    ) {
       await this.redis.sadd(`${this.prefix}blocked:${partnerUid}`, connection.userId);
     }
     await this.redis.scLeave(...this.common(now), connection.sid);

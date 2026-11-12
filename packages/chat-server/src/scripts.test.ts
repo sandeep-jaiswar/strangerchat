@@ -296,3 +296,28 @@ test("stale page-1 anyFresh does not shadow live page-2 candidates", async (t) =
   await run(TICK, 6_200);
   assert.equal(await redis.get(`${prefix}pair:alice`), "live");
 });
+
+test("tagged search scans older pages before pairing a newer candidate from another tag", async (t) => {
+  const { redis, prefix, run, claim, queue } = await fixture(t);
+  for (let i = 0; i < 50; i++) {
+    const sid = `alice-dup-${i}`;
+    await queue(sid, "alice");
+    await redis.sadd(`${prefix}tags:${sid}`, "chess");
+    await redis.zadd(`${prefix}tagq:chat:chess`, i + 1, sid);
+  }
+  await queue("older");
+  await redis.sadd(`${prefix}tags:older`, "chess");
+  await redis.zadd(`${prefix}tagq:chat:chess`, 51, "older");
+  await queue("newer");
+  await redis.sadd(`${prefix}tags:newer`, "music");
+  await redis.zadd(`${prefix}tagq:chat:music`, 52, "newer");
+  await claim("alice");
+
+  assert.equal(await run(FIND, 16_000, "alice", "chat", "chess", "music"), 0);
+  assert.equal(await redis.get(`${prefix}pair:alice`), null);
+  assert.equal(await redis.hget(`${prefix}tagscan`, "alice"), "50");
+  const newerScore = await redis.zscore(`${prefix}queue`, "newer");
+  await redis.set(`${prefix}retry`, newerScore!);
+  await run(TICK, 16_000);
+  assert.equal(await redis.get(`${prefix}pair:alice`), "older");
+});
