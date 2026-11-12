@@ -86,17 +86,54 @@ export function ChessPanel({
   const viewingHistory =
     game.status === "over" && viewPly < game.moves.length;
 
-  const displayChess = useMemo(() => {
-    if (!viewingHistory) return new Chess(game.fen);
-    const c = new Chess();
-    for (let i = 0; i < viewPly; i++) {
-      const san = game.moves[i];
-      if (san) c.move(san);
-    }
-    return c;
-  }, [game.fen, game.moves, viewPly, viewingHistory]);
-
   const chess = useMemo(() => new Chess(game.fen), [game.fen]);
+
+  // Precompute all ply snapshots once when the game ends so history stepping is O(1).
+  const historySnapshots = useMemo(() => {
+    if (game.status !== "over") return null;
+    const c = new Chess();
+    const list: {
+      fen: string;
+      lastMove: { from: string; to: string } | null;
+      material: Record<ChessColor, number>;
+      checkSquare: Square | null;
+    }[] = [
+      {
+        fen: c.fen(),
+        lastMove: null,
+        material: computeMaterialLead(c),
+        checkSquare: null,
+      },
+    ];
+    for (const san of game.moves) {
+      try {
+        const m = c.move(san);
+        const checkSquare = c.inCheck()
+          ? (c.findPiece({ type: "k", color: c.turn() }).at(0) ?? null)
+          : null;
+        list.push({
+          fen: c.fen(),
+          lastMove: { from: m.from, to: m.to },
+          material: computeMaterialLead(c),
+          checkSquare,
+        });
+      } catch {
+        break;
+      }
+    }
+    return list;
+  }, [game.status, game.moves]);
+
+  const historySnapshot =
+    viewingHistory && historySnapshots
+      ? historySnapshots[Math.min(viewPly, historySnapshots.length - 1)]
+      : null;
+  const displayFen = historySnapshot ? historySnapshot.fen : game.fen;
+  const liveCheckSquare = useMemo(() => {
+    if (historySnapshot || !chess.inCheck()) return null;
+    return chess.findPiece({ type: "k", color: chess.turn() }).at(0) ?? null;
+  }, [historySnapshot, chess]);
+  const checkSquare = historySnapshot ? historySnapshot.checkSquare : liveCheckSquare;
   const [muted, setMuted] = useState(false);
   const prevMoveCount = useRef(game.moves.length);
   const prevStatus = useRef(game.status);
@@ -119,7 +156,10 @@ export function ChessPanel({
     prevStatus.current = game.status;
   }, [game.moves, game.status, muted]);
 
-  const material = useMemo(() => computeMaterialLead(displayChess), [displayChess]);
+  const material = useMemo(
+    () => historySnapshot?.material ?? computeMaterialLead(chess),
+    [historySnapshot, chess],
+  );
   const playing = game.status === "playing";
   const turn: ChessColor = chess.turn() === "w" ? "white" : "black";
   const myTurn = playing && connected && turn === game.color;
@@ -216,12 +256,7 @@ export function ChessPanel({
     return onMove(from, to);
   };
 
-  const displayLastMove = useMemo(() => {
-    if (!viewingHistory) return game.lastMove;
-    if (viewPly === 0) return null;
-    const h = displayChess.history({ verbose: true }).at(-1);
-    return h ? { from: h.from, to: h.to } : null;
-  }, [viewingHistory, game.lastMove, viewPly, displayChess]);
+  const displayLastMove = historySnapshot ? historySnapshot.lastMove : game.lastMove;
 
   const squareStyles: Record<string, CSSProperties> = {};
   if (displayLastMove) {
@@ -232,11 +267,8 @@ export function ChessPanel({
     squareStyles[premove.from] = PREMOVE;
     squareStyles[premove.to] = PREMOVE;
   }
-  if (displayChess.inCheck()) {
-    const king = displayChess
-      .findPiece({ type: "k", color: displayChess.turn() })
-      .at(0);
-    if (king) squareStyles[king] = CHECK;
+  if (checkSquare) {
+    squareStyles[checkSquare] = CHECK;
   }
   if (selected) squareStyles[selected] = SELECTED;
   for (const square of targets) {
@@ -305,7 +337,7 @@ export function ChessPanel({
         <Chessboard
           options={{
             id: `game-${game.id}`,
-            position: displayChess.fen(),
+            position: displayFen,
             boardOrientation: game.color,
             squareStyles,
             darkSquareStyle: { backgroundColor: "#7c94b4" },

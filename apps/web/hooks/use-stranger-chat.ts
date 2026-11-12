@@ -128,8 +128,15 @@ const initialState: State = {
   friendPartner: null,
 };
 
+const MAX_CHAT_HISTORY = 300;
+
 function systemItem(text: string): ChatItem {
   return { id: crypto.randomUUID(), from: "system", text, sentAt: Date.now() };
+}
+
+function appendMessage(messages: ChatItem[], item: ChatItem): ChatItem[] {
+  if (messages.length < MAX_CHAT_HISTORY) return [...messages, item];
+  return [...messages.slice(messages.length - MAX_CHAT_HISTORY + 1), item];
 }
 
 /** Replays SAN moves from the start into a position. */
@@ -231,7 +238,7 @@ function reducer(state: State, action: Action): State {
         partnerTyping: action.status === "open" && state.partnerTyping,
       };
     case "sent":
-      return { ...state, messages: [...state.messages, action.item] };
+      return { ...state, messages: appendMessage(state.messages, action.item) };
     case "find":
       return {
         ...state,
@@ -297,10 +304,10 @@ function reducer(state: State, action: Action): State {
               chessInvite: null,
               chessInviteTimeControl: null,
               puzzleDuelInvite: null,
-              messages: [
-                ...state.messages,
+              messages: appendMessage(
+                state.messages,
                 systemItem("Stranger has left the chat."),
-              ],
+              ),
             };
           }
           return state;
@@ -376,12 +383,12 @@ function reducer(state: State, action: Action): State {
             chessInviteTimeControl: event.timeControl ?? DEFAULT_TIME_CONTROL,
             messages:
               event.from === "them"
-                ? [
-                    ...state.messages,
+                ? appendMessage(
+                    state.messages,
                     systemItem(
                       `Stranger invited you to play ${getTimeControl(event.timeControl).label} chess while chatting.`,
                     ),
-                  ]
+                  )
                 : state.messages,
           };
         case "chess_invite_declined":
@@ -389,10 +396,10 @@ function reducer(state: State, action: Action): State {
             ...state,
             chessInvite: null,
             chessInviteTimeControl: null,
-            messages: [
-              ...state.messages,
+            messages: appendMessage(
+              state.messages,
               systemItem("Stranger declined the chess invite."),
-            ],
+            ),
           };
         case "chess_game": {
           const rematch =
@@ -402,19 +409,19 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             game: fromServer(event.game),
             messages: rematch
-              ? [
-                  ...state.messages,
+              ? appendMessage(
+                  state.messages,
                   systemItem(
                     `Rematch started — you're playing ${event.game.color}.`,
                   ),
-                ]
+                )
               : state.game === null && state.mode === "chat"
-                ? [
-                    ...state.messages,
+                ? appendMessage(
+                    state.messages,
                     systemItem(
                       `Chess game started — you're playing ${event.game.color}.`,
                     ),
-                  ]
+                  )
                 : state.messages,
           };
         }
@@ -445,7 +452,10 @@ function reducer(state: State, action: Action): State {
           return {
             ...state,
             game,
-            messages: [...state.messages, systemItem(describeResult(game))],
+            messages: appendMessage(
+              state.messages,
+              systemItem(describeResult(game)),
+            ),
           };
         }
         case "chess_offer": {
@@ -456,29 +466,26 @@ function reducer(state: State, action: Action): State {
               ...state.game,
               offers: { ...state.game.offers, [event.offer]: "them" },
             },
-            messages: [
-              ...state.messages,
+            messages: appendMessage(
+              state.messages,
               systemItem(
                 event.offer === "draw"
                   ? "Stranger offers a draw."
                   : "Stranger wants a rematch.",
               ),
-            ],
+            ),
           };
         }
         case "message":
           return {
             ...state,
             partnerTyping: false,
-            messages: [
-              ...state.messages,
-              {
-                id: event.id,
-                from: "stranger",
-                text: event.text,
-                sentAt: event.sentAt,
-              },
-            ],
+            messages: appendMessage(state.messages, {
+              id: event.id,
+              from: "stranger",
+              text: event.text,
+              sentAt: event.sentAt,
+            }),
           };
         case "typing":
           return { ...state, partnerTyping: event.isTyping };
@@ -488,20 +495,20 @@ function reducer(state: State, action: Action): State {
             puzzleDuelInvite: event.from,
             messages:
               event.from === "them"
-                ? [
-                    ...state.messages,
+                ? appendMessage(
+                    state.messages,
                     systemItem("Stranger challenged you to a 90s Puzzle Duel!"),
-                  ]
+                  )
                 : state.messages,
           };
         case "puzzle_duel_declined":
           return {
             ...state,
             puzzleDuelInvite: null,
-            messages: [
-              ...state.messages,
+            messages: appendMessage(
+              state.messages,
               systemItem("Stranger declined the Puzzle Duel."),
-            ],
+            ),
           };
         case "puzzle_duel_start": {
           const empty = {
@@ -522,10 +529,10 @@ function reducer(state: State, action: Action): State {
               them: empty,
               winner: null,
             },
-            messages: [
-              ...state.messages,
+            messages: appendMessage(
+              state.messages,
               systemItem("Puzzle Duel started! Solve 3 tactics faster than Stranger."),
-            ],
+            ),
           };
         }
         case "puzzle_duel_state":
@@ -554,7 +561,7 @@ function reducer(state: State, action: Action): State {
               them: event.them,
               winner: event.winner,
             },
-            messages: [...state.messages, systemItem(summary)],
+            messages: appendMessage(state.messages, systemItem(summary)),
           };
         }
         case "partner_left":
@@ -565,10 +572,10 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
-            messages: [
-              ...state.messages,
+            messages: appendMessage(
+              state.messages,
               systemItem("Stranger has left the chat."),
-            ],
+            ),
           };
         case "friend_challenge":
           return {
@@ -595,7 +602,7 @@ function reducer(state: State, action: Action): State {
             friendStatus: event.status,
             friendPartner: event.partner ?? state.friendPartner,
             messages: acceptedText
-              ? [...state.messages, systemItem(acceptedText)]
+              ? appendMessage(state.messages, systemItem(acceptedText))
               : state.messages,
           };
         }
@@ -607,7 +614,7 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
-            messages: [...state.messages, systemItem(event.message)],
+            messages: appendMessage(state.messages, systemItem(event.message)),
           };
         case "error":
           return state;

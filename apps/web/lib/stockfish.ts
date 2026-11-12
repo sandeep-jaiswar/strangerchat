@@ -197,6 +197,7 @@ export async function analyzeGameMoves(
     }
 
     const analyzed: AnalyzedMove[] = [];
+    const probe = new Chess();
     for (let ply = 1; ply <= moves.length; ply++) {
       const before = evals[ply - 1]!;
       const after = evals[ply]!;
@@ -210,7 +211,7 @@ export async function analyzeGameMoves(
       let bestMoveSan: string | null = null;
       if (before.bestMoveUci) {
         try {
-          const probe = new Chess(fens[ply - 1]!);
+          probe.load(fens[ply - 1]!);
           const m = probe.move({
             from: before.bestMoveUci.slice(0, 2),
             to: before.bestMoveUci.slice(2, 4),

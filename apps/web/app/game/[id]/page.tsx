@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,13 +15,15 @@ import { pageMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
+const loadChessGame = cache((id: string) => getChessGameById(id));
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const game = await getChessGameById(id);
+  const game = await loadChessGame(id);
   if (!game) {
     return pageMetadata({
       path: `/game/${id}`,
@@ -42,7 +45,7 @@ export default async function GameReplayPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const game = await getChessGameById(id);
+  const game = await loadChessGame(id);
   if (!game) notFound();
 
   return (

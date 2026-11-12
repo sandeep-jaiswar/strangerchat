@@ -12,11 +12,14 @@
  *   P..owner         hash        sid -> user id
  *   P..conn          hash        sid -> id of the connection serving it. Absent while the session is reconnecting.
  *   P..mode          hash        sid -> mode it last searched in ("chat" or "chess"); absent means "chat"
- *   P..queue         list        connected sessions waiting for a chat partner, oldest first
- *   P..queue:chess   list        the same for Chess Club
- *   P..scan           hash        sid -> next candidate offset in its queue
- *   P..fallback       hash        sid -> previous partner considered during a paginated scan
- *   P..retry[:mode]   string      next queue offset for the periodic retry pass over that mode's queue
+ *   P..qseq          string      monotonic queue sequence counter for strict FIFO ZSET ordering
+ *   P..queue         sorted set  connected sessions waiting for a chat partner, score = qseq
+ *   P..queue:chess:* sorted set  the same for Chess Club time controls
+ *   P..tagq:<m>:<t>  sorted set  inverted tag index per mode+tag, score = qseq
+ *   P..online_users  set         distinct user ids currently having >= 1 connected session
+ *   P..scan          hash        sid -> last qseq cursor during a paginated scan
+ *   P..fallback      hash        sid -> previous partner considered during a paginated scan
+ *   P..retry[:mode]  string      next qseq cursor for the periodic retry pass over that mode's queue
  *   P..pair:<sid>    string      partner's sid
  *   P..inbox:<sid>   list        messages that arrived while the session was reconnecting
  *   P..ended:<u>:<v> string      when users u and v (sorted) last stopped chatting (ms), for the rematch rule
@@ -167,13 +170,17 @@ local function gameEvent(sid)
     ',"moves":[' .. table.concat(moves, ',') .. ']}}'
 end
 
+local INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+local INITIAL_REP = '{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -":1}'
+
 local function startGame(white, black, tc)
   tc = (tc and TIME_CONTROL_SPECS[tc]) and tc or DEFAULT_TC
   local spec = TIME_CONTROL_SPECS[tc]
   local initMs, incMs = spec[1], spec[2]
   local gid = tostring(redis.call('INCR', P .. 'gseq'))
   redis.call('HSET', gameKey(gid), 'w', white, 'b', black, 'wt', initMs, 'bt', initMs,
-    'inc', incMs, 'tc', tc, 'ply', 0, 'turnAt', NOW, 'status', 'playing')
+    'inc', incMs, 'tc', tc, 'ply', 0, 'turnAt', NOW, 'status', 'playing',
+    'fen', INITIAL_FEN, 'rep', INITIAL_REP)
   redis.call('SET', P .. 'game:' .. white, gid)
   redis.call('SET', P .. 'game:' .. black, gid)
   redis.call('ZADD', P .. 'games', deadlineOf(gid), gid)
@@ -206,7 +213,7 @@ local function endGame(gid, result, reason)
         timeControl = tc,
         moves = moves,
       }))
-      redis.call('LTRIM', P .. 'ended_games', -100, -1)
+      redis.call('LTRIM', P .. 'ended_games', -5000, -1)
     end
   end
   clock.running = false
@@ -280,12 +287,17 @@ local function clearInvite(sid)
 end
 
 local function removeQueued(sid)
-  redis.call('LREM', queueKey(modeOf(sid)), 0, sid)
+  local mode = modeOf(sid)
+  redis.call('ZREM', queueKey(mode), sid)
+  local tagsKey = P .. 'tags:' .. sid
+  for _, tag in ipairs(redis.call('SMEMBERS', tagsKey)) do
+    redis.call('ZREM', P .. 'tagq:' .. mode .. ':' .. tag, sid)
+  end
   redis.call('HDEL', P .. 'scan', sid)
   redis.call('HDEL', P .. 'fallback', sid)
   redis.call('HDEL', P .. 'anyfresh', sid)
   redis.call('HDEL', P .. 'tagat', sid)
-  redis.call('DEL', P .. 'tags:' .. sid)
+  redis.call('DEL', tagsKey)
 end
 
 local function makePair(a, b, modeKey)
@@ -316,8 +328,8 @@ end
 
 -- Pairs a queued session with the longest-waiting eligible session in its mode's queue. Eligible: connected,
 -- a different user, not blocked, and not someone this user stopped chatting with less than
--- REMATCH_BLOCK ago. Prefers overlapping interest tags when present, falls back to any fresh
--- user, and within REMATCH_WINDOW picks a previous partner only when nobody new is waiting.
+-- REMATCH_BLOCK ago. Uses the inverted tag ZSET index when tags are present, falls back to any fresh
+-- user after TAG_WAIT, and within REMATCH_WINDOW picks a previous partner only when nobody new is waiting.
 local function matchOne(sid)
   local uid = redis.call('HGET', P .. 'owner', sid)
   if not uid or not isConnected(sid) then
@@ -326,21 +338,65 @@ local function matchOne(sid)
   end
   local mode = modeOf(sid)
   local queue = queueKey(mode)
-  local size = redis.call('LLEN', queue)
-  local offset = tonumber(redis.call('HGET', P .. 'scan', sid)) or 0
+  local cursor = redis.call('HGET', P .. 'scan', sid) or '-inf'
   local hasTags = redis.call('SCARD', P .. 'tags:' .. sid) > 0
   local tagAt = tonumber(redis.call('HGET', P .. 'tagat', sid))
   local allowTagFallback = not tagAt or (NOW - tagAt >= TAG_WAIT)
   local anyFresh = redis.call('HGET', P .. 'anyfresh', sid)
   local fallback = redis.call('HGET', P .. 'fallback', sid)
-  local candidates = redis.call('LRANGE', queue, offset, offset + 99)
-  local removed = 0
-  for _, candidate in ipairs(candidates) do
+
+  if hasTags and cursor == '-inf' then
+    local bestTagCand, bestTagScore = nil, nil
+    local needGeneralTagScan = false
+    local seen = {}
+    for _, tag in ipairs(redis.call('SMEMBERS', P .. 'tags:' .. sid)) do
+      local tq = P .. 'tagq:' .. mode .. ':' .. tag
+      local tItems = redis.call('ZRANGEBYSCORE', tq, '-inf', '+inf', 'WITHSCORES', 'LIMIT', 0, 50)
+      if #tItems == 100 and redis.call('ZCARD', tq) > 50 then
+        needGeneralTagScan = true
+      end
+      for i = 1, #tItems, 2 do
+        local cand = tItems[i]
+        local sc = tonumber(tItems[i + 1])
+        if cand ~= sid and not seen[cand] then
+          seen[cand] = true
+          local other = redis.call('HGET', P .. 'owner', cand)
+          if not other or not isConnected(cand) then
+            removeQueued(cand)
+          elseif other ~= uid and not isBlockedPair(uid, other) then
+            local ended = redis.call('GET', endedKey(uid, other))
+            if not ended then
+              if not bestTagScore or sc < bestTagScore then
+                bestTagCand = cand
+                bestTagScore = sc
+              end
+              break
+            elseif not fallback and NOW - tonumber(ended) >= REMATCH_BLOCK then
+              fallback = cand
+            end
+          end
+        end
+      end
+    end
+    if bestTagCand then
+      makePair(sid, bestTagCand, mode)
+      return true
+    end
+    if not allowTagFallback and not needGeneralTagScan then
+      return false
+    end
+  end
+
+  local minBound = (cursor == '-inf') and '-inf' or ('(' .. cursor)
+  local items = redis.call('ZRANGEBYSCORE', queue, minBound, '+inf', 'WITHSCORES', 'LIMIT', 0, 100)
+  local lastScore = cursor
+  for i = 1, #items, 2 do
+    local candidate = items[i]
+    lastScore = items[i + 1]
     if candidate ~= sid then
       local other = redis.call('HGET', P .. 'owner', candidate)
       if not other or not isConnected(candidate) then
         removeQueued(candidate)
-        removed = removed + 1
       elseif other ~= uid and not isBlockedPair(uid, other) then
         local ended = redis.call('GET', endedKey(uid, other))
         if not ended then
@@ -360,8 +416,8 @@ local function matchOne(sid)
       end
     end
   end
-  if offset + #candidates < size then
-    redis.call('HSET', P .. 'scan', sid, offset + #candidates - removed)
+  if #items == 200 then
+    redis.call('HSET', P .. 'scan', sid, lastScore)
     if anyFresh then redis.call('HSET', P .. 'anyfresh', sid, anyFresh) end
     if fallback then redis.call('HSET', P .. 'fallback', sid, fallback) end
     return false
@@ -369,7 +425,7 @@ local function matchOne(sid)
   redis.call('HDEL', P .. 'scan', sid)
   redis.call('HDEL', P .. 'anyfresh', sid)
   redis.call('HDEL', P .. 'fallback', sid)
-  if anyFresh and isConnected(anyFresh) and redis.call('LPOS', queue, anyFresh) then
+  if anyFresh and isConnected(anyFresh) and redis.call('ZSCORE', queue, anyFresh) then
     local other = redis.call('HGET', P .. 'owner', anyFresh)
     if other and other ~= uid and not isBlockedPair(uid, other) then
       makePair(sid, anyFresh, mode)
@@ -377,7 +433,7 @@ local function matchOne(sid)
     end
   end
   -- The fallback may have left or matched while we scanned later pages.
-  if fallback and isConnected(fallback) and redis.call('LPOS', queue, fallback) then
+  if fallback and isConnected(fallback) and redis.call('ZSCORE', queue, fallback) then
     local other = redis.call('HGET', P .. 'owner', fallback)
     if other and other ~= uid and not isBlockedPair(uid, other) then
       local ended = redis.call('GET', endedKey(uid, other))
@@ -390,23 +446,29 @@ local function matchOne(sid)
   return false
 end
 
--- Distinct users with at least one connected session.
+-- Distinct users with at least one connected session, O(1).
 local function countOnline()
-  local seen, count = {}, 0
-  for _, sid in ipairs(redis.call('HKEYS', P .. 'conn')) do
-    local uid = redis.call('HGET', P .. 'owner', sid)
-    if uid and not seen[uid] then
-      seen[uid] = true
-      count = count + 1
+  return redis.call('SCARD', P .. 'online_users')
+end
+
+local function releaseUserSession(uid, sid, expireBlocked)
+  if not uid then return end
+  if redis.call('SREM', P .. 'usids:' .. uid, sid) == 1 then
+    if redis.call('SCARD', P .. 'usids:' .. uid) == 0 then
+      redis.call('SREM', P .. 'online_users', uid)
+      if expireBlocked then
+        redis.call('EXPIRE', P .. 'blocked:' .. uid, 300)
+      else
+        redis.call('DEL', P .. 'blocked:' .. uid)
+      end
     end
   end
-  return count
 end
 
 -- Removes every trace of a session, ending its chat first.
 local function endSession(sid)
   local uid = redis.call('HGET', P .. 'owner', sid)
-  if uid then redis.call('SREM', P .. 'usids:' .. uid, sid) end
+  releaseUserSession(uid, sid, false)
   unpair(sid)
   removeQueued(sid)
   clearInvite(sid)
@@ -429,13 +491,18 @@ local owner = redis.call('HGET', P .. 'owner', sid)
 if owner and owner ~= uid then return { 'forbidden' } end
 redis.call('HSET', P .. 'owner', sid, uid)
 redis.call('HSET', P .. 'conn', sid, connectionId)
-redis.call('SADD', P .. 'usids:' .. uid, sid)
+if redis.call('SADD', P .. 'usids:' .. uid, sid) == 1 then
+  if redis.call('SCARD', P .. 'usids:' .. uid) == 1 then
+    redis.call('SADD', P .. 'online_users', uid)
+  end
+end
+redis.call('PERSIST', P .. 'blocked:' .. uid)
 redis.call('ZADD', P .. 'sess', expiresAt, sid)
 
 local phase = 'idle'
 if redis.call('EXISTS', P .. 'pair:' .. sid) == 1 then
   phase = 'chatting'
-elseif redis.call('LPOS', queueKey(modeOf(sid)), sid) then
+elseif redis.call('ZSCORE', queueKey(modeOf(sid)), sid) then
   phase = 'searching'
 end
 local result = { phase, countOnline(), gameEvent(sid) or '' }
@@ -464,7 +531,7 @@ end
 if redis.call('HGET', P .. 'conn', sid) ~= connectionId then return 0 end
 redis.call('HDEL', P .. 'conn', sid)
 local uid = redis.call('HGET', P .. 'owner', sid)
-if uid then redis.call('SREM', P .. 'usids:' .. uid, sid) end
+releaseUserSession(uid, sid, true)
 removeQueued(sid)
 clearInvite(sid)
 return 1
@@ -487,15 +554,17 @@ removeQueued(sid)
 clearInvite(sid)
 unpair(sid)
 redis.call('HSET', P .. 'mode', sid, mode)
+local seq = tonumber(redis.call('INCR', P .. 'qseq'))
 local addedTags = 0
 for i = 7, #ARGV do
   if ARGV[i] ~= '' then
     redis.call('SADD', P .. 'tags:' .. sid, ARGV[i])
+    redis.call('ZADD', P .. 'tagq:' .. mode .. ':' .. ARGV[i], seq, sid)
     addedTags = addedTags + 1
   end
 end
 if addedTags > 0 then redis.call('HSET', P .. 'tagat', sid, NOW) end
-redis.call('RPUSH', queueKey(mode), sid)
+redis.call('ZADD', queueKey(mode), seq, sid)
 if matchOne(sid) then return 1 end
 return 0
 `;
@@ -561,43 +630,49 @@ for _, mode in ipairs(MODES) do
   local queue = queueKey(mode)
   local retry = P .. 'retry'
   if mode ~= 'chat' then retry = retry .. ':' .. mode end
-  local offset = tonumber(redis.call('GET', retry)) or 0
-  if offset >= redis.call('LLEN', queue) then offset = 0 end
-  local waiting = redis.call('LRANGE', queue, offset, offset + 99)
-  for _, sid in ipairs(waiting) do
-    if redis.call('LPOS', queue, sid) then matchOne(sid) end
+  local cursor = redis.call('GET', retry) or '-inf'
+  local minBound = (cursor == '-inf') and '-inf' or ('(' .. cursor)
+  local items = redis.call('ZRANGEBYSCORE', queue, minBound, '+inf', 'WITHSCORES', 'LIMIT', 0, 100)
+  if #items == 0 and cursor ~= '-inf' then
+    cursor = '-inf'
+    items = redis.call('ZRANGEBYSCORE', queue, '-inf', '+inf', 'WITHSCORES', 'LIMIT', 0, 100)
   end
-  local nextOffset = offset + #waiting
-  if nextOffset >= redis.call('LLEN', queue) then nextOffset = 0 end
-  redis.call('SET', retry, nextOffset)
+  local lastScore = cursor
+  for i = 1, #items, 2 do
+    local sid = items[i]
+    lastScore = items[i + 1]
+    if redis.call('ZSCORE', queue, sid) then matchOne(sid) end
+  end
+  if #items < 200 then
+    redis.call('SET', retry, '-inf')
+  else
+    redis.call('SET', retry, lastScore)
+  end
 end
 return countOnline()
 `;
 
 /**
- * The session's game, for validating a move. ARGV[5]: sid.
- * Returns {} or { gid, color ("white" | "black"), ply, status, ...moves in SAN }.
+ * The session's game, for validating a move in O(1). ARGV[5]: sid.
+ * Returns {} or { gid, color ("white" | "black"), ply, status, fen, repJson }.
  */
 export const GAME = `${LIB}
 local sid = ARGV[5]
 local gid = redis.call('GET', P .. 'game:' .. sid)
 if not gid then return {} end
-local g = redis.call('HMGET', gameKey(gid), 'w', 'ply', 'status')
-local result = { gid, (g[1] == sid) and 'white' or 'black', g[2], g[3] }
-for _, san in ipairs(redis.call('LRANGE', P .. 'gm:' .. gid, 0, -1)) do
-  table.insert(result, san)
-end
-return result
+local g = redis.call('HMGET', gameKey(gid), 'w', 'ply', 'status', 'fen', 'rep')
+return { gid, (g[1] == sid) and 'white' or 'black', g[2], g[3], g[4] or INITIAL_FEN, g[5] or INITIAL_REP }
 `;
 
 /**
  * Play a move the caller already checked is legal, unless the game moved on meanwhile.
  * Ends the game when the mover ran out of time, or with `result` when the move ends it.
- * ARGV[5..10]: sid, gid, ply the move was checked against, san, result ("" if the game goes on), reason.
+ * ARGV[5..12]: sid, gid, ply, san, result, reason, nextFen (optional), nextRep (optional).
  * Returns 1 when played, 0 when not (the caller should resync the client).
  */
 export const MOVE = `${LIB}
 local sid, gid, ply, san, result, reason = ARGV[5], ARGV[6], tonumber(ARGV[7]), ARGV[8], ARGV[9], ARGV[10]
+local nextFen, nextRep = ARGV[11], ARGV[12]
 if redis.call('GET', P .. 'game:' .. sid) ~= gid then return 0 end
 local key = gameKey(gid)
 local g = redis.call('HMGET', key, 'w', 'b', 'ply', 'status', 'wt', 'bt', 'turnAt', 'draw', 'inc')
@@ -615,7 +690,11 @@ if ply >= 2 then
   redis.call('HSET', key, field, left + inc)
 end
 redis.call('RPUSH', P .. 'gm:' .. gid, san)
-redis.call('HSET', key, 'ply', ply + 1, 'turnAt', NOW)
+if nextFen and nextRep then
+  redis.call('HSET', key, 'ply', ply + 1, 'turnAt', NOW, 'fen', nextFen, 'rep', nextRep)
+else
+  redis.call('HSET', key, 'ply', ply + 1, 'turnAt', NOW)
+end
 -- Moving declines the partner's draw offer.
 if g[8] and g[8] ~= sid then redis.call('HDEL', key, 'draw') end
 publishToPlayers(gid, cjson.encode({ type = 'chess_move', san = san, ply = ply + 1, clock = clockOf(gid) }))

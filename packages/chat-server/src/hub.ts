@@ -132,6 +132,7 @@ export class Hub {
   private readonly connections = new Map<string, Connection>();
   private readonly duelTimers = new Map<string, NodeJS.Timeout>();
   private timer: NodeJS.Timeout | undefined;
+  private flushingEndedGames: Promise<void> | null = null;
   private online = 0;
   private closed = false;
 
@@ -493,29 +494,46 @@ export class Hub {
     }
   }
 
-  /** Checks a move against the game so far, then plays it. */
+  /** Checks a move in O(1) against the stored FEN and repetition window, then plays it. */
   private async move(
     connection: Connection,
     event: Extract<ClientEvent, { type: "chess_move" }>,
   ) {
     const { sid } = connection;
-    const [gid, color, ply, status, ...moves] = await this.redis.scGame(
+    const [gid, color, ply, status, fen, repJson] = await this.redis.scGame(
       ...this.common(Date.now()),
       sid,
     );
     const turn = Number(ply) % 2 === 0 ? "white" : "black";
     let played:
-      { san: string; result: ChessResult | ""; reason: string } | undefined;
-    if (gid && status === "playing" && color === turn) {
-      const chess = new Chess();
-      for (const san of moves) chess.move(san);
+      | {
+          san: string;
+          result: ChessResult | "";
+          reason: string;
+          nextFen: string;
+          nextRep: string;
+        }
+      | undefined;
+    if (gid && status === "playing" && color === turn && fen) {
+      const chess = new Chess(fen);
       try {
         const { san } = chess.move({
           from: event.from,
           to: event.to,
           promotion: event.promotion,
         });
-        played = { san, ...outcome(chess) };
+        const nextFen = chess.fen();
+        const { rep, isThreefold } = updateRepetitionMap(
+          fen,
+          nextFen,
+          repJson,
+        );
+        played = {
+          san,
+          ...outcome(chess, isThreefold),
+          nextFen,
+          nextRep: JSON.stringify(rep),
+        };
       } catch {
         // Illegal move: fall through and resync the client.
       }
@@ -530,6 +548,8 @@ export class Hub {
         played.san,
         played.result,
         played.reason,
+        played.nextFen,
+        played.nextRep,
       ));
     if (ok) return;
 
@@ -589,8 +609,19 @@ export class Hub {
     }
 
     if (this.closed) return;
-    const online = await this.redis.scTick(...this.common(now));
-    void this.flushEndedGames();
+    const lockMs = Math.max(10, Math.floor(this.tickMs * 0.8));
+    const isLeader = await this.redis.set(
+      `${this.prefix}tick_lock`,
+      "1",
+      "PX",
+      lockMs,
+      "NX",
+    );
+    const online =
+      isLeader === "OK"
+        ? await this.redis.scTick(...this.common(now))
+        : await this.redis.scard(`${this.prefix}online_users`);
+    if (isLeader === "OK") void this.flushEndedGames();
     if (online !== this.online) {
       this.online = online;
       for (const connection of this.connections.values()) {
@@ -911,12 +942,17 @@ export class Hub {
 
   private async startPuzzleDuel(sidA: string, sidB: string) {
     const duelId = randomUUID();
-    const pool = [...CHESS_PUZZLES];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+    // Sparse O(K) partial Fisher-Yates without cloning the full puzzle catalog.
+    const swaps = new Map<number, number>();
+    const puzzleIds: string[] = [];
+    const total = CHESS_PUZZLES.length;
+    const count = Math.min(PUZZLE_DUEL_COUNT, total);
+    for (let i = 0; i < count; i++) {
+      const j = i + Math.floor(Math.random() * (total - i));
+      const picked = swaps.get(j) ?? j;
+      swaps.set(j, swaps.get(i) ?? i);
+      puzzleIds.push(CHESS_PUZZLES[picked]!.id);
     }
-    const puzzleIds = pool.slice(0, PUZZLE_DUEL_COUNT).map((p) => p.id);
     const startedAt = Date.now();
     const emptyState: PuzzleDuelPlayerState = {
       solved: 0,
@@ -1057,10 +1093,18 @@ export class Hub {
     ]);
   }
 
-  private async flushEndedGames() {
-    if (this.closed || !hasDatabase()) return;
+  private flushEndedGames(): Promise<void> {
+    if (this.closed || !hasDatabase()) return Promise.resolve();
+    if (this.flushingEndedGames) return this.flushingEndedGames;
+    this.flushingEndedGames = this.drainEndedGames().finally(() => {
+      this.flushingEndedGames = null;
+    });
+    return this.flushingEndedGames;
+  }
+
+  private async drainEndedGames() {
     const key = `${this.prefix}ended_games`;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       if (this.closed) return;
       let raw: string | null;
       try {
@@ -1093,6 +1137,9 @@ export class Hub {
         });
       } catch (error: unknown) {
         console.error("chat-server: failed to record chess game", error);
+        // Re-queue transient DB failures so completed games are not silently lost.
+        await this.redis.rpush(key, raw).catch(() => undefined);
+        return;
       }
     }
   }
@@ -1250,8 +1297,53 @@ function compareDuelStates(
   return "draw";
 }
 
+function fenPositionKey(fen: string): string {
+  // First 4 FEN fields: piece placement, active color, castling rights, en passant square.
+  let spaces = 0;
+  for (let i = 0; i < fen.length; i++) {
+    if (fen.charCodeAt(i) === 32 && ++spaces === 4) {
+      return fen.slice(0, i);
+    }
+  }
+  return fen;
+}
+
+function fenField(fen: string, index: number): string {
+  return fen.split(" ")[index] ?? "";
+}
+
+/**
+ * Updates the bounded position-repetition map in O(1).
+ * Resets on irreversible moves (halfmove clock == 0 or castling rights changed),
+ * bounding map size to <= 100 entries by the 50-move rule.
+ */
+function updateRepetitionMap(
+  prevFen: string,
+  nextFen: string,
+  repJson?: string,
+): { rep: Record<string, number>; isThreefold: boolean } {
+  const nextKey = fenPositionKey(nextFen);
+  const irreversible =
+    fenField(nextFen, 4) === "0" ||
+    fenField(prevFen, 2) !== fenField(nextFen, 2);
+  let rep: Record<string, number> = {};
+  if (!irreversible && repJson) {
+    try {
+      rep = JSON.parse(repJson) as Record<string, number>;
+    } catch {
+      rep = {};
+    }
+  }
+  const count = (rep[nextKey] ?? 0) + 1;
+  rep[nextKey] = count;
+  return { rep, isThreefold: count >= 3 };
+}
+
 /** How a game ends after the last move, if it does. */
-function outcome(chess: Chess): {
+function outcome(
+  chess: Chess,
+  isThreefold = chess.isThreefoldRepetition(),
+): {
   result: ChessResult | "";
   reason: ChessEndReason | "";
 } {
@@ -1266,7 +1358,7 @@ function outcome(chess: Chess): {
   });
   if (chess.isStalemate()) return draw("stalemate");
   if (chess.isInsufficientMaterial()) return draw("insufficient_material");
-  if (chess.isThreefoldRepetition()) return draw("threefold_repetition");
+  if (isThreefold) return draw("threefold_repetition");
   if (chess.isDrawByFiftyMoves()) return draw("fifty_moves");
   return { result: "", reason: "" };
 }

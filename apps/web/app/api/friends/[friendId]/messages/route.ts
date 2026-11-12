@@ -15,7 +15,7 @@ import { authOptions } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ friendId: string }> },
 ) {
   const session = await getServerSession(authOptions);
@@ -27,7 +27,10 @@ export async function GET(
   if (!(await areFriends(userId, friendId))) {
     return NextResponse.json({ error: "Not friends" }, { status: 403 });
   }
-  const messages = await listDirectMessages(userId, friendId);
+  const sinceParam = new URL(request.url).searchParams.get("since");
+  const sinceParsed = sinceParam !== null ? Number(sinceParam) : NaN;
+  const sinceMs = Number.isFinite(sinceParsed) ? sinceParsed : undefined;
+  const messages = await listDirectMessages(userId, friendId, 60, sinceMs);
   return NextResponse.json({ messages });
 }
 

@@ -1,5 +1,16 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, countDistinct, desc, eq, gte, inArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   CHESS_PUZZLE_BY_ID,
   CHESS_PUZZLES,
@@ -138,6 +149,24 @@ export async function ensureUser(userId: string): Promise<UserProfile | null> {
   return null;
 }
 
+/** Ensures multiple user rows exist with a single IN lookup instead of N sequential selects. */
+async function ensureUsersExist(userIds: string[]): Promise<void> {
+  const unique = Array.from(new Set(userIds));
+  if (unique.length === 0) return;
+  const db = await getDb();
+  if (!db) return;
+
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(inArray(users.id, unique));
+  const present = new Set(existing.map((r) => r.id));
+  const missing = unique.filter((id) => !present.has(id));
+  if (missing.length > 0) {
+    await Promise.all(missing.map((id) => ensureUser(id)));
+  }
+}
+
 export async function updateUserHandle(
   userId: string,
   handle: string,
@@ -213,8 +242,7 @@ export async function blockUser(
   if (blockerId === blockedId) return false;
   const db = await getDb();
   if (!db) return false;
-  await ensureUser(blockerId);
-  await ensureUser(blockedId);
+  await ensureUsersExist([blockerId, blockedId]);
   const [low, high] = orderedPair(blockerId, blockedId);
   await db.transaction(async (tx) => {
     await tx
@@ -257,8 +285,7 @@ export async function reportUser(
   const db = await getDb();
   if (!db) return { autoBanned: false };
 
-  await ensureUser(reporterId);
-  await ensureUser(reportedId);
+  await ensureUsersExist([reporterId, reportedId]);
   await db.insert(userReports).values({
     reporterId,
     reportedId,
@@ -296,9 +323,11 @@ export async function requestOrAcceptFriend(
   const db = await getDb();
   if (!db) return { status: "unavailable" };
 
-  await ensureUser(fromUserId);
-  await ensureUser(toUserId);
-  if (await isBlockedBetween(fromUserId, toUserId)) {
+  const [, blocked] = await Promise.all([
+    ensureUsersExist([fromUserId, toUserId]),
+    isBlockedBetween(fromUserId, toUserId),
+  ]);
+  if (blocked) {
     return { status: "blocked" };
   }
 
@@ -426,7 +455,7 @@ export async function listFriendsAndRequests(userId: string): Promise<{
       chessRating: users.chessRating,
     })
     .from(users)
-    .where(sql`${users.id} IN ${otherIds}`);
+    .where(inArray(users.id, otherIds));
   const byId = new Map(profiles.map((p) => [p.id, p]));
 
   const friends: FriendSummary[] = [];
@@ -452,30 +481,42 @@ export async function listDirectMessages(
   userA: string,
   userB: string,
   limit = 60,
+  sinceMs?: number,
 ): Promise<DirectMessageItem[]> {
   const db = await getDb();
   if (!db) return [];
   if (!(await areFriends(userA, userB))) return [];
 
+  const pairCondition = or(
+    and(
+      eq(directMessages.senderId, userA),
+      eq(directMessages.recipientId, userB),
+    ),
+    and(
+      eq(directMessages.senderId, userB),
+      eq(directMessages.recipientId, userA),
+    ),
+  );
+  const whereClause =
+    sinceMs !== undefined && Number.isFinite(sinceMs)
+      ? and(pairCondition, gt(directMessages.createdAt, new Date(sinceMs)))
+      : pairCondition;
+
   const rows = await db
     .select()
     .from(directMessages)
-    .where(
-      or(
-        and(
-          eq(directMessages.senderId, userA),
-          eq(directMessages.recipientId, userB),
-        ),
-        and(
-          eq(directMessages.senderId, userB),
-          eq(directMessages.recipientId, userA),
-        ),
-      ),
+    .where(whereClause)
+    .orderBy(
+      sinceMs !== undefined && Number.isFinite(sinceMs)
+        ? asc(directMessages.createdAt)
+        : desc(directMessages.createdAt),
     )
-    .orderBy(desc(directMessages.createdAt))
     .limit(limit);
 
-  return rows.reverse().map((r) => ({
+  const ordered =
+    sinceMs !== undefined && Number.isFinite(sinceMs) ? rows : rows.reverse();
+
+  return ordered.map((r) => ({
     id: r.id,
     senderId: r.senderId,
     recipientId: r.recipientId,
@@ -529,8 +570,7 @@ export async function recordChessGameAndUpdateElo(input: {
   const db = await getDb();
   if (!db) return;
 
-  await ensureUser(input.whiteId);
-  await ensureUser(input.blackId);
+  await ensureUsersExist([input.whiteId, input.blackId]);
 
   const scoreWhite =
     input.result === "1-0" ? 1 : input.result === "0-1" ? 0 : 0.5;
@@ -626,12 +666,16 @@ function activeStreak(
   return storedStreak;
 }
 
-export async function getPuzzleStats(userId: string): Promise<PuzzleStats> {
+export async function getPuzzleStats(
+  userId: string,
+  existingUser?: UserProfile | null,
+): Promise<PuzzleStats> {
   const todayKey = getUtcDateKey(0);
   const yesterdayKey = getUtcDateKey(-1);
   const dailyPuzzle = CHESS_PUZZLES[getDailyPuzzleIndex(todayKey)]!;
 
-  const user = await ensureUser(userId);
+  const user =
+    existingUser !== undefined ? existingUser : await ensureUser(userId);
   const db = await getDb();
   if (!db || !user) {
     return {
@@ -655,10 +699,11 @@ export async function getPuzzleStats(userId: string): Promise<PuzzleStats> {
       ),
     );
   const solvedTodayIds = solves.map((s) => s.puzzleId);
+  const solvedTodaySet = new Set(solvedTodayIds);
 
   return {
     dailyPuzzleId: dailyPuzzle.id,
-    dailySolvedToday: solvedTodayIds.includes(dailyPuzzle.id),
+    dailySolvedToday: solvedTodaySet.has(dailyPuzzle.id),
     solvedTodayIds,
     puzzleRating: user.puzzleRating,
     dailyStreak: activeStreak(
@@ -681,13 +726,14 @@ export async function recordPuzzleSolve(
   const db = await getDb();
   if (!db) return null;
 
-  await ensureUser(userId);
+  const ensuredUser = await ensureUser(userId);
+  if (!ensuredUser) return null;
   const todayKey = getUtcDateKey(0);
   const yesterdayKey = getUtcDateKey(-1);
   const dailyPuzzle = CHESS_PUZZLES[getDailyPuzzleIndex(todayKey)]!;
   const isDaily = puzzle.id === dailyPuzzle.id;
 
-  await db.transaction(async (tx) => {
+  const updatedUser = await db.transaction(async (tx) => {
     const inserted = await tx
       .insert(dailyPuzzleSolves)
       .values({ userId, puzzleId: puzzle.id, solveDate: todayKey })
@@ -695,7 +741,7 @@ export async function recordPuzzleSolve(
       .returning({ puzzleId: dailyPuzzleSolves.puzzleId });
 
     // Only grant puzzle Elo / count / streak once per puzzle per UTC day.
-    if (inserted.length === 0) return;
+    if (inserted.length === 0) return ensuredUser;
 
     const rows = await tx
       .select({
@@ -709,7 +755,7 @@ export async function recordPuzzleSolve(
       .where(eq(users.id, userId))
       .limit(1);
     const u = rows[0];
-    if (!u) return;
+    if (!u) return ensuredUser;
 
     const expected = 1 / (1 + 10 ** ((puzzle.rating - u.puzzleRating) / 400));
     const delta = Math.max(4, Math.round(24 * (1 - expected)));
@@ -729,7 +775,7 @@ export async function recordPuzzleSolve(
       nextLastDate = todayKey;
     }
 
-    await tx
+    const updated = await tx
       .update(users)
       .set({
         puzzleRating: nextRating,
@@ -739,10 +785,12 @@ export async function recordPuzzleSolve(
         lastPuzzleDate: nextLastDate,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, userId))
+      .returning();
+    return updated[0] ?? ensuredUser;
   });
 
-  return getPuzzleStats(userId);
+  return getPuzzleStats(userId, updatedUser);
 }
 
 export async function getLeaderboard(limit = 20): Promise<LeaderboardData> {

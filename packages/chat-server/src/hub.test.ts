@@ -801,3 +801,25 @@ test("online friends can challenge each other directly to a chess match", async 
   );
   assert.equal(lastOf(alice, "chess_game")!.game.timeControl, "blitz_3_2");
 });
+
+test("detects threefold repetition draw in O(1) without replaying full history", async () => {
+  const [hubA, hubB] = cluster();
+  const [white, black] = await playing(
+    await connect(hubA, `rep-a-${randomUUID()}`),
+    await connect(hubB, `rep-b-${randomUUID()}`),
+  );
+  await play(white, black, [
+    ["g1", "f3"],
+    ["g8", "f6"],
+    ["f3", "g1"],
+    ["f6", "g8"],
+    ["g1", "f3"],
+    ["g8", "f6"],
+    ["f3", "g1"],
+    ["f6", "g8"],
+  ]);
+  await until(() => !!lastOf(white, "chess_over"), "threefold draw detected");
+  const over = lastOf(white, "chess_over")!;
+  assert.equal(over.result, "1/2-1/2");
+  assert.equal(over.reason, "threefold_repetition");
+});

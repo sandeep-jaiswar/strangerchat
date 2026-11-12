@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -480,7 +480,7 @@ function Composer({
   );
 }
 
-function MessageList({
+const MessageList = memo(function MessageList({
   messages,
   partnerTyping,
 }: {
@@ -561,4 +561,4 @@ function MessageList({
       </ol>
     </div>
   );
-}
+});

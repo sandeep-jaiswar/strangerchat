@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -107,6 +107,7 @@ export function FriendsDrawer({
 
   const [activeFriend, setActiveFriend] = useState<FriendEntry | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const lastMessageAtRef = useRef<number | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -130,27 +131,68 @@ export function FriendsDrawer({
     }
   }, []);
 
-  const loadMessages = useCallback(async (friendId: string) => {
-    const res = await fetch(`/api/friends/${friendId}/messages`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as { messages: DirectMessage[] };
-    setMessages(data.messages ?? []);
-  }, []);
+  const loadMessages = useCallback(
+    async (friendId: string, incremental = false) => {
+      const since = incremental ? lastMessageAtRef.current : null;
+      const qs = since !== null ? `?since=${since}` : "";
+      const res = await fetch(`/api/friends/${friendId}/messages${qs}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { messages: DirectMessage[] };
+      const incomingMsgs = data.messages ?? [];
+      if (incomingMsgs.length > 0) {
+        lastMessageAtRef.current =
+          incomingMsgs[incomingMsgs.length - 1]!.createdAt;
+      }
+      if (!incremental) {
+        setMessages(incomingMsgs);
+        return;
+      }
+      if (incomingMsgs.length === 0) return;
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        const fresh = incomingMsgs.filter((m) => !seen.has(m.id));
+        return fresh.length > 0 ? [...prev, ...fresh] : prev;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
     void loadFriends();
-    const timer = setInterval(() => void loadFriends(), 15_000);
-    return () => clearInterval(timer);
+    const onVisible = () => {
+      if (!document.hidden) void loadFriends();
+    };
+    const timer = setInterval(() => {
+      if (!document.hidden) void loadFriends();
+    }, 15_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [open, loadFriends]);
 
   useEffect(() => {
-    if (!open || !activeFriend) return;
-    void loadMessages(activeFriend.id);
-    const timer = setInterval(() => void loadMessages(activeFriend.id), 4_000);
-    return () => clearInterval(timer);
+    if (!open || !activeFriend) {
+      lastMessageAtRef.current = null;
+      return;
+    }
+    lastMessageAtRef.current = null;
+    void loadMessages(activeFriend.id, false);
+    const onVisible = () => {
+      if (!document.hidden) void loadMessages(activeFriend.id, true);
+    };
+    const timer = setInterval(() => {
+      if (!document.hidden) void loadMessages(activeFriend.id, true);
+    }, 4_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [open, activeFriend, loadMessages]);
 
   if (!open) return null;
@@ -213,6 +255,10 @@ export function FriendsDrawer({
         toast.error(data.error ?? "Unable to send message.");
         return;
       }
+      lastMessageAtRef.current = Math.max(
+        lastMessageAtRef.current ?? 0,
+        data.message.createdAt,
+      );
       setMessages((prev) => [...prev, data.message!]);
       setDraft("");
     } finally {

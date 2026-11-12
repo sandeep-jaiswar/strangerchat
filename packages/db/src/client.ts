@@ -54,6 +54,12 @@ function ensureSchema(pgPool: Pool): Promise<void> {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS puzzles_solved INTEGER NOT NULL DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS week_key TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_elo_gain INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS users_elo_rank_idx
+        ON users (chess_rating DESC, chess_wins DESC);
+      CREATE INDEX IF NOT EXISTS users_weekly_gain_idx
+        ON users (week_key, weekly_elo_gain DESC, chess_rating DESC);
+      CREATE INDEX IF NOT EXISTS users_streak_rank_idx
+        ON users (last_puzzle_date, daily_streak DESC, puzzle_rating DESC);
 
       CREATE TABLE IF NOT EXISTS daily_puzzle_solves (
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -74,6 +80,8 @@ function ensureSchema(pgPool: Pool): Promise<void> {
       );
       CREATE UNIQUE INDEX IF NOT EXISTS friendships_pair_idx
         ON friendships (user_low, user_high);
+      CREATE INDEX IF NOT EXISTS friendships_high_idx
+        ON friendships (user_high);
 
       CREATE TABLE IF NOT EXISTS direct_messages (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,6 +99,8 @@ function ensureSchema(pgPool: Pool): Promise<void> {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (blocker_id, blocked_id)
       );
+      CREATE INDEX IF NOT EXISTS user_blocks_blocked_idx
+        ON user_blocks (blocked_id);
 
       CREATE TABLE IF NOT EXISTS user_reports (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -100,6 +110,8 @@ function ensureSchema(pgPool: Pool): Promise<void> {
         details TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      CREATE INDEX IF NOT EXISTS user_reports_reported_time_idx
+        ON user_reports (reported_id, created_at);
 
       CREATE TABLE IF NOT EXISTS chess_games (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
