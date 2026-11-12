@@ -133,7 +133,15 @@ export function Conversation({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") handleNextRef.current();
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (
+        document.querySelector(
+          '[role="dialog"], [role="menu"][data-state="open"]',
+        )
+      ) {
+        return;
+      }
+      handleNextRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

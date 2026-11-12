@@ -63,7 +63,7 @@ export class StockfishClient {
           }
         };
         worker.onerror = (err) => {
-          reject(new Error(err.message || "Stockfish worker failed"));
+          this.failAll(new Error(err.message || "Stockfish worker failed"));
         };
 
         let uciOk = false;
@@ -161,14 +161,18 @@ export class StockfishClient {
     );
   }
 
-  dispose() {
-    this.disposed = true;
-    for (const reject of this.pending) reject(new Error("Stockfish disposed"));
+  private failAll(error: Error) {
+    for (const reject of this.pending) reject(error);
     this.pending.clear();
     this.listeners.clear();
     this.worker?.terminate();
     this.worker = null;
     this.readyPromise = null;
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.failAll(new Error("Stockfish disposed"));
   }
 }
 

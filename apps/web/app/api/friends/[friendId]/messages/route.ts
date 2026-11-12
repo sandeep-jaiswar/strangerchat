@@ -29,7 +29,10 @@ export async function GET(
   }
   const sinceParam = new URL(request.url).searchParams.get("since");
   const sinceParsed = sinceParam !== null ? Number(sinceParam) : NaN;
-  const sinceMs = Number.isFinite(sinceParsed) ? sinceParsed : undefined;
+  const sinceMs =
+    Number.isFinite(sinceParsed) && Math.abs(sinceParsed) <= 8.64e15
+      ? sinceParsed
+      : undefined;
   const messages = await listDirectMessages(userId, friendId, 60, sinceMs);
   return NextResponse.json({ messages });
 }

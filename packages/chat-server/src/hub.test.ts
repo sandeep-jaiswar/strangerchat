@@ -891,3 +891,98 @@ test("mid-chat partners can start a second chess game with a different time cont
   assert.notEqual(second.id, firstId);
   assert.equal(second.timeControl, "blitz_5_0");
 });
+
+test("puzzle duel clears active lock on leave and delivers held puzzle_duel_over after reconnect", async (t) => {
+  const prefix = `test:${randomUUID()}:`;
+  const redis = new Redis(REDIS_URL);
+  const hubA = new Hub({
+    redisUrl: REDIS_URL,
+    prefix,
+    tickMs: TICK_MS,
+    sessionTtlMs: 2_000,
+    rematchBlockMs: REMATCH_BLOCK_MS,
+  });
+  const hubB = new Hub({
+    redisUrl: REDIS_URL,
+    prefix,
+    tickMs: TICK_MS,
+    sessionTtlMs: 2_000,
+    rematchBlockMs: REMATCH_BLOCK_MS,
+  });
+  t.after(async () => {
+    await Promise.all([hubA.close(), hubB.close()]);
+    const keys = await redis.keys(`${prefix}*`);
+    if (keys.length) await redis.del(...keys);
+    await redis.quit();
+  });
+
+  const alice = await connect(hubA, `duel-a-${randomUUID()}`);
+  const bob = await connect(hubB, `duel-b-${randomUUID()}`);
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "puzzle_duel_invite" });
+  await until(
+    () => lastOf(bob, "puzzle_duel_invite")?.from === "them",
+    "bob gets puzzle duel invite",
+  );
+  bob.deliver({ type: "puzzle_duel_response", accept: true });
+  await until(
+    () => !!lastOf(alice, "puzzle_duel_start") && !!lastOf(bob, "puzzle_duel_start"),
+    "puzzle duel starts",
+  );
+  const duel = lastOf(alice, "puzzle_duel_start")!;
+
+  // Negative progress must be rejected by parseEvent so invalid counts are never recorded.
+  alice.deliver({
+    type: "puzzle_duel_progress",
+    duelId: duel.id,
+    solved: -1,
+    mistakes: 0,
+    finished: false,
+  });
+
+  // Bob briefly disconnects while the duel ends on Alice's progress (expired clock).
+  const bobSid = bob.sid;
+  const bobUid = bob.userId;
+  bob.close();
+  await sleep(30);
+  await redis.hset(`${prefix}duel:${duel.id}`, "startedAt", "1");
+
+  alice.deliver({
+    type: "puzzle_duel_progress",
+    duelId: duel.id,
+    solved: duel.puzzleIds.length,
+    mistakes: 0,
+    finished: true,
+  });
+  await until(() => !!lastOf(alice, "puzzle_duel_over"), "alice gets duel over");
+  assert.equal(lastOf(alice, "puzzle_duel_over")!.me.solved, duel.puzzleIds.length);
+
+  // When Bob reconnects within the grace period, held puzzle_duel_over arrives.
+  const bobReconnected = await connect(hubB, bobUid, bobSid);
+  await until(
+    () => lastOf(bobReconnected, "puzzle_duel_over")?.id === duel.id,
+    "reconnected bob gets held puzzle_duel_over",
+  );
+
+  // Start a second duel, then have Alice leave mid-duel; Alice & Carol must be able to duel right away.
+  bobReconnected.deliver({ type: "puzzle_duel_invite" });
+  await until(
+    () => alice.events.filter((e) => e.type === "puzzle_duel_invite").length === 2,
+    "second duel invite delivered",
+  );
+  alice.deliver({ type: "puzzle_duel_response", accept: true });
+  await until(
+    () => alice.events.filter((e) => e.type === "puzzle_duel_start").length === 2,
+    "second duel starts",
+  );
+
+  alice.deliver({ type: "leave" });
+  const carol = await connect(hubB, `duel-c-${randomUUID()}`);
+  await chatting(alice, carol);
+  alice.deliver({ type: "puzzle_duel_invite" });
+  await until(
+    () => lastOf(carol, "puzzle_duel_invite")?.from === "them",
+    "new chat partner receives puzzle duel invite immediately after mid-duel leave",
+  );
+});

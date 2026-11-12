@@ -47,6 +47,7 @@ import {
   FIND,
   FLAG,
   GAME,
+  HOLD,
   JOIN_INVITE,
   LEAVE,
   MOVE,
@@ -105,6 +106,7 @@ interface ChatCommands {
   scResign(...args: Args): Promise<number>;
   scOffer(...args: Args): Promise<number>;
   scFlag(...args: Args): Promise<number>;
+  scHold(...args: Args): Promise<number>;
   scSync(...args: Args): Promise<string>;
   scChessInvite(...args: Args): Promise<number>;
   scChessInviteRespond(...args: Args): Promise<number>;
@@ -158,6 +160,7 @@ export class Hub {
       scResign: RESIGN,
       scOffer: OFFER,
       scFlag: FLAG,
+      scHold: HOLD,
       scSync: SYNC,
       scChessInvite: CHESS_INVITE,
       scChessInviteRespond: CHESS_INVITE_RESPOND,
@@ -1122,9 +1125,11 @@ export class Hub {
     const winnerForB =
       winnerForA === "draw" ? "draw" : winnerForA === "me" ? "them" : "me";
 
+    const common = this.common(Date.now());
     await Promise.all([
-      this.redis.publish(
-        this.channel(duel.sidA),
+      this.redis.scHold(
+        ...common,
+        duel.sidA,
         JSON.stringify({
           type: "puzzle_duel_over",
           id: duelId,
@@ -1133,8 +1138,9 @@ export class Hub {
           them: stateB,
         } satisfies ServerEvent),
       ),
-      this.redis.publish(
-        this.channel(duel.sidB),
+      this.redis.scHold(
+        ...common,
+        duel.sidB,
         JSON.stringify({
           type: "puzzle_duel_over",
           id: duelId,
@@ -1277,7 +1283,11 @@ function parseEvent(raw: string): ClientEvent | undefined {
     case "puzzle_duel_progress":
       return typeof event.duelId === "string" &&
         typeof event.solved === "number" &&
+        Number.isFinite(event.solved) &&
+        event.solved >= 0 &&
         typeof event.mistakes === "number" &&
+        Number.isFinite(event.mistakes) &&
+        event.mistakes >= 0 &&
         typeof event.finished === "boolean"
         ? {
             type: "puzzle_duel_progress",

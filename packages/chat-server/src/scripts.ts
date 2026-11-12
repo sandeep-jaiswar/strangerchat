@@ -274,12 +274,14 @@ end
 local function dropGame(gid, leaver)
   local key = gameKey(gid)
   local g = redis.call('HMGET', key, 'w', 'b', 'ply')
-  if tonumber(g[3]) < 2 then
-    endGame(gid, 'aborted', 'aborted')
-  elseif g[1] == leaver then
-    endGame(gid, '0-1', 'abandoned')
-  else
-    endGame(gid, '1-0', 'abandoned')
+  if g[1] and g[3] then
+    if tonumber(g[3]) < 2 then
+      endGame(gid, 'aborted', 'aborted')
+    elseif g[1] == leaver then
+      endGame(gid, '0-1', 'abandoned')
+    else
+      endGame(gid, '1-0', 'abandoned')
+    end
   end
   for i = 1, 2 do
     if g[i] then redis.call('DEL', P .. 'game:' .. g[i]) end
@@ -288,13 +290,24 @@ local function dropGame(gid, leaver)
   redis.call('ZREM', P .. 'games', gid)
 end
 
+local function clearDuelFor(sid)
+  local duelId = redis.call('GET', P .. 'duel_active:' .. sid)
+  redis.call('DEL', P .. 'duel_inv:' .. sid, P .. 'duel_active:' .. sid)
+  if duelId then
+    redis.call('SET', P .. 'duel_done:' .. duelId, '1', 'EX', 600)
+    redis.call('DEL', P .. 'duel:' .. duelId)
+  end
+end
+
 -- Ends a session's chat (and any game, which the session loses), tells the partner and
 -- records when the two users stopped chatting.
 local function unpair(sid)
   local partner = redis.call('GET', P .. 'pair:' .. sid)
-  redis.call('DEL', P .. 'cinv:' .. sid, P .. 'duel_inv:' .. sid)
+  redis.call('DEL', P .. 'cinv:' .. sid)
+  clearDuelFor(sid)
   if not partner then return end
-  redis.call('DEL', P .. 'cinv:' .. partner, P .. 'duel_inv:' .. partner)
+  redis.call('DEL', P .. 'cinv:' .. partner)
+  clearDuelFor(partner)
   local gid = redis.call('GET', P .. 'game:' .. sid)
   if gid then dropGame(gid, sid) end
   redis.call('DEL', P .. 'pair:' .. sid)
@@ -820,6 +833,7 @@ local gid = redis.call('GET', P .. 'game:' .. sid)
 if not gid then return 0 end
 local key = gameKey(gid)
 local g = redis.call('HMGET', key, 'w', 'b', 'status', offer, 'tc')
+if not g[1] or not g[2] or (g[3] ~= 'playing' and g[3] ~= 'over') then return 0 end
 local partner = (g[1] == sid) and g[2] or g[1]
 if (offer == 'draw') ~= (g[3] == 'playing') or g[4] == sid then return 0 end
 if g[4] == partner then
@@ -938,6 +952,12 @@ unpair(a)
 unpair(b)
 makePair(a, b, 'chess:' .. ((tc and TIME_CONTROL_SPECS[tc]) and tc or DEFAULT_TC))
 return 'ok'
+`;
+
+/** Deliver an event to `sid` or hold it in their reconnect inbox while `sess` is alive. ARGV[5..6]: sid, payload */
+export const HOLD = `${LIB}
+deliverOrHold(ARGV[5], ARGV[6])
+return 1
 `;
 
 /** Returns { partnerSid, partnerUid } for the current chat, or {} if idle. ARGV[5]: sid */
