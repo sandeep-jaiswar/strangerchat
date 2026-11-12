@@ -53,6 +53,9 @@ services:
       INDEXNOW_KEY: ${INDEXNOW_KEY:-3e2f6e540f92b5b78001f37dd4bd261a}
       POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
       POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:jaiswarsandeep119@gmail.com}
     depends_on:
       redis:
         condition: service_healthy
@@ -76,6 +79,9 @@ services:
       INDEXNOW_KEY: ${INDEXNOW_KEY:-3e2f6e540f92b5b78001f37dd4bd261a}
       POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
       POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:jaiswarsandeep119@gmail.com}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/healthz"]
       interval: 10s

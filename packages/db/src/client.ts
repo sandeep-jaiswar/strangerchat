@@ -107,7 +107,18 @@ function ensureSchema(pgPool: Pool): Promise<void> {
         black_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         result TEXT NOT NULL,
         reason TEXT NOT NULL,
+        time_control TEXT NOT NULL DEFAULT 'rapid_10_0',
         moves TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE chess_games ADD COLUMN IF NOT EXISTS time_control TEXT NOT NULL DEFAULT 'rapid_10_0';
+
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `)

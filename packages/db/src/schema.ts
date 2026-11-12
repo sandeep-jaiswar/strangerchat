@@ -121,6 +121,18 @@ export const chessGames = pgTable("chess_games", {
     .references(() => users.id, { onDelete: "cascade" }),
   result: text("result").notNull(),
   reason: text("reason").notNull(),
+  timeControl: text("time_control").notNull().default("rapid_10_0"),
   moves: text("moves").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

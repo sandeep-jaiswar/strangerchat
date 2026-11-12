@@ -12,12 +12,14 @@
   "dependencies": {
     "@funstranger/protocol": "workspace:*",
     "drizzle-orm": "^0.45.1",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@funstranger/typescript-config": "workspace:*",
     "@types/node": "26.4.1",
     "@types/pg": "^8.15.0",
+    "@types/web-push": "^3.6.4",
     "typescript": "7.0.2"
   }
 }
