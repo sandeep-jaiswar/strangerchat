@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "@repo/ui/globals.css";
 import { Providers } from "@/components/providers";
+import { ConsentBanner } from "@/components/ads/consent-banner";
 import { ADSENSE_CLIENT } from "@/lib/ads";
-import { Analytics } from "@vercel/analytics/next";
 import { JsonLd } from "@/components/json-ld";
 import {
   SITE_DESCRIPTION,
@@ -92,6 +93,13 @@ const siteJsonLd = {
       operatingSystem: "Any",
       browserRequirements: "Requires JavaScript and a modern web browser.",
       isAccessibleForFree: true,
+      featureList: [
+        "Anonymous 1-on-1 stranger text chat",
+        "Play live 10+0 chess while talking",
+        "Interest-tag matchmaking",
+        "Mutual friend requests with anonymous handles and direct messages",
+        "Free interactive tactical chess puzzles",
+      ],
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": `${SITE_URL}/#organization` },
     },
@@ -127,9 +135,16 @@ export default function RootLayout({
         ) : null}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
+        {ADSENSE_CLIENT ? (
+          <Script id="sc-consent-default" strategy="beforeInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',region:['AT','BE','BG','CH','CY','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR','HU','IE','IS','IT','LI','LT','LU','LV','MT','NL','NO','PL','PT','RO','SE','SI','SK'],wait_for_update:500});try{var c=localStorage.getItem('sc_ad_consent_v1');if(c==='granted'){gtag('consent','update',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});}}catch(e){}`}
+          </Script>
+        ) : null}
         <JsonLd data={siteJsonLd} />
-        <Providers>{children}</Providers>
-        <Analytics />
+        <Providers>
+          {children}
+          <ConsentBanner />
+        </Providers>
       </body>
     </html>
   );

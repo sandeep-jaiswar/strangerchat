@@ -1,8 +1,14 @@
 "use client";
 
-import { ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ShieldAlert, Trophy, Users } from "lucide-react";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
+import {
+  FriendsDrawer,
+  type ProfileData,
+} from "@/components/friends/friends-drawer";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu, type UserSummary } from "@/components/user-menu";
@@ -23,6 +29,39 @@ export function ChatRoom({ user }: { user: UserSummary }) {
   const inChat = chat.phase === "chatting" || chat.phase === "ended";
   const game = inChat ? chat.game : null;
 
+  const [friendsOpen, setFriendsOpen] = useState(false);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfileAndRequests = async () => {
+      try {
+        const [profRes, friendsRes] = await Promise.all([
+          fetch("/api/profile", { cache: "no-store" }),
+          fetch("/api/friends", { cache: "no-store" }),
+        ]);
+        if (!active) return;
+        if (profRes.ok) {
+          const data = (await profRes.json()) as { profile: ProfileData | null };
+          if (data.profile) setProfile(data.profile);
+        }
+        if (friendsRes.ok) {
+          const data = (await friendsRes.json()) as { incoming?: unknown[] };
+          setPendingCount(data.incoming?.length ?? 0);
+        }
+      } catch {
+        // Offline / DB unavailable in local dev.
+      }
+    };
+    void loadProfileAndRequests();
+    const timer = setInterval(() => void loadProfileAndRequests(), 30_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [chat.friendStatus, chat.game?.status, friendsOpen]);
+
   return (
     <div
       className="flex h-dvh flex-col overflow-hidden"
@@ -31,8 +70,28 @@ export function ChatRoom({ user }: { user: UserSummary }) {
       <header className="shrink-0 border-b bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
           <Logo />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <StatusBadge connection={chat.connection} online={chat.online} />
+            {profile && (
+              <Badge variant="outline" className="hidden gap-1 sm:inline-flex">
+                <Trophy className="size-3 text-amber-500" />
+                {profile.chessRating}
+              </Badge>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="relative gap-1.5"
+              onClick={() => setFriendsOpen(true)}
+            >
+              <Users className="size-4" />
+              <span className="hidden sm:inline">Friends</span>
+              {pendingCount > 0 && (
+                <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                  {pendingCount}
+                </span>
+              )}
+            </Button>
             <ThemeToggle />
             <UserMenu user={user} />
           </div>
@@ -70,6 +129,11 @@ export function ChatRoom({ user }: { user: UserSummary }) {
                 connected={chat.connection === "open"}
                 messages={chat.messages}
                 partnerTyping={chat.partnerTyping}
+                hasGame={game !== null}
+                chessInvite={chat.chessInvite}
+                friendStatus={chat.friendStatus}
+                friendPartner={chat.friendPartner}
+                sharedTags={chat.sharedTags}
                 nextLabel={
                   chat.mode === "chess" ? "Find a new opponent" : undefined
                 }
@@ -77,14 +141,20 @@ export function ChatRoom({ user }: { user: UserSummary }) {
                 onTyping={chat.notifyTyping}
                 onNext={() => chat.findStranger()}
                 onLeave={chat.leave}
+                onInviteChess={chat.inviteToChess}
+                onRespondChessInvite={chat.respondChessInvite}
+                onAddFriend={chat.sendFriendRequest}
+                onSafetyAction={chat.safetyAction}
               />
             </div>
           ) : (
             <Lobby
               searching={chat.phase === "searching"}
               mode={chat.mode}
+              tags={chat.tags}
               ready={chat.connection === "open"}
               online={chat.online}
+              onTagsChange={chat.setTags}
               onStart={chat.findStranger}
               onCancel={chat.leave}
             />
@@ -105,7 +175,7 @@ export function ChatRoom({ user }: { user: UserSummary }) {
             </p>
             <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
               <li>Don&apos;t share your phone number, address or socials.</li>
-              <li>Skip anyone who makes you uncomfortable.</li>
+              <li>Use Add Friend to keep talking safely with handles only.</li>
               <li>
                 Press <kbd className="rounded border px-1 text-xs">Esc</kbd> to
                 skip to the next stranger.
@@ -119,6 +189,13 @@ export function ChatRoom({ user }: { user: UserSummary }) {
           />
         </aside>
       </div>
+
+      <FriendsDrawer
+        open={friendsOpen}
+        onClose={() => setFriendsOpen(false)}
+        profile={profile}
+        onProfileUpdated={setProfile}
+      />
     </div>
   );
 }

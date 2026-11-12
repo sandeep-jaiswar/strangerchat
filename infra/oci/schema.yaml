@@ -1,0 +1,109 @@
+title: "Strangerchat - OCI Always Free Stack"
+description: "Provisions an Always Free VCN, firewall rules, and an Ampere A1 ARM64 Ubuntu server ready for Docker + PostgreSQL + Redis + Caddy."
+schemaVersion: 1.1.0
+version: "20240101"
+locale: "en"
+
+variableGroups:
+  - title: "OCI Location & Project"
+    variables:
+      - compartment_ocid
+      - region
+      - project_name
+      - availability_domain_index
+  - title: "Always Free Compute Sizing"
+    variables:
+      - instance_ocpus
+      - instance_memory_in_gbs
+      - boot_volume_size_in_gbs
+  - title: "SSH Access"
+    variables:
+      - ssh_public_key
+      - ssh_allowed_cidr
+  - title: "Local CLI Only (Leave Empty in OCI Resource Manager)"
+    visible: false
+    variables:
+      - tenancy_ocid
+      - user_ocid
+      - fingerprint
+      - private_key_path
+
+variables:
+  compartment_ocid:
+    type: oci:identity:compartment:id
+    required: true
+    title: "Compartment"
+    description: "Compartment where the VCN and server will be created."
+
+  region:
+    type: oci:identity:region:name
+    required: true
+    title: "Region"
+
+  project_name:
+    type: string
+    required: true
+    default: "strangerchat"
+    title: "Project Name"
+
+  availability_domain_index:
+    type: enum
+    required: true
+    default: 0
+    enum:
+      - 0
+      - 1
+      - 2
+    title: "Availability Domain Index"
+    description: "Start with 0. If OCI reports out-of-capacity for Ampere A1, try 1 or 2."
+
+  instance_ocpus:
+    type: number
+    required: true
+    default: 4
+    minimum: 1
+    maximum: 4
+    title: "Ampere A1 OCPUs (Always Free max: 4)"
+
+  instance_memory_in_gbs:
+    type: number
+    required: true
+    default: 24
+    minimum: 1
+    maximum: 24
+    title: "Memory in GB (Always Free max: 24)"
+
+  boot_volume_size_in_gbs:
+    type: number
+    required: true
+    default: 100
+    minimum: 50
+    maximum: 200
+    title: "Boot Volume in GB (Always Free max: 200)"
+
+  ssh_public_key:
+    type: string
+    required: true
+    title: "SSH Public Key"
+    description: "Paste your OpenSSH public key (e.g. from ~/.ssh/id_ed25519.pub)."
+
+  ssh_allowed_cidr:
+    type: string
+    required: true
+    default: "0.0.0.0/0"
+    title: "Allowed SSH CIDR"
+    description: "Use YOUR_IP/32 for tighter security, or 0.0.0.0/0 temporarily."
+
+outputs:
+  public_ip:
+    title: "Server Public IP"
+    type: string
+    visible: true
+  ssh_command:
+    title: "SSH Command"
+    type: copyableString
+    visible: true
+  next_steps:
+    title: "Next Steps"
+    type: string
+    visible: true

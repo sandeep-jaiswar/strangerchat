@@ -53,7 +53,9 @@ export default async function LoginPage({
       <Logo />
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>Welcome</h1>
+          </CardTitle>
           <CardDescription>
             Sign in to start chatting with strangers.
           </CardDescription>

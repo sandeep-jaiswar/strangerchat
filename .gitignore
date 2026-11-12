@@ -38,3 +38,14 @@ yarn-error.log*
 *.pem
 .env*
 !.env.example
+!.env.docker.example
+
+# Terraform / OpenTofu & OCI Resource Manager bundles
+infra/oci/.terraform/
+infra/oci/*.tfstate*
+infra/oci/terraform.tfvars
+infra/oci/*.zip
+
+# PostHog CLI wizard local state/tokens
+.posthog/
+.posthog-wizard-cache/

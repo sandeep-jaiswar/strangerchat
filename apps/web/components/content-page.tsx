@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
+import { AdSlot } from "@/components/ads/ad-slot";
+import { AD_SLOTS } from "@/lib/ads";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { JsonLd } from "./json-ld";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
-/** Long-form marketing page with a closing call to action and breadcrumb structured data. */
+/** Long-form marketing page with visible + structured breadcrumbs and a closing call to action. */
 export function ContentPage({
   title,
   lead,
@@ -36,7 +38,18 @@ export function ContentPage({
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-14">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-6 flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
+          <Link href="/" className="hover:text-foreground">
+            {SITE_NAME}
+          </Link>
+          <ChevronRight className="size-3.5" aria-hidden />
+          <span className="truncate text-foreground">{title}</span>
+        </nav>
+
         <article>
           <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {title}
@@ -49,12 +62,17 @@ export function ContentPage({
           </div>
         </article>
 
-        <section className="mt-16 rounded-2xl border bg-card p-8 text-center">
+        <div className="mt-12">
+          <AdSlot slot={AD_SLOTS.banner} format="horizontal" />
+        </div>
+
+        <section className="mt-12 rounded-2xl border bg-card p-8 text-center">
           <h2 className="text-2xl font-bold tracking-tight">
             Ready to meet someone new?
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Free, anonymous, one-on-one. Matched in seconds.
+            Chat anonymously, play 10-minute chess, and make real friends on
+            Funstranger.
           </p>
           <Button asChild size="lg" className="mt-6">
             <Link href="/chat">

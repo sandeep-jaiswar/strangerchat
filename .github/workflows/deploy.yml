@@ -1,0 +1,143 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-oracle-prod
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Before Deploy
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm check-types
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run @repo/chat-server unit tests
+        env:
+          REDIS_URL: redis://localhost:6379
+          TEST_REDIS_URL: redis://localhost:6379
+        run: pnpm --filter @repo/chat-server test
+
+  deploy:
+    name: Deploy Production Stack
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
+        run: |
+          if [ -z "$OCI_HOST" ] || [ -z "$OCI_SSH_KEY" ]; then
+            echo "Missing OCI_HOST or OCI_SSH_KEY secret" >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$OCI_SSH_KEY" > ~/.ssh/oci_deploy
+          chmod 600 ~/.ssh/oci_deploy
+          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync repository & rebuild containers on Oracle VM
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_DEPLOY_PATH: ${{ secrets.OCI_DEPLOY_PATH }}
+        run: |
+          SSH_TARGET="${OCI_USER}@${OCI_HOST}"
+          SSH_OPTS="-i ~/.ssh/oci_deploy -o BatchMode=yes -o ConnectTimeout=15"
+
+          OLD_CADDY_SHA=$(ssh $SSH_OPTS "$SSH_TARGET" "sha256sum ${OCI_DEPLOY_PATH}/infra/docker/Caddyfile 2>/dev/null | awk '{print \$1}'" || true)
+
+          rsync -az --delete \
+            -e "ssh $SSH_OPTS" \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '*/node_modules' \
+            --exclude '.next' \
+            --exclude '*/.next' \
+            --exclude '.turbo' \
+            --exclude '*/.turbo' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'apps/web/.env*' \
+            --exclude 'infra/oci/*.tfstate*' \
+            --exclude 'infra/oci/terraform.tfvars' \
+            --exclude 'infra/oci/.terraform' \
+            --exclude '.posthog' \
+            --exclude '.posthog-wizard-cache' \
+            ./ "${SSH_TARGET}:${OCI_DEPLOY_PATH}/"
+
+          ssh $SSH_OPTS "$SSH_TARGET" "OLD_CADDY_SHA='${OLD_CADDY_SHA}' OCI_DEPLOY_PATH='${OCI_DEPLOY_PATH}' bash -s" <<'EOF'
+          set -euo pipefail
+          cd "$OCI_DEPLOY_PATH"
+          NEW_CADDY_SHA=$(sha256sum infra/docker/Caddyfile 2>/dev/null | awk '{print $1}' || true)
+          docker compose up -d --build --remove-orphans
+          if [ "$OLD_CADDY_SHA" != "$NEW_CADDY_SHA" ]; then
+            docker compose up -d --force-recreate caddy
+          fi
+          docker image prune -f >/dev/null 2>&1 || true
+
+          for i in $(seq 1 30); do
+            if docker compose exec -T chat-server wget -qO- http://127.0.0.1:3001/healthz >/dev/null 2>&1; then
+              echo "chat-server healthy"
+              break
+            fi
+            sleep 2
+          done
+          docker compose ps
+          EOF
+
+      - name: Verify live site & ping IndexNow
+        run: |
+          for i in $(seq 1 15); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://funstranger.in/)
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+          for path in "/" "/puzzles" "/ads.txt" "/sitemap.xml"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://funstranger.in${path}")
+            echo "${path} -> ${code}"
+            test "$code" = "200"
+          done
+          node scripts/submit-indexnow.mjs || true
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/oci_deploy

@@ -13,8 +13,10 @@ import {
   type ChessOffer,
   type ChessResult,
   type ClientEvent,
+  type PublicFriendProfile,
   type ServerEvent,
 } from "@repo/protocol";
+import { captureEvent } from "@/lib/analytics";
 
 export type ChatPhase = "idle" | "searching" | "chatting" | "ended";
 export type ConnectionStatus = "connecting" | "open" | "reconnecting";
@@ -35,22 +37,35 @@ export interface ChessView extends ChessGame {
   clockAt: number;
 }
 
+export type FriendHandshakeStatus =
+  | "none"
+  | "pending_me"
+  | "pending_them"
+  | "accepted"
+  | "unavailable";
+
 interface State {
   connection: ConnectionStatus;
   phase: ChatPhase;
   /** The mode of the current (or last) search. */
   mode: ChatMode;
+  tags: string[];
+  sharedTags: string[];
   online: number;
   messages: ChatItem[];
   partnerTyping: boolean;
   game: ChessView | null;
+  chessInvite: "me" | "them" | null;
+  friendStatus: FriendHandshakeStatus;
+  friendPartner: PublicFriendProfile | null;
 }
 
 type Action =
   | { type: "connection"; status: ConnectionStatus }
   | { type: "server"; event: ServerEvent }
   | { type: "sent"; item: ChatItem }
-  | { type: "find"; mode: ChatMode }
+  | { type: "find"; mode: ChatMode; tags?: string[] }
+  | { type: "setTags"; tags: string[] }
   | { type: "localMove"; san: string }
   | { type: "localOffer"; offer: ChessOffer }
   | { type: "partnerTypingTimeout" }
@@ -60,10 +75,15 @@ const initialState: State = {
   connection: "connecting",
   phase: "idle",
   mode: "chat",
+  tags: [],
+  sharedTags: [],
   online: 0,
   messages: [],
   partnerTyping: false,
   game: null,
+  chessInvite: null,
+  friendStatus: "none",
+  friendPartner: null,
 };
 
 function systemItem(text: string): ChatItem {
@@ -171,7 +191,13 @@ function reducer(state: State, action: Action): State {
     case "sent":
       return { ...state, messages: [...state.messages, action.item] };
     case "find":
-      return { ...state, mode: action.mode };
+      return {
+        ...state,
+        mode: action.mode,
+        tags: action.tags ?? state.tags,
+      };
+    case "setTags":
+      return { ...state, tags: action.tags };
     case "localMove": {
       const game = state.game && withMove(state.game, action.san);
       return game ? { ...state, game } : state;
@@ -188,7 +214,13 @@ function reducer(state: State, action: Action): State {
     case "partnerTypingTimeout":
       return { ...state, partnerTyping: false };
     case "left":
-      return { ...state, phase: "idle", partnerTyping: false };
+      return {
+        ...state,
+        phase: "idle",
+        partnerTyping: false,
+        chessInvite: null,
+        sharedTags: [],
+      };
     case "server": {
       const event = action.event;
       switch (event.type) {
@@ -204,6 +236,7 @@ function reducer(state: State, action: Action): State {
             return {
               ...state,
               phase: "ended",
+              chessInvite: null,
               messages: [
                 ...state.messages,
                 systemItem("Stranger has left the chat."),
@@ -214,20 +247,58 @@ function reducer(state: State, action: Action): State {
         case "online":
           return { ...state, online: event.count };
         case "searching":
-          return { ...state, phase: "searching", messages: [], game: null };
-        case "matched":
+          return {
+            ...state,
+            phase: "searching",
+            messages: [],
+            game: null,
+            sharedTags: [],
+            chessInvite: null,
+            friendStatus: "none",
+            friendPartner: null,
+          };
+        case "matched": {
+          const shared = event.sharedTags ?? [];
+          const baseMsg =
+            event.mode === "chess"
+              ? "You're now playing chess with a random stranger. Say hi!"
+              : "You're now chatting with a random stranger. Say hi!";
+          const tagMsg =
+            shared.length > 0
+              ? ` Shared interests: ${shared.map((t) => `#${t}`).join(", ")}.`
+              : "";
           return {
             ...state,
             phase: "chatting",
             mode: event.mode,
+            sharedTags: shared,
             partnerTyping: false,
             game: null,
+            chessInvite: null,
+            friendStatus: "none",
+            friendPartner: null,
+            messages: [systemItem(`${baseMsg}${tagMsg}`)],
+          };
+        }
+        case "chess_invite":
+          return {
+            ...state,
+            chessInvite: event.from,
+            messages:
+              event.from === "them"
+                ? [
+                    ...state.messages,
+                    systemItem("Stranger invited you to play chess while chatting."),
+                  ]
+                : state.messages,
+          };
+        case "chess_invite_declined":
+          return {
+            ...state,
+            chessInvite: null,
             messages: [
-              systemItem(
-                event.mode === "chess"
-                  ? "You're now playing chess with a random stranger. Say hi!"
-                  : "You're now chatting with a random stranger. Say hi!",
-              ),
+              ...state.messages,
+              systemItem("Stranger declined the chess invite."),
             ],
           };
         case "chess_game": {
@@ -235,7 +306,7 @@ function reducer(state: State, action: Action): State {
             state.game !== null && state.game.id !== event.game.id;
           return {
             ...state,
-            mode: "chess",
+            chessInvite: null,
             game: fromServer(event.game),
             messages: rematch
               ? [
@@ -244,7 +315,14 @@ function reducer(state: State, action: Action): State {
                     `Rematch started — you're playing ${event.game.color}.`,
                   ),
                 ]
-              : state.messages,
+              : state.game === null && state.mode === "chat"
+                ? [
+                    ...state.messages,
+                    systemItem(
+                      `Chess game started — you're playing ${event.game.color}.`,
+                    ),
+                  ]
+                : state.messages,
           };
         }
         case "chess_move": {
@@ -316,10 +394,35 @@ function reducer(state: State, action: Action): State {
             ...state,
             phase: "ended",
             partnerTyping: false,
+            chessInvite: null,
             messages: [
               ...state.messages,
               systemItem("Stranger has left the chat."),
             ],
+          };
+        case "friend_status": {
+          const acceptedText =
+            event.status === "accepted"
+              ? `You and ${event.partner?.handle ?? "Stranger"} are now friends! Open Friends to message anytime.`
+              : event.status === "pending_them"
+                ? "Stranger wants to add you as a friend!"
+                : null;
+          return {
+            ...state,
+            friendStatus: event.status,
+            friendPartner: event.partner ?? state.friendPartner,
+            messages: acceptedText
+              ? [...state.messages, systemItem(acceptedText)]
+              : state.messages,
+          };
+        }
+        case "safety_ack":
+          return {
+            ...state,
+            phase: "ended",
+            partnerTyping: false,
+            chessInvite: null,
+            messages: [...state.messages, systemItem(event.message)],
           };
         case "error":
           return state;
@@ -348,12 +451,14 @@ export function useStrangerchat() {
   const socketRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef(state.phase);
   const modeRef = useRef(state.mode);
+  const tagsRef = useRef(state.tags);
   const gameRef = useRef(state.game);
   useEffect(() => {
     phaseRef.current = state.phase;
     modeRef.current = state.mode;
+    tagsRef.current = state.tags;
     gameRef.current = state.game;
-  }, [state.phase, state.mode, state.game]);
+  }, [state.phase, state.mode, state.tags, state.game]);
 
   const typingSentAt = useRef(0);
   const typingIdleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -416,8 +521,11 @@ export function useStrangerchat() {
             JSON.stringify({
               type: "find",
               mode: modeRef.current,
+              tags: tagsRef.current,
             } satisfies ClientEvent),
           );
+        } else if (event.type === "safety_ack") {
+          toast.success(event.message);
         }
         dispatch({ type: "server", event });
       };
@@ -500,11 +608,52 @@ export function useStrangerchat() {
 
   /** Start searching (in `mode`, or the last one), or skip the current partner and search again. */
   const findStranger = useCallback(
-    (mode: ChatMode = modeRef.current) => {
+    (mode: ChatMode = modeRef.current, tags: string[] = tagsRef.current) => {
       stopTyping();
-      if (send({ type: "find", mode })) {
+      if (send({ type: "find", mode, tags })) {
         modeRef.current = mode;
-        dispatch({ type: "find", mode });
+        tagsRef.current = tags;
+        dispatch({ type: "find", mode, tags });
+        captureEvent("match_search_started", {
+          mode,
+          tags_count: tags.length,
+        });
+      }
+    },
+    [send, stopTyping],
+  );
+
+  const setTags = useCallback((tags: string[]) => {
+    tagsRef.current = tags;
+    dispatch({ type: "setTags", tags });
+  }, []);
+
+  const inviteToChess = useCallback(() => {
+    if (send({ type: "chess_invite" })) {
+      captureEvent("chess_invite_sent");
+    }
+  }, [send]);
+
+  const respondChessInvite = useCallback(
+    (accept: boolean) => {
+      if (send({ type: "chess_invite_response", accept })) {
+        captureEvent("chess_invite_responded", { accepted: accept });
+      }
+    },
+    [send],
+  );
+
+  const sendFriendRequest = useCallback(() => {
+    if (send({ type: "friend_request" })) {
+      captureEvent("friend_action_clicked");
+    }
+  }, [send]);
+
+  const safetyAction = useCallback(
+    (action: "block" | "report", reason?: string) => {
+      stopTyping();
+      if (send({ type: "safety_action", action, reason })) {
+        captureEvent("safety_action_submitted", { action });
       }
     },
     [send, stopTyping],
@@ -553,12 +702,17 @@ export function useStrangerchat() {
   return {
     ...state,
     findStranger,
+    setTags,
     leave,
     sendMessage,
     notifyTyping,
+    inviteToChess,
+    respondChessInvite,
     playMove,
     resign,
     offer,
     claimFlag,
+    sendFriendRequest,
+    safetyAction,
   };
 }

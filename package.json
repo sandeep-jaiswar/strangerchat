@@ -4,11 +4,16 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:deps": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:deps:down": "docker compose -f docker-compose.dev.yml down",
     "lint": "turbo run lint",
+    "seo:ping": "node scripts/submit-indexnow.mjs",
+    "test:e2e": "node --env-file-if-exists=apps/web/.env.local scripts/e2e-playwright.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "playwright": "^1.65.0",
     "prettier": "3.9.6",
     "turbo": "^2.11.4",
     "typescript": "7.0.2"

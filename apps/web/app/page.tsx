@@ -1,26 +1,22 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
 import Link from "next/link";
 import {
-  ArrowRight,
+  ChessKnight,
   EyeOff,
-  Lock,
+  Hash,
   ShieldCheck,
-  Shuffle,
-  Smartphone,
   SkipForward,
-  Zap,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { SignInButton } from "@/components/sign-in-button";
-import { SiteFooter } from "@/components/site-footer";
+import { HeroAuthCta } from "@/components/auth-cta";
 import { JsonLd } from "@/components/json-ld";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { AD_SLOTS } from "@/lib/ads";
-import { authOptions } from "@/lib/auth";
 import { HOME_FAQ } from "@/lib/faq";
-import { SITE_DESCRIPTION, pageMetadata } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, pageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",
@@ -37,57 +33,85 @@ const faqJsonLd = {
   })),
 };
 
+const howToJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: `How to chat, play chess, and make friends with strangers on ${SITE_NAME}`,
+  description: SITE_DESCRIPTION,
+  step: [
+    {
+      "@type": "HowToStep",
+      position: 1,
+      name: "Sign in with Google",
+      text: "Verify with Google in one tap to keep spam bots out. Your email and real name stay hidden from strangers.",
+      url: `${SITE_URL}/login`,
+    },
+    {
+      "@type": "HowToStep",
+      position: 2,
+      name: "Match by interests or jump into Chess Club",
+      text: "Pick up to three interest tags like #chess or #music and get matched one-on-one in seconds.",
+      url: `${SITE_URL}/chat`,
+    },
+    {
+      "@type": "HowToStep",
+      position: 3,
+      name: "Play chess while talking and add friends",
+      text: "Launch a 10+0 chess board right inside any chat, or tap Add Friend when both sides want to stay connected.",
+      url: `${SITE_URL}/play-chess-with-strangers`,
+    },
+  ],
+};
+
 const features = [
   {
-    icon: Shuffle,
-    title: "Instant matching",
-    body: "One tap pairs you with a random person who's online right now.",
+    icon: ChessKnight,
+    title: "Play chess while talking",
+    body: "Invite any chat partner to a live 10+0 chess game right beside your messages, or queue straight into Chess Club.",
+  },
+  {
+    icon: UserPlus,
+    title: "Make real friends",
+    body: "Vibe with a stranger? Tap Add Friend — when both accept, keep chatting anytime using anonymous handles.",
+  },
+  {
+    icon: Hash,
+    title: "Match by interests",
+    body: "Add tags like #chess, #coding, #music or #languages so you meet people who share your favorite topics.",
   },
   {
     icon: EyeOff,
     title: "Stay anonymous",
-    body: "Strangers never see your name, photo or email — just your words.",
+    body: "Strangers never see your Gmail, real name or photo. Your privacy stays protected by default.",
   },
   {
     icon: ShieldCheck,
-    title: "Real people only",
-    body: "Google sign-in keeps bots and spam accounts out of the queue.",
-  },
-  {
-    icon: Lock,
-    title: "Nothing stored",
-    body: "Messages are relayed live and never saved. When a chat ends, it's gone.",
+    title: "Real people, safer chats",
+    body: "Google sign-in keeps bots out, automated moderation filters abuse, and one-tap Block & Report puts you in control.",
   },
   {
     icon: SkipForward,
-    title: "Skip anytime",
-    body: "Not a good match? Press Esc or tap Next to meet someone new.",
-  },
-  {
-    icon: Smartphone,
-    title: "No app needed",
-    body: "Works in any browser on your phone, tablet or computer.",
+    title: "Skip anytime, free forever",
+    body: "Not a good match? Press Esc or tap Next to meet someone new in any mobile or desktop browser.",
   },
 ];
 
 const steps = [
   {
     title: "Sign in with Google",
-    body: "One tap. Your name and photo stay private — strangers only see your messages.",
+    body: "One tap. Your name, email and photo stay private — strangers never see your Google account.",
   },
   {
     title: "Get matched instantly",
-    body: "We pair you with a random person who's online and looking to chat right now.",
+    body: "Pick optional interest tags or Chess Club and get paired one-on-one with someone online right now.",
   },
   {
-    title: "Chat or skip",
-    body: "Talk as long as you like, or skip to the next stranger whenever you want.",
+    title: "Chat, play chess & add friends",
+    body: "Talk, launch a chess board mid-chat, skip anytime, or become mutual friends to message later.",
   },
 ];
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
+export default function HomePage() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
@@ -101,32 +125,31 @@ export default async function HomePage() {
           <div className="relative mx-auto flex max-w-3xl flex-col items-center px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
             <span className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
               <span className="size-2 animate-pulse rounded-full bg-success" />
-              People are chatting right now
+              People are chatting &amp; playing chess right now
             </span>
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-6xl">
               Talk to a stranger.
               <br />
-              <span className="text-primary">Instantly.</span>
+              <span className="text-primary">Play chess &amp; make friends.</span>
             </h1>
             <p className="mt-5 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
-              Free anonymous chat with strangers from around the world. Tap
-              start and get matched one-on-one with someone new. Not vibing?
-              Skip to the next person in a second.
+              Free anonymous chat with strangers around the world. Match by
+              shared interests, start a live chess game while you talk, and add
+              friends safely — no app required.
             </p>
             <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
-              {session ? (
-                <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link href="/chat">
-                    Start chatting
-                    <ArrowRight />
-                  </Link>
-                </Button>
-              ) : (
-                <SignInButton className="w-full sm:w-auto" />
-              )}
+              <HeroAuthCta icon="arrow" className="w-full sm:w-auto" />
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                <Link href="/puzzles">Try chess puzzles</Link>
+              </Button>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              Free forever. Be kind — chats are one-on-one and anonymous.
+              Free forever · 18+ only · Verified Google sign-in keeps bots out
             </p>
           </div>
         </section>
@@ -136,7 +159,7 @@ export default async function HomePage() {
           className="mx-auto max-w-5xl px-4 pb-16 sm:px-6"
         >
           <h2 id="features-heading" className="sr-only">
-            Why chat with strangers on Strangerchat
+            Why chat with strangers on Funstranger
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map(({ icon: Icon, title, body }) => (
@@ -159,11 +182,10 @@ export default async function HomePage() {
             id="how-heading"
             className="text-center text-2xl font-bold tracking-tight sm:text-3xl"
           >
-            How to talk to strangers online
+            How to talk to strangers and play chess online
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
-            Random chat in three steps. No profiles to fill out, no swiping, no
-            waiting for replies.
+            Random chat, live chess, and real friendships in three simple steps.
           </p>
           <ol className="mt-8 grid gap-4 sm:grid-cols-3">
             {steps.map(({ title, body }, index) => (
@@ -190,22 +212,36 @@ export default async function HomePage() {
             id="about-heading"
             className="text-2xl font-bold tracking-tight sm:text-3xl"
           >
-            A simple, safer way to chat with random people
+            A safer way to meet strangers, play chess, and make friends
           </h2>
           <div className="mt-4 space-y-4 text-muted-foreground">
             <p>
-              Strangerchat is a free stranger chat site for meeting new people
-              through quick, anonymous one-on-one text conversations. Whether
-              you&apos;re bored, want to practise your English, need to vent to
-              someone who doesn&apos;t know you, or just enjoy random
-              conversations, you&apos;re one tap away from someone new.
+              Funstranger is a free stranger chat site for meeting new people
+              through quick, anonymous one-on-one text conversations and live
+              chess games. Whether you&apos;re bored, want to practise your
+              English,{" "}
+              <Link
+                href="/play-chess-with-strangers"
+                className="text-foreground underline underline-offset-2"
+              >
+                play casual 10-minute chess with strangers
+              </Link>
+              , or{" "}
+              <Link
+                href="/make-friends-online"
+                className="text-foreground underline underline-offset-2"
+              >
+                make new friends online
+              </Link>
+              , you&apos;re one tap away from someone new.
             </p>
             <p>
               Unlike open chat rooms, every conversation is private between you
-              and one stranger. There are no usernames, follower counts or
-              profile pictures — just two people talking. And because every
-              account is verified with Google, you spend less time dodging bots
-              and more time having real conversations.
+              and one stranger. Your Google details stay hidden — and if you
+              vibe, tap <strong>Add Friend</strong> to connect with anonymous
+              handles only. Because every account is verified with Google, you
+              spend less time dodging bots and more time having real
+              conversations.
             </p>
             <p>
               Looking for a replacement since Omegle closed? See{" "}
@@ -213,7 +249,14 @@ export default async function HomePage() {
                 href="/omegle-alternative"
                 className="text-foreground underline underline-offset-2"
               >
-                why Strangerchat is the best Omegle alternative
+                why Funstranger is the best Omegle alternative
+              </Link>
+              , warm up with our{" "}
+              <Link
+                href="/puzzles"
+                className="text-foreground underline underline-offset-2"
+              >
+                free tactical chess puzzles
               </Link>
               , and read our{" "}
               <Link
@@ -260,25 +303,17 @@ export default async function HomePage() {
             Someone new is waiting to talk
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Start a free anonymous chat in seconds.
+            Start a free anonymous chat or chess match in seconds.
           </p>
           <div className="mt-6 flex justify-center">
-            {session ? (
-              <Button asChild size="lg">
-                <Link href="/chat">
-                  Start chatting
-                  <Zap />
-                </Link>
-              </Button>
-            ) : (
-              <SignInButton />
-            )}
+            <HeroAuthCta icon="zap" />
           </div>
         </section>
       </main>
 
       <SiteFooter />
       <JsonLd data={faqJsonLd} />
+      <JsonLd data={howToJsonLd} />
     </div>
   );
 }

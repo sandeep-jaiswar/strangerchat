@@ -3,13 +3,13 @@ import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
 import { pageMetadata } from "@/lib/site";
 
-const title = "About Strangerchat";
+const title = "About Funstranger";
 const description =
-  "Strangerchat is a free, anonymous random chat site that connects you one-on-one with strangers from around the world. Here's what we're building and why.";
+  "Funstranger is a free, anonymous random chat and chess site (funstranger.in) that connects you one-on-one with strangers around the world.";
 
 export const metadata: Metadata = pageMetadata({
   path: "/about",
-  title: "About",
+  title: "About Our Anonymous Chat & Chess Platform",
   socialTitle: title,
   description,
 });
@@ -19,7 +19,7 @@ export default function AboutPage() {
     <ContentPage
       title={title}
       path="/about"
-      lead="Strangerchat is a free place to talk to someone new. One tap matches you with a random stranger for an anonymous, one-on-one text conversation — no profiles, no feeds, no pressure."
+      lead="Funstranger is a free place to talk to someone new, play live chess while you chat, and make friends safely. One tap matches you with a random stranger — no feeds, no pressure."
     >
       <h2>Why we built it</h2>
       <p>
@@ -29,7 +29,7 @@ export default function AboutPage() {
         you&apos;d never otherwise meet.
       </p>
       <p>
-        When Omegle closed in 2023, millions of people lost that. Strangerchat
+        When Omegle closed in 2023, millions of people lost that. Funstranger
         is our take on bringing it back — with the problems fixed. Read more
         about{" "}
         <Link href="/omegle-alternative">
@@ -41,16 +41,16 @@ export default function AboutPage() {
       <h2>What we believe</h2>
       <ul>
         <li>
-          <strong>Conversation over content.</strong> Text chat keeps the focus
-          on what people say, not how they look.
+          <strong>Conversation over content.</strong> Text chat and casual chess
+          keep the focus on what people say and think, not how they look.
         </li>
         <li>
-          <strong>Privacy by default.</strong> Strangers never see who you are,
-          and messages are not stored once delivered.
+          <strong>Privacy by default.</strong> Strangers never see your Google
+          account, and random chats are not stored once delivered.
         </li>
         <li>
-          <strong>Real people only.</strong> Verified sign-in keeps bots out so
-          every match is a real human.
+          <strong>Real people only.</strong> Verified Google sign-in keeps bots
+          out so every match is a real human.
         </li>
         <li>
           <strong>Free for everyone.</strong> No coins, no premium filters, no
@@ -58,16 +58,16 @@ export default function AboutPage() {
         </li>
       </ul>
 
-      <h2>Who uses Strangerchat</h2>
+      <h2>Who uses Funstranger</h2>
       <p>
-        People come to kill time, practise a language, get a stranger&apos;s
-        honest opinion, vent without judgement or just see who&apos;s out there.
-        Every chat is different — that&apos;s the fun of it.
+        People come to kill time, play a casual chess match while chatting,
+        practise a language, or make new online friends. Every chat is
+        different — that&apos;s the fun of it.
       </p>
 
       <h2>Stay safe</h2>
       <p>
-        Strangerchat is for adults 18 and over. Before you start, take two
+        Funstranger is for adults 18 and over. Before you start, take two
         minutes to read our <Link href="/safety">safety tips</Link>, our{" "}
         <Link href="/terms">terms of service</Link> and our{" "}
         <Link href="/privacy">privacy policy</Link>.

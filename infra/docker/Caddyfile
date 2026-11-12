@@ -1,0 +1,34 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Optional www -> apex redirect (e.g. WWW_REDIRECT_SITE=www.funstranger.in).
+# Defaults to an unused local HTTP port so fresh IP-only setups don't request certs.
+{$WWW_REDIRECT_SITE:http://127.0.0.1:8088} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+# Set SITE_DOMAIN to your real domain (e.g. funstranger.in) for automatic HTTPS,
+# or ":80" for initial HTTP testing by server IP before DNS is pointed.
+{$SITE_DOMAIN::80} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Route WebSocket upgrades directly to the long-lived Node chat-server
+	handle /api/ws* {
+		reverse_proxy chat-server:3001
+	}
+
+	# Route everything else to Next.js
+	handle {
+		reverse_proxy web:3000
+	}
+}

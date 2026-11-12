@@ -8,14 +8,18 @@
   },
   "scripts": {
     "dev": "node --watch --env-file-if-exists=../../apps/web/.env.local src/dev-server.ts",
+    "start": "node src/server.ts",
     "test": "node --env-file-if-exists=../../apps/web/.env.local --test \"src/**/*.test.ts\"",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/db": "workspace:*",
     "@repo/protocol": "workspace:*",
     "chess.js": "^1.4.0",
     "ioredis": "^6.0.0",
     "next-auth": "^4.24.15",
+    "obscenity": "^0.4.6",
+    "posthog-node": "^5.68.2",
     "ws": "^8.21.3"
   },
   "devDependencies": {
