@@ -36,9 +36,31 @@ function ensureSchema(pgPool: Pool): Promise<void> {
         chess_wins INTEGER NOT NULL DEFAULT 0,
         chess_losses INTEGER NOT NULL DEFAULT 0,
         chess_draws INTEGER NOT NULL DEFAULT 0,
+        puzzle_rating INTEGER NOT NULL DEFAULT 1200,
+        daily_streak INTEGER NOT NULL DEFAULT 0,
+        best_streak INTEGER NOT NULL DEFAULT 0,
+        last_puzzle_date TEXT,
+        puzzles_solved INTEGER NOT NULL DEFAULT 0,
+        week_key TEXT,
+        weekly_elo_gain INTEGER NOT NULL DEFAULT 0,
         banned_until TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS puzzle_rating INTEGER NOT NULL DEFAULT 1200;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_puzzle_date TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS puzzles_solved INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS week_key TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_elo_gain INTEGER NOT NULL DEFAULT 0;
+
+      CREATE TABLE IF NOT EXISTS daily_puzzle_solves (
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        puzzle_id TEXT NOT NULL,
+        solve_date TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, puzzle_id, solve_date)
       );
 
       CREATE TABLE IF NOT EXISTS friendships (

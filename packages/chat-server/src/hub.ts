@@ -19,12 +19,15 @@ import {
   type ClientEvent,
   type PuzzleDuelPlayerState,
   type ServerEvent,
+  type TimeControlId,
 } from "@funstranger/protocol";
 import {
+  areFriends,
   blockUser,
   ensureUser,
   getBlockedRelationIds,
   hasDatabase,
+  isBlockedBetween,
   isUserBanned,
   recordChessGameAndUpdateElo,
   reportUser,
@@ -47,6 +50,7 @@ import {
   LEAVE,
   MOVE,
   OFFER,
+  PAIR_DIRECT,
   PARTNER,
   RELAY,
   RESIGN,
@@ -107,6 +111,7 @@ interface ChatCommands {
   scJoinInvite(
     ...args: Args
   ): Promise<"ok" | "not_found" | "self" | "blocked">;
+  scPairDirect(...args: Args): Promise<"ok" | "unavailable">;
   scPartner(...args: Args): Promise<[string?, string?]>;
 }
 
@@ -156,6 +161,7 @@ export class Hub {
       scChessInviteRespond: CHESS_INVITE_RESPOND,
       scCreateInvite: CREATE_INVITE,
       scJoinInvite: JOIN_INVITE,
+      scPairDirect: PAIR_DIRECT,
       scPartner: PARTNER,
     };
     for (const [name, lua] of Object.entries(scripts)) {
@@ -463,6 +469,20 @@ export class Hub {
       case "puzzle_duel_progress":
         await this.handlePuzzleDuelProgress(connection, event);
         return;
+      case "friend_challenge":
+        await this.handleFriendChallenge(
+          connection,
+          event.friendId,
+          getTimeControl(event.timeControl).id,
+        );
+        return;
+      case "friend_challenge_response":
+        await this.handleFriendChallengeResponse(
+          connection,
+          event.challengeId,
+          event.accept,
+        );
+        return;
       case "friend_request":
         await this.handleFriendRequest(connection);
         return;
@@ -644,6 +664,150 @@ export class Hub {
       return;
     }
     this.send(connection, { type: "friend_status", status: "unavailable" });
+  }
+
+  private async handleFriendChallenge(
+    connection: Connection,
+    friendId: string,
+    timeControl: TimeControlId,
+  ) {
+    if (friendId === connection.userId) {
+      this.send(connection, { type: "friend_challenge_failed", reason: "self" });
+      return;
+    }
+    if (hasDatabase()) {
+      if (await isBlockedBetween(connection.userId, friendId)) {
+        this.send(connection, {
+          type: "friend_challenge_failed",
+          reason: "blocked",
+        });
+        return;
+      }
+      if (!(await areFriends(connection.userId, friendId))) {
+        this.send(connection, {
+          type: "friend_challenge_failed",
+          reason: "not_friends",
+        });
+        return;
+      }
+    }
+
+    const candidateSids = await this.redis.smembers(
+      `${this.prefix}usids:${friendId}`,
+    );
+    const liveSids: string[] = [];
+    if (candidateSids.length > 0) {
+      const conns = await this.redis.hmget(`${this.prefix}conn`, ...candidateSids);
+      for (let i = 0; i < candidateSids.length; i++) {
+        if (conns[i]) liveSids.push(candidateSids[i]!);
+      }
+    }
+    if (liveSids.length === 0) {
+      this.send(connection, {
+        type: "friend_challenge_failed",
+        reason: "offline",
+      });
+      return;
+    }
+
+    const me = hasDatabase() ? await ensureUser(connection.userId) : null;
+    const challengeId = randomUUID();
+    const key = `${this.prefix}fch:${challengeId}`;
+    await this.redis.hset(key, {
+      fromUid: connection.userId,
+      fromSid: connection.sid,
+      toUid: friendId,
+      tc: timeControl,
+    });
+    await this.redis.expire(key, 60);
+
+    const incomingPayload = JSON.stringify({
+      type: "friend_challenge",
+      challengeId,
+      from: me
+        ? {
+            id: me.id,
+            handle: me.handle,
+            avatarSeed: me.avatarSeed,
+            chessRating: me.chessRating,
+          }
+        : {
+            id: connection.userId,
+            handle: "Friend",
+            avatarSeed: connection.userId.slice(0, 8),
+            chessRating: 1200,
+          },
+      timeControl,
+    } satisfies ServerEvent);
+
+    await Promise.all(
+      liveSids.map((sid) => this.redis.publish(this.channel(sid), incomingPayload)),
+    );
+    this.send(connection, {
+      type: "friend_challenge_sent",
+      challengeId,
+      toId: friendId,
+      timeControl,
+    });
+    captureServerEvent(connection.userId, "friend_challenge_sent", {
+      time_control: timeControl,
+    });
+  }
+
+  private async handleFriendChallengeResponse(
+    connection: Connection,
+    challengeId: string,
+    accept: boolean,
+  ) {
+    const key = `${this.prefix}fch:${challengeId}`;
+    const lock = await this.redis.set(`${key}:lock`, "1", "EX", 60, "NX");
+    if (lock !== "OK") {
+      this.send(connection, {
+        type: "friend_challenge_failed",
+        reason: "expired",
+      });
+      return;
+    }
+    const ch = await this.redis.hgetall(key);
+    await this.redis.del(key);
+    if (!ch.fromSid || !ch.fromUid || ch.toUid !== connection.userId) {
+      this.send(connection, {
+        type: "friend_challenge_failed",
+        reason: "expired",
+      });
+      return;
+    }
+
+    if (!accept) {
+      const me = hasDatabase() ? await ensureUser(connection.userId) : null;
+      await this.redis.publish(
+        this.channel(ch.fromSid),
+        JSON.stringify({
+          type: "friend_challenge_declined",
+          challengeId,
+          byHandle: me?.handle,
+        } satisfies ServerEvent),
+      );
+      return;
+    }
+
+    const tc = isTimeControlId(ch.tc) ? ch.tc : undefined;
+    const status = await this.redis.scPairDirect(
+      ...this.common(Date.now()),
+      ch.fromSid,
+      connection.sid,
+      getTimeControl(tc).id,
+    );
+    if (status !== "ok") {
+      this.send(connection, {
+        type: "friend_challenge_failed",
+        reason: "expired",
+      });
+      return;
+    }
+    captureServerEvent(connection.userId, "friend_challenge_accepted", {
+      time_control: getTimeControl(tc).id,
+    });
   }
 
   private async handleSafetyAction(
@@ -1012,6 +1176,26 @@ function parseEvent(raw: string): ClientEvent | undefined {
             solved: event.solved,
             mistakes: event.mistakes,
             finished: event.finished,
+          }
+        : undefined;
+    case "friend_challenge":
+      return typeof event.friendId === "string" && event.friendId.length > 0
+        ? {
+            type: "friend_challenge",
+            friendId: event.friendId,
+            timeControl: isTimeControlId(event.timeControl)
+              ? event.timeControl
+              : undefined,
+          }
+        : undefined;
+    case "friend_challenge_response":
+      return typeof event.challengeId === "string" &&
+        event.challengeId.length > 0 &&
+        typeof event.accept === "boolean"
+        ? {
+            type: "friend_challenge_response",
+            challengeId: event.challengeId,
+            accept: event.accept,
           }
         : undefined;
     case "friend_request":

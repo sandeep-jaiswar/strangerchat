@@ -1,9 +1,17 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, countDistinct, desc, eq, gte, or, sql } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, gte, inArray, or, sql } from "drizzle-orm";
+import {
+  CHESS_PUZZLE_BY_ID,
+  CHESS_PUZZLES,
+  getDailyPuzzleIndex,
+  getIsoWeekKey,
+  getUtcDateKey,
+} from "@funstranger/protocol";
 import { getDb } from "./client.ts";
 import { generateHandle, isValidHandle } from "./handles.ts";
 import {
   chessGames,
+  dailyPuzzleSolves,
   directMessages,
   friendships,
   userBlocks,
@@ -19,6 +27,11 @@ export interface UserProfile {
   chessWins: number;
   chessLosses: number;
   chessDraws: number;
+  puzzleRating: number;
+  dailyStreak: number;
+  bestStreak: number;
+  lastPuzzleDate: string | null;
+  puzzlesSolved: number;
   bannedUntil: Date | null;
 }
 
@@ -27,6 +40,36 @@ export interface FriendSummary {
   handle: string;
   avatarSeed: string;
   chessRating: number;
+}
+
+export interface PuzzleStats {
+  dailyPuzzleId: string;
+  dailySolvedToday: boolean;
+  solvedTodayIds: string[];
+  puzzleRating: number;
+  dailyStreak: number;
+  bestStreak: number;
+  puzzlesSolved: number;
+}
+
+export interface LeaderboardEntry {
+  handle: string;
+  avatarSeed: string;
+  chessRating: number;
+  chessWins: number;
+  chessLosses: number;
+  chessDraws: number;
+  weeklyEloGain: number;
+  dailyStreak: number;
+  bestStreak: number;
+  puzzleRating: number;
+}
+
+export interface LeaderboardData {
+  weekKey: string;
+  topElo: LeaderboardEntry[];
+  topWeeklyGainers: LeaderboardEntry[];
+  topStreaks: LeaderboardEntry[];
 }
 
 export interface DirectMessageItem {
@@ -485,13 +528,19 @@ export async function recordChessGameAndUpdateElo(input: {
     });
 
     const rows = await tx
-      .select({ id: users.id, chessRating: users.chessRating })
+      .select({
+        id: users.id,
+        chessRating: users.chessRating,
+        weekKey: users.weekKey,
+        weeklyEloGain: users.weeklyEloGain,
+      })
       .from(users)
       .where(or(eq(users.id, input.whiteId), eq(users.id, input.blackId)));
     const white = rows.find((r) => r.id === input.whiteId);
     const black = rows.find((r) => r.id === input.blackId);
     if (!white || !black) return;
 
+    const currentWeekKey = getIsoWeekKey();
     const expectedWhite =
       1 / (1 + 10 ** ((black.chessRating - white.chessRating) / 400));
     const expectedBlack = 1 - expectedWhite;
@@ -505,6 +554,13 @@ export async function recordChessGameAndUpdateElo(input: {
       Math.round(black.chessRating + K * (scoreBlack - expectedBlack)),
     );
 
+    const nextWhiteGain =
+      (white.weekKey === currentWeekKey ? white.weeklyEloGain : 0) +
+      (newWhite - white.chessRating);
+    const nextBlackGain =
+      (black.weekKey === currentWeekKey ? black.weeklyEloGain : 0) +
+      (newBlack - black.chessRating);
+
     await tx
       .update(users)
       .set({
@@ -515,6 +571,8 @@ export async function recordChessGameAndUpdateElo(input: {
           scoreWhite === 0 ? sql`${users.chessLosses} + 1` : users.chessLosses,
         chessDraws:
           scoreWhite === 0.5 ? sql`${users.chessDraws} + 1` : users.chessDraws,
+        weekKey: currentWeekKey,
+        weeklyEloGain: nextWhiteGain,
         updatedAt: new Date(),
       })
       .where(eq(users.id, input.whiteId));
@@ -529,10 +587,195 @@ export async function recordChessGameAndUpdateElo(input: {
           scoreBlack === 0 ? sql`${users.chessLosses} + 1` : users.chessLosses,
         chessDraws:
           scoreBlack === 0.5 ? sql`${users.chessDraws} + 1` : users.chessDraws,
+        weekKey: currentWeekKey,
+        weeklyEloGain: nextBlackGain,
         updatedAt: new Date(),
       })
       .where(eq(users.id, input.blackId));
   });
+}
+
+function activeStreak(
+  storedStreak: number,
+  lastDate: string | null,
+  todayKey: string,
+  yesterdayKey: string,
+): number {
+  if (!lastDate || (lastDate !== todayKey && lastDate !== yesterdayKey)) {
+    return 0;
+  }
+  return storedStreak;
+}
+
+export async function getPuzzleStats(userId: string): Promise<PuzzleStats> {
+  const todayKey = getUtcDateKey(0);
+  const yesterdayKey = getUtcDateKey(-1);
+  const dailyPuzzle = CHESS_PUZZLES[getDailyPuzzleIndex(todayKey)]!;
+
+  const user = await ensureUser(userId);
+  const db = await getDb();
+  if (!db || !user) {
+    return {
+      dailyPuzzleId: dailyPuzzle.id,
+      dailySolvedToday: false,
+      solvedTodayIds: [],
+      puzzleRating: user?.puzzleRating ?? 1200,
+      dailyStreak: 0,
+      bestStreak: user?.bestStreak ?? 0,
+      puzzlesSolved: user?.puzzlesSolved ?? 0,
+    };
+  }
+
+  const solves = await db
+    .select({ puzzleId: dailyPuzzleSolves.puzzleId })
+    .from(dailyPuzzleSolves)
+    .where(
+      and(
+        eq(dailyPuzzleSolves.userId, userId),
+        eq(dailyPuzzleSolves.solveDate, todayKey),
+      ),
+    );
+  const solvedTodayIds = solves.map((s) => s.puzzleId);
+
+  return {
+    dailyPuzzleId: dailyPuzzle.id,
+    dailySolvedToday: solvedTodayIds.includes(dailyPuzzle.id),
+    solvedTodayIds,
+    puzzleRating: user.puzzleRating,
+    dailyStreak: activeStreak(
+      user.dailyStreak,
+      user.lastPuzzleDate,
+      todayKey,
+      yesterdayKey,
+    ),
+    bestStreak: user.bestStreak,
+    puzzlesSolved: user.puzzlesSolved,
+  };
+}
+
+export async function recordPuzzleSolve(
+  userId: string,
+  puzzleId: string,
+): Promise<PuzzleStats | null> {
+  const puzzle = CHESS_PUZZLE_BY_ID.get(puzzleId);
+  if (!puzzle) return null;
+  const db = await getDb();
+  if (!db) return null;
+
+  await ensureUser(userId);
+  const todayKey = getUtcDateKey(0);
+  const yesterdayKey = getUtcDateKey(-1);
+  const dailyPuzzle = CHESS_PUZZLES[getDailyPuzzleIndex(todayKey)]!;
+  const isDaily = puzzle.id === dailyPuzzle.id;
+
+  await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(dailyPuzzleSolves)
+      .values({ userId, puzzleId: puzzle.id, solveDate: todayKey })
+      .onConflictDoNothing()
+      .returning({ puzzleId: dailyPuzzleSolves.puzzleId });
+
+    // Only grant puzzle Elo / count / streak once per puzzle per UTC day.
+    if (inserted.length === 0) return;
+
+    const rows = await tx
+      .select({
+        puzzleRating: users.puzzleRating,
+        dailyStreak: users.dailyStreak,
+        bestStreak: users.bestStreak,
+        lastPuzzleDate: users.lastPuzzleDate,
+        puzzlesSolved: users.puzzlesSolved,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const u = rows[0];
+    if (!u) return;
+
+    const expected = 1 / (1 + 10 ** ((puzzle.rating - u.puzzleRating) / 400));
+    const delta = Math.max(4, Math.round(24 * (1 - expected)));
+    const nextRating = u.puzzleRating + delta;
+
+    let nextStreak = activeStreak(
+      u.dailyStreak,
+      u.lastPuzzleDate,
+      todayKey,
+      yesterdayKey,
+    );
+    let nextBest = u.bestStreak;
+    let nextLastDate = u.lastPuzzleDate;
+    if (isDaily && u.lastPuzzleDate !== todayKey) {
+      nextStreak = u.lastPuzzleDate === yesterdayKey ? u.dailyStreak + 1 : 1;
+      nextBest = Math.max(nextBest, nextStreak);
+      nextLastDate = todayKey;
+    }
+
+    await tx
+      .update(users)
+      .set({
+        puzzleRating: nextRating,
+        puzzlesSolved: u.puzzlesSolved + 1,
+        dailyStreak: nextStreak,
+        bestStreak: nextBest,
+        lastPuzzleDate: nextLastDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  });
+
+  return getPuzzleStats(userId);
+}
+
+export async function getLeaderboard(limit = 20): Promise<LeaderboardData> {
+  const weekKey = getIsoWeekKey();
+  const todayKey = getUtcDateKey(0);
+  const yesterdayKey = getUtcDateKey(-1);
+  const db = await getDb();
+  if (!db) {
+    return { weekKey, topElo: [], topWeeklyGainers: [], topStreaks: [] };
+  }
+
+  const baseSelect = {
+    handle: users.handle,
+    avatarSeed: users.avatarSeed,
+    chessRating: users.chessRating,
+    chessWins: users.chessWins,
+    chessLosses: users.chessLosses,
+    chessDraws: users.chessDraws,
+    weeklyEloGain: users.weeklyEloGain,
+    dailyStreak: users.dailyStreak,
+    bestStreak: users.bestStreak,
+    puzzleRating: users.puzzleRating,
+  };
+
+  const [topElo, topWeeklyGainers, topStreaks] = await Promise.all([
+    db
+      .select(baseSelect)
+      .from(users)
+      .orderBy(desc(users.chessRating), desc(users.chessWins))
+      .limit(limit),
+    db
+      .select(baseSelect)
+      .from(users)
+      .where(
+        and(eq(users.weekKey, weekKey), sql`${users.weeklyEloGain} > 0`),
+      )
+      .orderBy(desc(users.weeklyEloGain), desc(users.chessRating))
+      .limit(limit),
+    db
+      .select(baseSelect)
+      .from(users)
+      .where(
+        and(
+          inArray(users.lastPuzzleDate, [todayKey, yesterdayKey]),
+          sql`${users.dailyStreak} > 0`,
+        ),
+      )
+      .orderBy(desc(users.dailyStreak), desc(users.puzzleRating))
+      .limit(limit),
+  ]);
+
+  return { weekKey, topElo, topWeeklyGainers, topStreaks };
 }
 
 export { asc };

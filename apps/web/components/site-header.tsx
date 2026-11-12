@@ -6,6 +6,7 @@ import { ThemeToggle } from "./theme-toggle";
 const navLinks = [
   { href: "/play-chess-with-strangers", label: "Play Chess" },
   { href: "/puzzles", label: "Puzzles" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/make-friends-online", label: "Make Friends" },
   { href: "/safety", label: "Safety" },
 ];

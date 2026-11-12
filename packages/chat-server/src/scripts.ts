@@ -403,6 +403,8 @@ end
 
 -- Removes every trace of a session, ending its chat first.
 local function endSession(sid)
+  local uid = redis.call('HGET', P .. 'owner', sid)
+  if uid then redis.call('SREM', P .. 'usids:' .. uid, sid) end
   unpair(sid)
   removeQueued(sid)
   clearInvite(sid)
@@ -425,6 +427,7 @@ local owner = redis.call('HGET', P .. 'owner', sid)
 if owner and owner ~= uid then return { 'forbidden' } end
 redis.call('HSET', P .. 'owner', sid, uid)
 redis.call('HSET', P .. 'conn', sid, connectionId)
+redis.call('SADD', P .. 'usids:' .. uid, sid)
 redis.call('ZADD', P .. 'sess', expiresAt, sid)
 
 local phase = 'idle'
@@ -458,6 +461,8 @@ if #ARGV >= 7 and redis.call('ZSCORE', P .. 'sess', sid) then
 end
 if redis.call('HGET', P .. 'conn', sid) ~= connectionId then return 0 end
 redis.call('HDEL', P .. 'conn', sid)
+local uid = redis.call('HGET', P .. 'owner', sid)
+if uid then redis.call('SREM', P .. 'usids:' .. uid, sid) end
 removeQueued(sid)
 clearInvite(sid)
 return 1
@@ -741,6 +746,23 @@ removeQueued(sid)
 clearInvite(sid)
 unpair(sid)
 makePair(creator, sid, inv[2] or 'chat')
+return 'ok'
+`;
+
+/** Pair two connected sessions directly into a chess match. ARGV[5..7]: sidA, sidB, tc */
+export const PAIR_DIRECT = `${LIB}
+local a, b, tc = ARGV[5], ARGV[6], ARGV[7]
+if not isConnected(a) or not isConnected(b) then return 'unavailable' end
+local ua = redis.call('HGET', P .. 'owner', a)
+local ub = redis.call('HGET', P .. 'owner', b)
+if not ua or not ub or ua == ub or isBlockedPair(ua, ub) then return 'unavailable' end
+removeQueued(a)
+removeQueued(b)
+clearInvite(a)
+clearInvite(b)
+unpair(a)
+unpair(b)
+makePair(a, b, 'chess:' .. ((tc and TIME_CONTROL_SPECS[tc]) and tc or DEFAULT_TC))
 return 'ok'
 `;
 

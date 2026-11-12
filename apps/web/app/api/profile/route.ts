@@ -1,6 +1,11 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { ensureUser, hasDatabase, updateUserHandle } from "@funstranger/db";
+import {
+  ensureUser,
+  getPuzzleStats,
+  hasDatabase,
+  updateUserHandle,
+} from "@funstranger/db";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +17,13 @@ export async function GET() {
   if (!hasDatabase()) {
     return NextResponse.json({ profile: null });
   }
-  const profile = await ensureUser(userId);
-  return NextResponse.json({ profile });
+  const [profile, stats] = await Promise.all([
+    ensureUser(userId),
+    getPuzzleStats(userId),
+  ]);
+  return NextResponse.json({
+    profile: profile ? { ...profile, dailyStreak: stats.dailyStreak } : null,
+  });
 }
 
 export async function PATCH(request: Request) {

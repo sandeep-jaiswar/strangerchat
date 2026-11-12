@@ -189,6 +189,17 @@ export type ClientEvent =
       mistakes: number;
       finished: boolean;
     }
+  /** Challenge an online mutual friend directly to a chess match. */
+  | {
+      type: "friend_challenge";
+      friendId: string;
+      timeControl?: TimeControlId;
+    }
+  | {
+      type: "friend_challenge_response";
+      challengeId: string;
+      accept: boolean;
+    }
   /** Send or accept a mutual friend request with the current partner. */
   | { type: "friend_request" }
   /** Block or report the current partner. */
@@ -255,6 +266,27 @@ export type ServerEvent =
       them: PuzzleDuelPlayerState;
     }
   | {
+      type: "friend_challenge";
+      challengeId: string;
+      from: PublicFriendProfile;
+      timeControl: TimeControlId;
+    }
+  | {
+      type: "friend_challenge_sent";
+      challengeId: string;
+      toId: string;
+      timeControl: TimeControlId;
+    }
+  | {
+      type: "friend_challenge_declined";
+      challengeId: string;
+      byHandle?: string;
+    }
+  | {
+      type: "friend_challenge_failed";
+      reason: "offline" | "not_friends" | "blocked" | "self" | "expired";
+    }
+  | {
       type: "friend_status";
       status: "pending_me" | "pending_them" | "accepted" | "unavailable";
       partner?: PublicFriendProfile;
@@ -275,3 +307,13 @@ export {
   CHESS_PUZZLE_BY_ID,
   type ChessPuzzle,
 } from "./puzzles.ts";
+
+export {
+  RANK_TIERS,
+  getDailyPuzzleIndex,
+  getIsoWeekKey,
+  getRankTier,
+  getUtcDateKey,
+  type RankTier,
+  type RankTierId,
+} from "./ranks.ts";

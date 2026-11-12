@@ -13,6 +13,7 @@ const routes: {
     changeFrequency: "weekly",
   },
   { path: "/puzzles", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/leaderboard", priority: 0.9, changeFrequency: "daily" },
   { path: "/make-friends-online", priority: 0.9, changeFrequency: "weekly" },
   { path: "/omegle-alternative", priority: 0.85, changeFrequency: "monthly" },
   { path: "/safety", priority: 0.8, changeFrequency: "monthly" },

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { after, test } from "node:test";
 import type { WebSocket } from "ws";
+import { hasDatabase } from "@funstranger/db";
 import { CloseCode, type ServerEvent } from "@funstranger/protocol";
 import { Hub } from "./hub.ts";
 
@@ -735,4 +736,68 @@ test("in-chat puzzle duel pairs, syncs progress, and declares winner", async () 
   );
   assert.equal(lastOf(alice, "puzzle_duel_over")!.winner, "me");
   assert.equal(lastOf(bob, "puzzle_duel_over")!.winner, "them");
+});
+
+test("online friends can challenge each other directly to a chess match", async () => {
+  const [hubA, hubB] = cluster();
+  const aliceId = `fc-a-${randomUUID()}`;
+  const bobId = `fc-b-${randomUUID()}`;
+  const alice = await connect(hubA, aliceId);
+  const bob = await connect(hubB, bobId);
+
+  if (hasDatabase()) {
+    // Become mutual friends via the normal chat handshake (satisfies DB friendship check when enabled).
+    await chatting(alice, bob);
+    alice.deliver({ type: "friend_request" });
+    await until(
+      () => lastOf(bob, "friend_status")?.status === "pending_them",
+      "bob gets friend request",
+    );
+    bob.deliver({ type: "friend_request" });
+    await until(
+      () => lastOf(alice, "friend_status")?.status === "accepted",
+      "both become friends",
+    );
+    alice.deliver({ type: "leave" });
+    bob.deliver({ type: "leave" });
+    await sleep(50);
+  }
+
+  // Offline friend fails gracefully.
+  const carolId = `fc-c-${randomUUID()}`;
+  alice.deliver({
+    type: "friend_challenge",
+    friendId: carolId,
+    timeControl: "blitz_3_2",
+  });
+  await until(
+    () =>
+      lastOf(alice, "friend_challenge_failed")?.reason === "offline" ||
+      lastOf(alice, "friend_challenge_failed")?.reason === "not_friends",
+    "unavailable target handled",
+  );
+
+  // Challenge online friend to 3+2 Blitz.
+  alice.deliver({
+    type: "friend_challenge",
+    friendId: bobId,
+    timeControl: "blitz_3_2",
+  });
+  await until(() => !!lastOf(bob, "friend_challenge"), "bob receives challenge");
+  const challenge = lastOf(bob, "friend_challenge")!;
+  assert.equal(challenge.timeControl, "blitz_3_2");
+
+  const prevGames = alice.events.filter((e) => e.type === "chess_game").length;
+  bob.deliver({
+    type: "friend_challenge_response",
+    challengeId: challenge.challengeId,
+    accept: true,
+  });
+  await until(
+    () =>
+      alice.events.filter((e) => e.type === "chess_game").length > prevGames &&
+      bob.events.filter((e) => e.type === "chess_game").length > 0,
+    "friend challenge game starts",
+  );
+  assert.equal(lastOf(alice, "chess_game")!.game.timeControl, "blitz_3_2");
 });
