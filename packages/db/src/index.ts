@@ -36,6 +36,8 @@ export {
   deletePushSubscription,
   getVapidPublicKey,
   hasWebPushConfigured,
+  isSafePushEndpoint,
+  hasPushSubscription,
   savePushSubscription,
   sendUserPush,
   type PushPayload,

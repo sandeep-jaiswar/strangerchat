@@ -78,7 +78,7 @@ export default async function GameOpengraphImage({
             color: "#d4d0f0",
           }}
         >
-          {tc} Chess · {game.moveCount} moves
+          {tc} Chess · {game.moveCount} plies
         </div>
       </div>
 

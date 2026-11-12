@@ -113,6 +113,10 @@ function ensureSchema(pgPool: Pool): Promise<void> {
       );
       ALTER TABLE chess_games ADD COLUMN IF NOT EXISTS time_control TEXT NOT NULL DEFAULT 'rapid_10_0';
 
+      CREATE INDEX IF NOT EXISTS chess_games_created_at_idx ON chess_games (created_at DESC);
+      CREATE INDEX IF NOT EXISTS chess_games_white_time_idx ON chess_games (white_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS chess_games_black_time_idx ON chess_games (black_id, created_at DESC);
+
       CREATE TABLE IF NOT EXISTS push_subscriptions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -121,7 +125,9 @@ function ensureSchema(pgPool: Pool): Promise<void> {
         auth TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-    `)
+      CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);
+    `,
+    )
     .then(() => undefined)
     .catch((err: unknown) => {
       schemaReady = undefined;

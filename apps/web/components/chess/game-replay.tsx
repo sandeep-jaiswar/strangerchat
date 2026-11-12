@@ -1,6 +1,12 @@
 "use client";
 
-import { type CSSProperties, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useRef,
+  useMemo,
+  useState,
+} from "react";
 import { Chess } from "chess.js";
 import {
   ArrowLeftRight,
@@ -14,7 +20,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Chessboard } from "react-chessboard";
-import { getTimeControl, type ChessColor, type TimeControlId } from "@funstranger/protocol";
+import {
+  getTimeControl,
+  type ChessColor,
+  type TimeControlId,
+} from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
 import { cn } from "@funstranger/ui/lib/utils";
@@ -50,6 +60,9 @@ export function GameReplay({
   const [analysis, setAnalysis] = useState<AnalyzedMove[] | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
+  const analysisController = useRef<AbortController | null>(null);
+  useEffect(() => () => analysisController.current?.abort(), []);
+
   const tcSpec = getTimeControl(timeControl as TimeControlId);
 
   const chess = useMemo(() => {
@@ -68,7 +81,9 @@ export function GameReplay({
 
   const squareStyles: Record<string, CSSProperties> = {};
   if (lastMove) {
-    squareStyles[lastMove.from] = { backgroundColor: "rgba(250, 204, 21, 0.45)" };
+    squareStyles[lastMove.from] = {
+      backgroundColor: "rgba(250, 204, 21, 0.45)",
+    };
     squareStyles[lastMove.to] = { backgroundColor: "rgba(250, 204, 21, 0.45)" };
   }
 
@@ -84,14 +99,22 @@ export function GameReplay({
 
   const runAnalysis = async () => {
     if (analyzing || moves.length === 0) return;
+    const controller = new AbortController();
+    analysisController.current = controller;
     setAnalyzing(true);
     setAnalysisError(null);
     try {
-      setAnalysis(await analyzeGameMoves(moves));
+      const result = await analyzeGameMoves(
+        moves,
+        undefined,
+        controller.signal,
+      );
+      if (!controller.signal.aborted) setAnalysis(result);
     } catch {
-      setAnalysisError("Stockfish engine unavailable in this browser.");
+      if (!controller.signal.aborted)
+        setAnalysisError("Stockfish engine unavailable in this browser.");
     } finally {
-      setAnalyzing(false);
+      if (!controller.signal.aborted) setAnalyzing(false);
     }
   };
 

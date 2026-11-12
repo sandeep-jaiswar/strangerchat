@@ -20,7 +20,11 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TIME_CONTROLS, getTimeControl, type TimeControlId } from "@funstranger/protocol";
+import {
+  TIME_CONTROLS,
+  getTimeControl,
+  type TimeControlId,
+} from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
 import {
@@ -109,7 +113,10 @@ export function FriendsDrawer({
     supported: boolean;
     publicKey: string | null;
     subscribed: boolean;
+    accountId?: string;
   }>({ supported: false, publicKey: null, subscribed: false });
+  const subscribed =
+    pushConfig.accountId === profile?.id && pushConfig.subscribed;
   const [togglingPush, setTogglingPush] = useState(false);
 
   const loadFriends = useCallback(async () => {
@@ -158,20 +165,25 @@ export function FriendsDrawer({
     let active = true;
     void (async () => {
       try {
-        const res = await fetch("/api/push", { cache: "no-store" });
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        const existing = await reg?.pushManager.getSubscription();
+        const res = await fetch(
+          `/api/push?endpoint=${encodeURIComponent(existing?.endpoint ?? "")}`,
+          { cache: "no-store" },
+        );
         if (!res.ok || !active) return;
         const data = (await res.json()) as {
           supported: boolean;
           publicKey: string | null;
+          subscribed: boolean;
         };
         if (!active || !data.supported || !data.publicKey) return;
-        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
-        const existing = await reg?.pushManager.getSubscription();
         if (active) {
           setPushConfig({
+            accountId: profile?.id,
             supported: true,
             publicKey: data.publicKey,
-            subscribed: Boolean(existing),
+            subscribed: Boolean(existing) && data.subscribed,
           });
         }
       } catch {
@@ -181,20 +193,22 @@ export function FriendsDrawer({
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [open, profile?.id]);
 
   const togglePushAlerts = async () => {
     if (!pushConfig.supported || !pushConfig.publicKey || togglingPush) return;
     setTogglingPush(true);
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.register("/sw.js");
+      const reg = await navigator.serviceWorker.ready;
       const existing = await reg.pushManager.getSubscription();
-      if (existing) {
-        await fetch("/api/push", {
+      if (existing && subscribed) {
+        const res = await fetch("/api/push", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: existing.endpoint }),
         });
+        if (!res.ok) throw new Error("Unable to remove subscription");
         await existing.unsubscribe();
         setPushConfig((prev) => ({ ...prev, subscribed: false }));
         toast.info("Push alerts disabled.");
@@ -203,24 +217,34 @@ export function FriendsDrawer({
 
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        toast.info("Allow browser notifications to receive challenge and DM alerts.");
+        toast.info(
+          "Allow browser notifications to receive challenge and DM alerts.",
+        );
         return;
       }
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(pushConfig.publicKey),
-      });
-      const json = sub.toJSON();
-      const res = await fetch("/api/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-      });
-      if (!res.ok) {
-        toast.error("Unable to enable push alerts.");
-        return;
+      const sub =
+        existing ??
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(pushConfig.publicKey),
+        }));
+      try {
+        const json = sub.toJSON();
+        const res = await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        });
+        if (!res.ok) throw new Error("Unable to enable push alerts");
+      } catch (error) {
+        if (!existing) await sub.unsubscribe();
+        throw error;
       }
-      setPushConfig((prev) => ({ ...prev, subscribed: true }));
+      setPushConfig((prev) => ({
+        ...prev,
+        accountId: profile?.id,
+        subscribed: true,
+      }));
       toast.success("Push alerts enabled for friend challenges & DMs!");
     } catch {
       toast.error("Unable to configure push alerts in this browser.");
@@ -476,17 +500,17 @@ export function FriendsDrawer({
                   {pushConfig.supported && (
                     <Button
                       size="sm"
-                      variant={pushConfig.subscribed ? "secondary" : "outline"}
+                      variant={subscribed ? "secondary" : "outline"}
                       className="h-7 px-2 text-xs"
                       disabled={togglingPush}
                       onClick={() => void togglePushAlerts()}
                     >
-                      {pushConfig.subscribed ? (
+                      {subscribed ? (
                         <Bell className="size-3.5 text-success" />
                       ) : (
                         <BellOff className="size-3.5" />
                       )}
-                      {pushConfig.subscribed ? "Alerts On" : "Enable Alerts"}
+                      {subscribed ? "Alerts On" : "Enable Alerts"}
                     </Button>
                   )}
                 </div>

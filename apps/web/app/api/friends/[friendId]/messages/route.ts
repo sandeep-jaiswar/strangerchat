@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { moderateMessageText } from "@funstranger/chat-server";
 import {
   areFriends,
@@ -72,14 +72,16 @@ export async function POST(
   if (!saved) {
     return NextResponse.json({ error: "Unable to send" }, { status: 400 });
   }
-  void ensureUser(userId)
-    .then((sender) =>
-      sendUserPush(friendId, {
-        title: `Message from ${sender?.handle ?? "Friend"}`,
-        body: text.length > 90 ? `${text.slice(0, 87)}...` : text,
-        url: "/chat",
-      }),
-    )
-    .catch(() => undefined);
+  after(() =>
+    ensureUser(userId)
+      .then((sender) =>
+        sendUserPush(friendId, {
+          title: `Message from ${sender?.handle ?? "Friend"}`,
+          body: text.length > 90 ? `${text.slice(0, 87)}...` : text,
+          url: "/chat",
+        }),
+      )
+      .catch(() => undefined),
+  );
   return NextResponse.json({ message: saved });
 }

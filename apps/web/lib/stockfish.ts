@@ -40,6 +40,7 @@ export class StockfishClient {
   private queue: Promise<unknown> = Promise.resolve();
   private listeners = new Set<(line: string) => void>();
   private disposed = false;
+  private pending = new Set<(reason: Error) => void>();
 
   private ensureReady(): Promise<void> {
     if (this.disposed) return Promise.reject(new Error("Stockfish disposed"));
@@ -49,6 +50,7 @@ export class StockfishClient {
     if (this.readyPromise) return this.readyPromise;
 
     this.readyPromise = new Promise<void>((resolve, reject) => {
+      this.pending.add(reject);
       try {
         const worker = new Worker("/stockfish/stockfish-19-lite-single.js");
         this.worker = worker;
@@ -71,6 +73,7 @@ export class StockfishClient {
             worker.postMessage("isready");
           } else if (line === "readyok") {
             this.listeners.delete(onLine);
+            this.pending.delete(reject);
             resolve();
           }
         };
@@ -100,11 +103,13 @@ export class StockfishClient {
     const spec = BOT_LEVELS[difficulty];
     return this.runSerialized(
       (worker) =>
-        new Promise<string | null>((resolve) => {
+        new Promise<string | null>((resolve, reject) => {
+          this.pending.add(reject);
           const onLine = (line: string) => {
             if (line.startsWith("bestmove ")) {
               this.listeners.delete(onLine);
               const token = line.split(/\s+/)[1];
+              this.pending.delete(reject);
               resolve(token && token !== "(none)" ? token : null);
             }
           };
@@ -122,7 +127,8 @@ export class StockfishClient {
     const sideToMove = fen.split(" ")[1] === "b" ? -1 : 1;
     return this.runSerialized(
       (worker) =>
-        new Promise<PositionEval>((resolve) => {
+        new Promise<PositionEval>((resolve, reject) => {
+          this.pending.add(reject);
           let cpWhite = 0;
           let mateWhite: number | null = null;
           let bestMoveUci: string | null = null;
@@ -143,6 +149,7 @@ export class StockfishClient {
               this.listeners.delete(onLine);
               const token = line.split(/\s+/)[1];
               bestMoveUci = token && token !== "(none)" ? token : null;
+              this.pending.delete(reject);
               resolve({ cpWhite, mateWhite, bestMoveUci });
             }
           };
@@ -156,6 +163,8 @@ export class StockfishClient {
 
   dispose() {
     this.disposed = true;
+    for (const reject of this.pending) reject(new Error("Stockfish disposed"));
+    this.pending.clear();
     this.listeners.clear();
     this.worker?.terminate();
     this.worker = null;
@@ -166,9 +175,13 @@ export class StockfishClient {
 export async function analyzeGameMoves(
   moves: string[],
   onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<AnalyzedMove[]> {
   const client = new StockfishClient();
+  const abort = () => client.dispose();
+  signal?.addEventListener("abort", abort, { once: true });
   try {
+    signal?.throwIfAborted();
     const chess = new Chess();
     const fens: string[] = [chess.fen()];
     for (const san of moves) {
@@ -178,6 +191,7 @@ export async function analyzeGameMoves(
 
     const evals: PositionEval[] = [];
     for (let i = 0; i < fens.length; i++) {
+      signal?.throwIfAborted();
       evals.push(await client.evaluatePosition(fens[i]!, 10));
       onProgress?.(i + 1, fens.length);
     }
@@ -219,6 +233,7 @@ export async function analyzeGameMoves(
     }
     return analyzed;
   } finally {
+    signal?.removeEventListener("abort", abort);
     client.dispose();
   }
 }
