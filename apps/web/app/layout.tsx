@@ -95,7 +95,7 @@ const siteJsonLd = {
       isAccessibleForFree: true,
       featureList: [
         "Anonymous 1-on-1 stranger text chat",
-        "Play live 10+0 chess while talking",
+        "Play live 1+0 Bullet, 3+2/5+0 Blitz, and 10+0 Rapid chess while talking",
         "Interest-tag matchmaking",
         "Mutual friend requests with anonymous handles and direct messages",
         "Free interactive tactical chess puzzles",

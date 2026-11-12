@@ -721,6 +721,16 @@ export function useStrangerchat(initialInviteCode?: string | null) {
           toast.info(msg);
         } else if (event.type === "matched") {
           dispatch({ type: "clearChallenge" });
+          captureEvent("match_connected", {
+            mode: event.mode,
+            time_control: event.timeControl ?? null,
+            shared_tags_count: event.sharedTags?.length ?? 0,
+          });
+        } else if (event.type === "chess_over") {
+          captureEvent("chess_game_completed", {
+            result: event.result,
+            reason: event.reason,
+          });
         } else if (event.type === "invite_failed") {
           toast.info(
             event.reason === "self"

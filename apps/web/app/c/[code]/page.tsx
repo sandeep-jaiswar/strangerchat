@@ -55,7 +55,7 @@ export default async function InvitePage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <SignInButton callbackUrl={target} className="w-full" />
+          <SignInButton callbackUrl={target} source="invite_page" className="w-full" />
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5 text-success" />
             Your email and real name are never shared.

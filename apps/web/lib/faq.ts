@@ -13,7 +13,7 @@ export const HOME_FAQ = [
   {
     question: "Can I make friends or play chess while chatting?",
     answer:
-      "Yes! Any time during a conversation you can send a chess invite to play a live 10-minute game side-by-side, or tap Add Friend — if both of you accept, you can message each other anytime.",
+      "Yes! Any time during a conversation you can send a 1+0 Bullet, 3+2/5+0 Blitz, or 10+0 Rapid chess invite, launch a 90s Puzzle Duel, or tap Add Friend — if both accept, you can challenge and message each other anytime.",
   },
   {
     question: "Are stranger chats saved?",

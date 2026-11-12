@@ -69,7 +69,7 @@ export default async function LoginPage({
               {error}
             </p>
           )}
-          <SignInButton callbackUrl={callbackUrl} className="w-full" />
+          <SignInButton callbackUrl={callbackUrl} source="login_page" className="w-full" />
           <p className="text-center text-xs text-muted-foreground">
             Your name and email are never shown to other users. By continuing
             you agree to our{" "}

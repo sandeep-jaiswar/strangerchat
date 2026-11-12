@@ -4,12 +4,17 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@funstranger/ui/components/button";
+import { captureEvent } from "@/lib/analytics";
 
 export function SignInButton({
   callbackUrl = "/chat",
+  source = "unknown",
+  label = "Continue with Google",
   className,
 }: {
   callbackUrl?: string;
+  source?: string;
+  label?: string;
   className?: string;
 }) {
   const [pending, setPending] = useState(false);
@@ -22,11 +27,15 @@ export function SignInButton({
       disabled={pending}
       onClick={() => {
         setPending(true);
+        captureEvent("oauth_signin_started", {
+          callback_url: callbackUrl,
+          source,
+        });
         void signIn("google", { callbackUrl });
       }}
     >
       {pending ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
-      Continue with Google
+      {label}
     </Button>
   );
 }

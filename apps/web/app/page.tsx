@@ -11,6 +11,7 @@ import {
 import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { HeroAuthCta } from "@/components/auth-cta";
+import { HeroWarmupPuzzle } from "@/components/chess/hero-warmup-puzzle";
 import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -57,7 +58,7 @@ const howToJsonLd = {
       "@type": "HowToStep",
       position: 3,
       name: "Play chess while talking and add friends",
-      text: "Launch a 10+0 chess board right inside any chat, or tap Add Friend when both sides want to stay connected.",
+      text: "Launch a 1+0 Bullet, 3+2 or 5+0 Blitz, or 10+0 Rapid chess board (or a 90s Puzzle Duel) right inside any chat, then tap Add Friend to stay connected.",
       url: `${SITE_URL}/play-chess-with-strangers`,
     },
   ],
@@ -66,8 +67,8 @@ const howToJsonLd = {
 const features = [
   {
     icon: ChessKnight,
-    title: "Play chess while talking",
-    body: "Invite any chat partner to a live 10+0 chess game right beside your messages, or queue straight into Chess Club.",
+    title: "Play Bullet, Blitz & Rapid chess",
+    body: "Launch 1+0, 3+2, 5+0, or 10+0 chess right beside your messages, run a 90s Puzzle Duel, or warm up vs Stockfish AI anytime.",
   },
   {
     icon: UserPlus,
@@ -122,35 +123,38 @@ export default function HomePage() {
             aria-hidden
             className="pointer-events-none absolute inset-x-0 -top-40 mx-auto h-80 max-w-3xl rounded-full bg-primary/20 blur-3xl"
           />
-          <div className="relative mx-auto flex max-w-3xl flex-col items-center px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
-            <span className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-              <span className="size-2 animate-pulse rounded-full bg-success" />
-              People are chatting &amp; playing chess right now
-            </span>
-            <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-6xl">
-              Talk to a stranger.
-              <br />
-              <span className="text-primary">Play chess &amp; make friends.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
-              Free anonymous chat with strangers around the world. Match by
-              shared interests, start a live chess game while you talk, and add
-              friends safely — no app required.
-            </p>
-            <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
-              <HeroAuthCta icon="arrow" className="w-full sm:w-auto" />
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                <Link href="/puzzles">Try chess puzzles</Link>
-              </Button>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-12 text-center sm:px-6 sm:pt-16 sm:pb-16 lg:grid-cols-[1.15fr_0.85fr] lg:text-left">
+            <div className="flex flex-col items-center lg:items-start">
+              <span className="mb-5 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
+                <span className="size-2 animate-pulse rounded-full bg-success" />
+                Live chat, Bullet/Blitz chess &amp; daily puzzles
+              </span>
+              <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+                Talk to a stranger.
+                <br />
+                <span className="text-primary">Play chess &amp; make friends.</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
+                Free anonymous 1-on-1 stranger chat with live 1+0 Bullet, 3+2
+                &amp; 5+0 Blitz, 10+0 Rapid chess, 90s Puzzle Duels, and Stockfish
+                game review — no app required.
+              </p>
+              <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                <HeroAuthCta icon="arrow" source="hero_primary" className="w-full sm:w-auto" />
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <Link href="/leaderboard">View leaderboard</Link>
+                </Button>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Free forever · 18+ only · Verified Google sign-in keeps bots out
+              </p>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Free forever · 18+ only · Verified Google sign-in keeps bots out
-            </p>
+            <HeroWarmupPuzzle />
           </div>
         </section>
 
@@ -224,7 +228,7 @@ export default function HomePage() {
                 href="/play-chess-with-strangers"
                 className="text-foreground underline underline-offset-2"
               >
-                play casual 10-minute chess with strangers
+                play live Bullet, Blitz, or Rapid chess with strangers
               </Link>
               , or{" "}
               <Link
@@ -306,7 +310,7 @@ export default function HomePage() {
             Start a free anonymous chat or chess match in seconds.
           </p>
           <div className="mt-6 flex justify-center">
-            <HeroAuthCta icon="zap" />
+            <HeroAuthCta icon="zap" source="footer_cta" />
           </div>
         </section>
       </main>

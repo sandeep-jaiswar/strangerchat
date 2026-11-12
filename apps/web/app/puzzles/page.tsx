@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/puzzles",
   title: "Free Chess Puzzles & Tactics Trainer",
   description:
-    "Sharpen your tactics with free interactive chess puzzles, then match with a stranger to chat and play a live 10-minute chess game on Funstranger.",
+    "Sharpen your tactics with free interactive chess puzzles, build your daily streak, and match with a stranger to play Bullet, Blitz, or Rapid chess on Funstranger.",
 });
 
 const puzzleBreadcrumbJsonLd = {

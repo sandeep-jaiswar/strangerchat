@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@funstranger/ui/components/textarea";
 import { cn } from "@funstranger/ui/lib/utils";
 import { RankBadge } from "@/components/chess/rank-badge";
+import { usePushAlerts } from "@/hooks/use-push-alerts";
 
 export interface RecentGameEntry {
   id: string;
@@ -109,15 +110,7 @@ export function FriendsDrawer({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
-  const [pushConfig, setPushConfig] = useState<{
-    supported: boolean;
-    publicKey: string | null;
-    subscribed: boolean;
-    accountId?: string;
-  }>({ supported: false, publicKey: null, subscribed: false });
-  const subscribed =
-    pushConfig.accountId === profile?.id && pushConfig.subscribed;
-  const [togglingPush, setTogglingPush] = useState(false);
+  const pushAlerts = usePushAlerts(profile?.id, open);
 
   const loadFriends = useCallback(async () => {
     setLoading(true);
@@ -152,106 +145,6 @@ export function FriendsDrawer({
     const timer = setInterval(() => void loadFriends(), 15_000);
     return () => clearInterval(timer);
   }, [open, loadFriends]);
-
-  useEffect(() => {
-    if (
-      !open ||
-      typeof window === "undefined" ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window)
-    ) {
-      return;
-    }
-    let active = true;
-    void (async () => {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
-        const existing = await reg?.pushManager.getSubscription();
-        const res = await fetch(
-          `/api/push?endpoint=${encodeURIComponent(existing?.endpoint ?? "")}`,
-          { cache: "no-store" },
-        );
-        if (!res.ok || !active) return;
-        const data = (await res.json()) as {
-          supported: boolean;
-          publicKey: string | null;
-          subscribed: boolean;
-        };
-        if (!active || !data.supported || !data.publicKey) return;
-        if (active) {
-          setPushConfig({
-            accountId: profile?.id,
-            supported: true,
-            publicKey: data.publicKey,
-            subscribed: Boolean(existing) && data.subscribed,
-          });
-        }
-      } catch {
-        // Ignore push check errors in restricted browsers.
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [open, profile?.id]);
-
-  const togglePushAlerts = async () => {
-    if (!pushConfig.supported || !pushConfig.publicKey || togglingPush) return;
-    setTogglingPush(true);
-    try {
-      await navigator.serviceWorker.register("/sw.js");
-      const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
-      if (existing && subscribed) {
-        const res = await fetch("/api/push", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: existing.endpoint }),
-        });
-        if (!res.ok) throw new Error("Unable to remove subscription");
-        await existing.unsubscribe();
-        setPushConfig((prev) => ({ ...prev, subscribed: false }));
-        toast.info("Push alerts disabled.");
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.info(
-          "Allow browser notifications to receive challenge and DM alerts.",
-        );
-        return;
-      }
-      const sub =
-        existing ??
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(pushConfig.publicKey),
-        }));
-      try {
-        const json = sub.toJSON();
-        const res = await fetch("/api/push", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-        });
-        if (!res.ok) throw new Error("Unable to enable push alerts");
-      } catch (error) {
-        if (!existing) await sub.unsubscribe();
-        throw error;
-      }
-      setPushConfig((prev) => ({
-        ...prev,
-        accountId: profile?.id,
-        subscribed: true,
-      }));
-      toast.success("Push alerts enabled for friend challenges & DMs!");
-    } catch {
-      toast.error("Unable to configure push alerts in this browser.");
-    } finally {
-      setTogglingPush(false);
-    }
-  };
 
   useEffect(() => {
     if (!open || !activeFriend) return;
@@ -497,20 +390,20 @@ export function FriendsDrawer({
                       ? ` · Puzzle Elo ${profile.puzzleRating}`
                       : ""}
                   </p>
-                  {pushConfig.supported && (
+                  {pushAlerts.supported && (
                     <Button
                       size="sm"
-                      variant={subscribed ? "secondary" : "outline"}
+                      variant={pushAlerts.subscribed ? "secondary" : "outline"}
                       className="h-7 px-2 text-xs"
-                      disabled={togglingPush}
-                      onClick={() => void togglePushAlerts()}
+                      disabled={pushAlerts.toggling}
+                      onClick={() => void pushAlerts.toggle()}
                     >
-                      {subscribed ? (
+                      {pushAlerts.subscribed ? (
                         <Bell className="size-3.5 text-success" />
                       ) : (
                         <BellOff className="size-3.5" />
                       )}
-                      {subscribed ? "Alerts On" : "Enable Alerts"}
+                      {pushAlerts.subscribed ? "Alerts On" : "Enable Alerts"}
                     </Button>
                   )}
                 </div>
@@ -715,15 +608,4 @@ export function FriendsDrawer({
       </div>
     </div>
   );
-}
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const output = new Uint8Array(new ArrayBuffer(rawData.length));
-  for (let i = 0; i < rawData.length; i++) {
-    output[i] = rawData.charCodeAt(i);
-  }
-  return output;
 }
