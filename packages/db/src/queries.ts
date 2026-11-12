@@ -5,7 +5,6 @@ import {
   countDistinct,
   desc,
   eq,
-  gt,
   gte,
   inArray,
   or,
@@ -499,7 +498,7 @@ export async function listDirectMessages(
   );
   const whereClause =
     sinceMs !== undefined && Number.isFinite(sinceMs)
-      ? and(pairCondition, gt(directMessages.createdAt, new Date(sinceMs)))
+      ? and(pairCondition, gte(directMessages.createdAt, new Date(sinceMs)))
       : pairCondition;
 
   const rows = await db
@@ -594,7 +593,9 @@ export async function recordChessGameAndUpdateElo(input: {
         weeklyEloGain: users.weeklyEloGain,
       })
       .from(users)
-      .where(or(eq(users.id, input.whiteId), eq(users.id, input.blackId)));
+      .where(or(eq(users.id, input.whiteId), eq(users.id, input.blackId)))
+      .orderBy(asc(users.id))
+      .for("update");
     const white = rows.find((r) => r.id === input.whiteId);
     const black = rows.find((r) => r.id === input.blackId);
     if (!white || !black) return;
@@ -753,7 +754,8 @@ export async function recordPuzzleSolve(
       })
       .from(users)
       .where(eq(users.id, userId))
-      .limit(1);
+      .limit(1)
+      .for("update");
     const u = rows[0];
     if (!u) return ensuredUser;
 

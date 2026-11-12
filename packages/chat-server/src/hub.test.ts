@@ -861,3 +861,33 @@ for (const { online, cached } of [
       assert.equal(await redis.sismember(blockKey, "existing-block"), 1);
   });
 }
+
+test("mid-chat partners can start a second chess game with a different time control after resigning", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, `reinv-a-${randomUUID()}`);
+  const bob = await connect(hubB, `reinv-b-${randomUUID()}`);
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "chess_invite", timeControl: "bullet_1_0" });
+  await until(() => lastOf(bob, "chess_invite")?.from === "them", "first invite");
+  bob.deliver({ type: "chess_invite_response", accept: true });
+  await until(() => !!lastOf(alice, "chess_game"), "first game starts");
+  const firstId = lastOf(alice, "chess_game")!.game.id;
+
+  alice.deliver({ type: "chess_resign" });
+  await until(() => !!lastOf(bob, "chess_over"), "first game ends");
+
+  bob.deliver({ type: "chess_invite", timeControl: "blitz_5_0" });
+  await until(
+    () => alice.events.filter((e) => e.type === "chess_invite").length === 1,
+    "second invite delivered",
+  );
+  alice.deliver({ type: "chess_invite_response", accept: true });
+  await until(
+    () => alice.events.filter((e) => e.type === "chess_game").length === 2,
+    "second game starts",
+  );
+  const second = lastOf(alice, "chess_game")!.game;
+  assert.notEqual(second.id, firstId);
+  assert.equal(second.timeControl, "blitz_5_0");
+});

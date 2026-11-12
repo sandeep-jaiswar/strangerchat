@@ -442,7 +442,7 @@ function reducer(state: State, action: Action): State {
           };
         }
         case "chess_over": {
-          if (!state.game) return state;
+          if (!state.game || state.game.status !== "playing") return state;
           const game = gameOver(
             state.game,
             event.result,
@@ -572,6 +572,7 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
+            puzzleDuel: null,
             messages: appendMessage(
               state.messages,
               systemItem("Stranger has left the chat."),
@@ -614,6 +615,7 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
+            puzzleDuel: null,
             messages: appendMessage(state.messages, systemItem(event.message)),
           };
         case "error":

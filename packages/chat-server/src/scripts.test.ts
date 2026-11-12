@@ -2,7 +2,18 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test, type TestContext } from "node:test";
 import { Redis } from "ioredis";
-import { BYE, CLAIM, DETACH, FIND, MOVE, TICK } from "./scripts.ts";
+import {
+  BYE,
+  CHESS_INVITE,
+  CHESS_INVITE_RESPOND,
+  CLAIM,
+  DETACH,
+  FIND,
+  MOVE,
+  PAIR_DIRECT,
+  RESIGN,
+  TICK,
+} from "./scripts.ts";
 import {
   closePresenceRedis,
   filterOnlineUserIds,
@@ -320,4 +331,61 @@ test("tagged search scans older pages before pairing a newer candidate from anot
   await redis.set(`${prefix}retry`, newerScore!);
   await run(TICK, 16_000);
   assert.equal(await redis.get(`${prefix}pair:alice`), "older");
+});
+
+test("mid-chat chess_invite allows starting a new game after the prior game ends", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await run(FIND, 1_000, "alice", "chat");
+  await run(FIND, 1_000, "bob", "chat");
+
+  assert.equal(await run(CHESS_INVITE, 1_100, "alice", "bullet_1_0"), 1);
+  assert.equal(await run(CHESS_INVITE_RESPOND, 1_200, "bob", "1"), 1);
+  const gid1 = await redis.get(`${prefix}game:alice`);
+  assert.ok(gid1);
+
+  assert.equal(await run(RESIGN, 1_300, "alice"), 1);
+  assert.equal(await redis.hget(`${prefix}g:${gid1}`, "status"), "over");
+
+  // Starting a fresh game with a new time control must succeed after game 1 ended.
+  assert.equal(await run(CHESS_INVITE, 1_400, "alice", "blitz_5_0"), 1);
+  assert.equal(await run(CHESS_INVITE_RESPOND, 1_500, "bob", "1"), 1);
+  const gid2 = await redis.get(`${prefix}game:alice`);
+  assert.ok(gid2 && gid2 !== gid1);
+  assert.equal(await redis.hget(`${prefix}g:${gid2}`, "tc"), "blitz_5_0");
+  assert.equal(await redis.exists(`${prefix}g:${gid1}`), 0);
+});
+
+test("PAIR_DIRECT does not yank an already-paired challenger out of their active chat", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await claim("carol");
+  await run(FIND, 1_000, "alice", "chat");
+  await run(FIND, 1_000, "carol", "chat");
+  assert.equal(await redis.get(`${prefix}pair:alice`), "carol");
+
+  assert.equal(await run(PAIR_DIRECT, 2_000, "alice", "bob", "rapid_10_0"), "unavailable");
+  assert.equal(await redis.get(`${prefix}pair:alice`), "carol");
+});
+
+test("CLAIM delivers held chess_over when partner abandoned during brief disconnect", async (t) => {
+  const { run, claim } = await fixture(t);
+  await claim("alice", "alice", "c-a");
+  await claim("bob", "bob", "c-b");
+  await run(FIND, 1_000, "alice", "chess");
+  await run(FIND, 1_000, "bob", "chess");
+
+  // Bob disconnects into grace period; Alice leaves, dropping the game.
+  await run(DETACH, 2_000, "bob", "c-b");
+  await run(FIND, 3_000, "alice", "chat");
+
+  const resumed = (await claim("bob", "bob", "c-b2")) as (string | number)[];
+  assert.equal(resumed[0], "idle");
+  assert.equal(resumed[2], "");
+  const held = resumed
+    .slice(3)
+    .map((raw) => JSON.parse(String(raw)) as { type: string; reason?: string });
+  assert.ok(held.some((e) => e.type === "chess_over" && e.reason === "aborted"));
 });

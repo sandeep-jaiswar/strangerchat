@@ -153,7 +153,13 @@ export function FriendsDrawer({
       setMessages((prev) => {
         const seen = new Set(prev.map((m) => m.id));
         const fresh = incomingMsgs.filter((m) => !seen.has(m.id));
-        return fresh.length > 0 ? [...prev, ...fresh] : prev;
+        if (fresh.length === 0) return prev;
+        const merged = [...prev, ...fresh];
+        const lastPrevAt = prev[prev.length - 1]?.createdAt ?? 0;
+        if (fresh.some((m) => m.createdAt < lastPrevAt)) {
+          merged.sort((a, b) => a.createdAt - b.createdAt);
+        }
+        return merged;
       });
     },
     [],
@@ -255,10 +261,6 @@ export function FriendsDrawer({
         toast.error(data.error ?? "Unable to send message.");
         return;
       }
-      lastMessageAtRef.current = Math.max(
-        lastMessageAtRef.current ?? 0,
-        data.message.createdAt,
-      );
       setMessages((prev) => [...prev, data.message!]);
       setDraft("");
     } finally {

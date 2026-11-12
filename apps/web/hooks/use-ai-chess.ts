@@ -199,6 +199,9 @@ export function useAiChessGame() {
 
     return () => {
       cancelled = true;
+      if (thinkingGameId.current === key) {
+        thinkingGameId.current = null;
+      }
     };
   }, [ai, applyMove, getEngine]);
 

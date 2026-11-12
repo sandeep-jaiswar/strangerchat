@@ -107,9 +107,37 @@ end
 
 local function gameKey(gid) return P .. 'g:' .. gid end
 
-local function publishToPlayers(gid, payload)
+local function hasActiveGame(sid)
+  local gid = redis.call('GET', P .. 'game:' .. sid)
+  return gid ~= false and redis.call('HGET', gameKey(gid), 'status') == 'playing'
+end
+
+local function clearFinishedGame(sid)
+  local oldGid = redis.call('GET', P .. 'game:' .. sid)
+  if oldGid and redis.call('HGET', gameKey(oldGid), 'status') ~= 'playing' then
+    redis.call('DEL', gameKey(oldGid), P .. 'gm:' .. oldGid)
+  end
+end
+
+local function deliverOrHold(sid, payload)
+  if isConnected(sid) then
+    redis.call('PUBLISH', P .. 'to:' .. sid, payload)
+  elseif redis.call('ZSCORE', P .. 'sess', sid) then
+    local inbox = P .. 'inbox:' .. sid
+    redis.call('RPUSH', inbox, payload)
+    redis.call('LTRIM', inbox, -50, -1)
+  end
+end
+
+local function publishToPlayers(gid, payload, hold)
   for _, sid in ipairs(redis.call('HMGET', gameKey(gid), 'w', 'b')) do
-    if sid then redis.call('PUBLISH', P .. 'to:' .. sid, payload) end
+    if sid then
+      if hold then
+        deliverOrHold(sid, payload)
+      else
+        redis.call('PUBLISH', P .. 'to:' .. sid, payload)
+      end
+    end
   end
 end
 
@@ -174,6 +202,8 @@ local INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 local INITIAL_REP = '{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -":1}'
 
 local function startGame(white, black, tc)
+  clearFinishedGame(white)
+  clearFinishedGame(black)
   tc = (tc and TIME_CONTROL_SPECS[tc]) and tc or DEFAULT_TC
   local spec = TIME_CONTROL_SPECS[tc]
   local initMs, incMs = spec[1], spec[2]
@@ -218,7 +248,7 @@ local function endGame(gid, result, reason)
   end
   clock.running = false
   clock.firstMoveMs = cjson.null
-  publishToPlayers(gid, cjson.encode({ type = 'chess_over', result = result, reason = reason, clock = clock }))
+  publishToPlayers(gid, cjson.encode({ type = 'chess_over', result = result, reason = reason, clock = clock }), true)
   return true
 end
 
@@ -262,9 +292,9 @@ end
 -- records when the two users stopped chatting.
 local function unpair(sid)
   local partner = redis.call('GET', P .. 'pair:' .. sid)
-  redis.call('DEL', P .. 'cinv:' .. sid)
+  redis.call('DEL', P .. 'cinv:' .. sid, P .. 'duel_inv:' .. sid)
   if not partner then return end
-  redis.call('DEL', P .. 'cinv:' .. partner)
+  redis.call('DEL', P .. 'cinv:' .. partner, P .. 'duel_inv:' .. partner)
   local gid = redis.call('GET', P .. 'game:' .. sid)
   if gid then dropGame(gid, sid) end
   redis.call('DEL', P .. 'pair:' .. sid)
@@ -772,6 +802,7 @@ local sid = ARGV[5]
 local gid = redis.call('GET', P .. 'game:' .. sid)
 if not gid then return 0 end
 local g = redis.call('HMGET', gameKey(gid), 'w', 'ply')
+if not g[1] or not g[2] then return 0 end
 if tonumber(g[2]) < 2 then
   return endGame(gid, 'aborted', 'aborted') and 1 or 0
 end
@@ -820,7 +851,7 @@ export const CHESS_INVITE = `${LIB}
 local sid = ARGV[5]
 local tc = (ARGV[6] and TIME_CONTROL_SPECS[ARGV[6]]) and ARGV[6] or DEFAULT_TC
 local partner = redis.call('GET', P .. 'pair:' .. sid)
-if not partner or redis.call('EXISTS', P .. 'game:' .. sid) == 1 then return 0 end
+if not partner or hasActiveGame(sid) then return 0 end
 local pInv = redis.call('HMGET', P .. 'cinv:' .. partner, 'to', 'tc')
 if pInv[1] == sid then
   redis.call('DEL', P .. 'cinv:' .. partner)
@@ -842,7 +873,7 @@ if not partner then return 0 end
 local pInv = redis.call('HMGET', P .. 'cinv:' .. partner, 'to', 'tc')
 if pInv[1] ~= sid then return 0 end
 redis.call('DEL', P .. 'cinv:' .. partner)
-if accept == '1' and redis.call('EXISTS', P .. 'game:' .. sid) == 0 then
+if accept == '1' and not hasActiveGame(sid) then
   startGame(partner, sid, pInv[2])
   return 1
 end
@@ -894,6 +925,8 @@ return 'ok'
 export const PAIR_DIRECT = `${LIB}
 local a, b, tc = ARGV[5], ARGV[6], ARGV[7]
 if not isConnected(a) or not isConnected(b) then return 'unavailable' end
+-- Never yank the challenger out of a chat or rated game they started while waiting.
+if redis.call('EXISTS', P .. 'pair:' .. a) == 1 then return 'unavailable' end
 local ua = redis.call('HGET', P .. 'owner', a)
 local ub = redis.call('HGET', P .. 'owner', b)
 if not ua or not ub or ua == ub or isBlockedPair(ua, ub) then return 'unavailable' end

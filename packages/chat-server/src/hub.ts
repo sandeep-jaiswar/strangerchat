@@ -803,6 +803,14 @@ export class Hub {
     accept: boolean,
   ) {
     const key = `${this.prefix}fch:${challengeId}`;
+    const ch = await this.redis.hgetall(key);
+    if (!ch.fromSid || !ch.fromUid || ch.toUid !== connection.userId) {
+      this.send(connection, {
+        type: "friend_challenge_failed",
+        reason: "expired",
+      });
+      return;
+    }
     const lock = await this.redis.set(`${key}:lock`, "1", "EX", 60, "NX");
     if (lock !== "OK") {
       this.send(connection, {
@@ -811,15 +819,7 @@ export class Hub {
       });
       return;
     }
-    const ch = await this.redis.hgetall(key);
     await this.redis.del(key);
-    if (!ch.fromSid || !ch.fromUid || ch.toUid !== connection.userId) {
-      this.send(connection, {
-        type: "friend_challenge_failed",
-        reason: "expired",
-      });
-      return;
-    }
 
     if (!accept) {
       const me = hasDatabase() ? await ensureUser(connection.userId) : null;
@@ -905,6 +905,14 @@ export class Hub {
       connection.sid,
     );
     if (!partnerSid) return;
+    if (
+      (await this.redis.exists(
+        `${this.prefix}duel_active:${connection.sid}`,
+        `${this.prefix}duel_active:${partnerSid}`,
+      )) > 0
+    ) {
+      return;
+    }
 
     const invKey = `${this.prefix}duel_inv:${connection.sid}`;
     const partnerInvKey = `${this.prefix}duel_inv:${partnerSid}`;
@@ -947,6 +955,14 @@ export class Hub {
       return;
     }
 
+    if (
+      (await this.redis.exists(
+        `${this.prefix}duel_active:${connection.sid}`,
+        `${this.prefix}duel_active:${partnerSid}`,
+      )) > 0
+    ) {
+      return;
+    }
     await this.startPuzzleDuel(partnerSid, connection.sid);
   }
 
@@ -972,15 +988,20 @@ export class Hub {
     };
 
     const key = `${this.prefix}duel:${duelId}`;
-    await this.redis.hset(key, {
-      sidA,
-      sidB,
-      startedAt: String(startedAt),
-      durationMs: String(PUZZLE_DUEL_DURATION_MS),
-      puzzleIds: JSON.stringify(puzzleIds),
-      stateA: JSON.stringify(emptyState),
-      stateB: JSON.stringify(emptyState),
-    });
+    const activeTtlSec = Math.ceil(PUZZLE_DUEL_DURATION_MS / 1000) + 30;
+    await Promise.all([
+      this.redis.hset(key, {
+        sidA,
+        sidB,
+        startedAt: String(startedAt),
+        durationMs: String(PUZZLE_DUEL_DURATION_MS),
+        puzzleIds: JSON.stringify(puzzleIds),
+        stateA: JSON.stringify(emptyState),
+        stateB: JSON.stringify(emptyState),
+      }),
+      this.redis.set(`${this.prefix}duel_active:${sidA}`, duelId, "EX", activeTtlSec),
+      this.redis.set(`${this.prefix}duel_active:${sidB}`, duelId, "EX", activeTtlSec),
+    ]);
     await this.redis.expire(key, 600);
 
     const startPayload = JSON.stringify({
@@ -1006,6 +1027,9 @@ export class Hub {
     connection: Connection,
     event: Extract<ClientEvent, { type: "puzzle_duel_progress" }>,
   ) {
+    if ((await this.redis.exists(`${this.prefix}duel_done:${event.duelId}`)) === 1) {
+      return;
+    }
     const key = `${this.prefix}duel:${event.duelId}`;
     const duel = await this.redis.hgetall(key);
     if (!duel.sidA || !duel.sidB) return;
@@ -1014,14 +1038,29 @@ export class Hub {
     const isB = duel.sidB === connection.sid;
     if (!isA && !isB) return;
 
-    const now = Date.now();
-    const nextState: PuzzleDuelPlayerState = {
-      solved: Math.max(0, Math.min(PUZZLE_DUEL_COUNT, Math.floor(event.solved))),
-      mistakes: Math.max(0, Math.floor(event.mistakes)),
-      finished: Boolean(event.finished || event.solved >= PUZZLE_DUEL_COUNT),
-      finishedAt: event.finished ? now : null,
-    };
     const field = isA ? "stateA" : "stateB";
+    const prevRaw = isA ? duel.stateA : duel.stateB;
+    const prevState = prevRaw
+      ? (JSON.parse(prevRaw) as PuzzleDuelPlayerState)
+      : undefined;
+    if (prevState?.finished) return;
+
+    const now = Date.now();
+    const solved = Math.max(
+      prevState?.solved ?? 0,
+      Math.min(PUZZLE_DUEL_COUNT, Math.floor(event.solved)),
+    );
+    const mistakes = Math.max(
+      prevState?.mistakes ?? 0,
+      Math.floor(event.mistakes),
+    );
+    const finished = Boolean(event.finished || solved >= PUZZLE_DUEL_COUNT);
+    const nextState: PuzzleDuelPlayerState = {
+      solved,
+      mistakes,
+      finished,
+      finishedAt: finished ? now : null,
+    };
     await this.redis.hset(key, field, JSON.stringify(nextState));
     // Read both states after the write so concurrent finishes never miss each other.
     const [rawA, rawB] = await this.redis.hmget(key, "stateA", "stateB");
@@ -1072,6 +1111,10 @@ export class Hub {
 
     const duel = await this.redis.hgetall(`${this.prefix}duel:${duelId}`);
     if (!duel.sidA || !duel.sidB) return;
+    await this.redis.del(
+      `${this.prefix}duel_active:${duel.sidA}`,
+      `${this.prefix}duel_active:${duel.sidB}`,
+    );
 
     const stateA = JSON.parse(duel.stateA ?? "{}") as PuzzleDuelPlayerState;
     const stateB = JSON.parse(duel.stateB ?? "{}") as PuzzleDuelPlayerState;
