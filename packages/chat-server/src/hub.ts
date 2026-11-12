@@ -199,8 +199,12 @@ export class Hub {
         await ensureUser(userId);
         const blocked = await getBlockedRelationIds(userId);
         const blockKey = `${this.prefix}blocked:${userId}`;
-        await this.redis.del(blockKey);
-        if (blocked.length > 0) await this.redis.sadd(blockKey, ...blocked);
+        if (blocked.length > 0) {
+          // Replace atomically so concurrent tabs running matchOne never observe an empty block set.
+          await this.redis.multi().del(blockKey).sadd(blockKey, ...blocked).exec();
+        } else {
+          await this.redis.del(blockKey);
+        }
       } catch (error: unknown) {
         console.error("chat-server: db sync on attach failed", error);
       }
@@ -872,6 +876,9 @@ export class Hub {
       }
     }
     await this.redis.sadd(`${this.prefix}blocked:${connection.userId}`, partnerUid);
+    if (await this.redis.exists(`${this.prefix}blocked:${partnerUid}`)) {
+      await this.redis.sadd(`${this.prefix}blocked:${partnerUid}`, connection.userId);
+    }
     await this.redis.scLeave(...this.common(now), connection.sid);
     captureServerEvent(
       connection.userId,

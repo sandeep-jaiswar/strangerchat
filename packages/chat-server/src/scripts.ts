@@ -286,6 +286,26 @@ local function clearInvite(sid)
   end
 end
 
+local function isWaitingTag(sid)
+  local tagAt = tonumber(redis.call('HGET', P .. 'tagat', sid))
+  return tagAt ~= nil and (NOW - tagAt < TAG_WAIT)
+end
+
+local function hasSharedTag(a, b)
+  return #redis.call('SINTER', P .. 'tags:' .. a, P .. 'tags:' .. b) > 0
+end
+
+local function candidateOwnerIfEligible(uid, cand, queue)
+  if not cand or not isConnected(cand) or not redis.call('ZSCORE', queue, cand) then
+    return nil
+  end
+  local other = redis.call('HGET', P .. 'owner', cand)
+  if not other or other == uid or isBlockedPair(uid, other) then
+    return nil
+  end
+  return other
+end
+
 local function removeQueued(sid)
   local mode = modeOf(sid)
   redis.call('ZREM', queueKey(mode), sid)
@@ -294,6 +314,7 @@ local function removeQueued(sid)
     redis.call('ZREM', P .. 'tagq:' .. mode .. ':' .. tag, sid)
   end
   redis.call('HDEL', P .. 'scan', sid)
+  redis.call('HDEL', P .. 'tagscan', sid)
   redis.call('HDEL', P .. 'fallback', sid)
   redis.call('HDEL', P .. 'anyfresh', sid)
   redis.call('HDEL', P .. 'tagat', sid)
@@ -338,22 +359,50 @@ local function matchOne(sid)
   end
   local mode = modeOf(sid)
   local queue = queueKey(mode)
-  local cursor = redis.call('HGET', P .. 'scan', sid) or '-inf'
   local hasTags = redis.call('SCARD', P .. 'tags:' .. sid) > 0
   local tagAt = tonumber(redis.call('HGET', P .. 'tagat', sid))
   local allowTagFallback = not tagAt or (NOW - tagAt >= TAG_WAIT)
   local anyFresh = redis.call('HGET', P .. 'anyfresh', sid)
   local fallback = redis.call('HGET', P .. 'fallback', sid)
 
-  if hasTags and cursor == '-inf' then
+  -- Revalidate carried-over multi-page candidates so a stale entry never shadows live ones on later pages.
+  if anyFresh then
+    local other = candidateOwnerIfEligible(uid, anyFresh, queue)
+    if not other or redis.call('GET', endedKey(uid, other)) or isWaitingTag(anyFresh) then
+      anyFresh = nil
+      redis.call('HDEL', P .. 'anyfresh', sid)
+    end
+  end
+  if fallback then
+    local other = candidateOwnerIfEligible(uid, fallback, queue)
+    local ended = other and redis.call('GET', endedKey(uid, other))
+    local shared = (hasTags and other) and hasSharedTag(sid, fallback) or false
+    if not other
+      or (ended and NOW - tonumber(ended) < REMATCH_BLOCK)
+      or (isWaitingTag(fallback) and not shared)
+    then
+      fallback = nil
+      redis.call('HDEL', P .. 'fallback', sid)
+    end
+  end
+
+  if hasTags then
+    local tagCursor = redis.call('HGET', P .. 'tagscan', sid) or '-inf'
+    local tagMin = (tagCursor == '-inf') and '-inf' or ('(' .. tagCursor)
     local bestTagCand, bestTagScore = nil, nil
-    local needGeneralTagScan = false
+    local minSatScore = nil
     local seen = {}
     for _, tag in ipairs(redis.call('SMEMBERS', P .. 'tags:' .. sid)) do
       local tq = P .. 'tagq:' .. mode .. ':' .. tag
-      local tItems = redis.call('ZRANGEBYSCORE', tq, '-inf', '+inf', 'WITHSCORES', 'LIMIT', 0, 50)
-      if #tItems == 100 and redis.call('ZCARD', tq) > 50 then
-        needGeneralTagScan = true
+      local tItems = redis.call('ZRANGEBYSCORE', tq, tagMin, '+inf', 'WITHSCORES', 'LIMIT', 0, 50)
+      if #tItems == 100 then
+        local pageEnd = tItems[#tItems]
+        if #redis.call('ZRANGEBYSCORE', tq, '(' .. pageEnd, '+inf', 'LIMIT', 0, 1) > 0 then
+          local pageEndNum = tonumber(pageEnd)
+          if not minSatScore or pageEndNum < minSatScore then
+            minSatScore = pageEndNum
+          end
+        end
       end
       for i = 1, #tItems, 2 do
         local cand = tItems[i]
@@ -372,6 +421,7 @@ local function matchOne(sid)
               end
               break
             elseif not fallback and NOW - tonumber(ended) >= REMATCH_BLOCK then
+              -- Cand came from tagq:<mode>:<tag>, so both share at least this tag.
               fallback = cand
             end
           end
@@ -382,11 +432,18 @@ local function matchOne(sid)
       makePair(sid, bestTagCand, mode)
       return true
     end
-    if not allowTagFallback and not needGeneralTagScan then
+    if minSatScore then
+      redis.call('HSET', P .. 'tagscan', sid, tostring(minSatScore))
+      if fallback then redis.call('HSET', P .. 'fallback', sid, fallback) end
+      return false
+    end
+    redis.call('HDEL', P .. 'tagscan', sid)
+    if not allowTagFallback then
       return false
     end
   end
 
+  local cursor = redis.call('HGET', P .. 'scan', sid) or '-inf'
   local minBound = (cursor == '-inf') and '-inf' or ('(' .. cursor)
   local items = redis.call('ZRANGEBYSCORE', queue, minBound, '+inf', 'WITHSCORES', 'LIMIT', 0, 100)
   local lastScore = cursor
@@ -399,11 +456,10 @@ local function matchOne(sid)
         removeQueued(candidate)
       elseif other ~= uid and not isBlockedPair(uid, other) then
         local ended = redis.call('GET', endedKey(uid, other))
+        local candWaitingTag = isWaitingTag(candidate)
+        local shared = hasTags and hasSharedTag(sid, candidate) or false
         if not ended then
-          local sharedCount = hasTags and #redis.call('SINTER', P .. 'tags:' .. sid, P .. 'tags:' .. candidate) or 0
-          local candTagAt = tonumber(redis.call('HGET', P .. 'tagat', candidate))
-          local candWaitingTag = candTagAt and (NOW - candTagAt < TAG_WAIT)
-          if (not hasTags and not candWaitingTag) or sharedCount > 0 then
+          if (not hasTags and not candWaitingTag) or shared then
             makePair(sid, candidate, mode)
             return true
           end
@@ -411,12 +467,14 @@ local function matchOne(sid)
             anyFresh = candidate
           end
         elseif not fallback and NOW - tonumber(ended) >= REMATCH_BLOCK then
-          fallback = candidate
+          if not candWaitingTag or shared then
+            fallback = candidate
+          end
         end
       end
     end
   end
-  if #items == 200 then
+  if #items == 200 and #redis.call('ZRANGEBYSCORE', queue, '(' .. lastScore, '+inf', 'LIMIT', 0, 1) > 0 then
     redis.call('HSET', P .. 'scan', sid, lastScore)
     if anyFresh then redis.call('HSET', P .. 'anyfresh', sid, anyFresh) end
     if fallback then redis.call('HSET', P .. 'fallback', sid, fallback) end
@@ -425,22 +483,24 @@ local function matchOne(sid)
   redis.call('HDEL', P .. 'scan', sid)
   redis.call('HDEL', P .. 'anyfresh', sid)
   redis.call('HDEL', P .. 'fallback', sid)
-  if anyFresh and isConnected(anyFresh) and redis.call('ZSCORE', queue, anyFresh) then
-    local other = redis.call('HGET', P .. 'owner', anyFresh)
-    if other and other ~= uid and not isBlockedPair(uid, other) then
+  if anyFresh then
+    local other = candidateOwnerIfEligible(uid, anyFresh, queue)
+    if other and not redis.call('GET', endedKey(uid, other)) and not isWaitingTag(anyFresh) then
       makePair(sid, anyFresh, mode)
       return true
     end
   end
   -- The fallback may have left or matched while we scanned later pages.
-  if fallback and isConnected(fallback) and redis.call('ZSCORE', queue, fallback) then
-    local other = redis.call('HGET', P .. 'owner', fallback)
-    if other and other ~= uid and not isBlockedPair(uid, other) then
-      local ended = redis.call('GET', endedKey(uid, other))
-      if not ended or NOW - tonumber(ended) >= REMATCH_BLOCK then
-        makePair(sid, fallback, mode)
-        return true
-      end
+  if fallback then
+    local other = candidateOwnerIfEligible(uid, fallback, queue)
+    local ended = other and redis.call('GET', endedKey(uid, other))
+    local shared = (hasTags and other) and hasSharedTag(sid, fallback) or false
+    if other
+      and (not ended or NOW - tonumber(ended) >= REMATCH_BLOCK)
+      and (not isWaitingTag(fallback) or shared)
+    then
+      makePair(sid, fallback, mode)
+      return true
     end
   end
   return false
