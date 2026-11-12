@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { AD_SLOTS } from "@/lib/ads";
 import { SITE_NAME, SITE_URL } from "@/lib/site";

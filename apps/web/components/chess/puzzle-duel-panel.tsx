@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Flame, Swords, Timer, X } from "lucide-react";
-import { CHESS_PUZZLE_BY_ID, type ChessPuzzle } from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+import { CHESS_PUZZLE_BY_ID, type ChessPuzzle } from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
 import type { PuzzleDuelView } from "@/hooks/use-stranger-chat";
 import { PuzzleBoard } from "./puzzle-board";
 

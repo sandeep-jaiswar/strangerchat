@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { ChessKnight, ShieldCheck } from "lucide-react";
-import { normalizeInviteCode } from "@repo/protocol";
+import { normalizeInviteCode } from "@funstranger/protocol";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@funstranger/ui/components/card";
 import { Logo } from "@/components/logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { authOptions } from "@/lib/auth";

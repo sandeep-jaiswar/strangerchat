@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { CHESS_PUZZLES, type ChessPuzzle } from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+import { CHESS_PUZZLES, type ChessPuzzle } from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
 import { captureEvent } from "@/lib/analytics";
 import { PuzzleBoard } from "./puzzle-board";
 

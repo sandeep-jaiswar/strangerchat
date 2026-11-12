@@ -1,13 +1,13 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { moderateMessageText } from "@repo/chat-server";
+import { moderateMessageText } from "@funstranger/chat-server";
 import {
   areFriends,
   hasDatabase,
   listDirectMessages,
   saveDirectMessage,
-} from "@repo/db";
-import { MAX_MESSAGE_LENGTH } from "@repo/protocol";
+} from "@funstranger/db";
+import { MAX_MESSAGE_LENGTH } from "@funstranger/protocol";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { after, test } from "node:test";
 import type { WebSocket } from "ws";
-import { CloseCode, type ServerEvent } from "@repo/protocol";
+import { CloseCode, type ServerEvent } from "@funstranger/protocol";
 import { Hub } from "./hub.ts";
 
 // Needs a Redis server: docker run -d -p 6379:6379 redis:7-alpine

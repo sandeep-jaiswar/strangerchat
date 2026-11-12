@@ -19,7 +19,7 @@ import {
   type PuzzleDuelPlayerState,
   type ServerEvent,
   type TimeControlId,
-} from "@repo/protocol";
+} from "@funstranger/protocol";
 import { captureEvent } from "@/lib/analytics";
 
 export type ChatPhase = "idle" | "searching" | "chatting" | "ended";

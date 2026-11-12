@@ -1,5 +1,5 @@
 {
-  "extends": "@repo/typescript-config/nextjs.json",
+  "extends": "@funstranger/typescript-config/nextjs.json",
   "compilerOptions": {
     "plugins": [
       {
@@ -11,7 +11,7 @@
       "@/*": [
         "./*"
       ],
-      "@repo/ui/*": [
+      "@funstranger/ui/*": [
         "../../packages/ui/src/*"
       ]
     },

@@ -10,7 +10,7 @@ import {
   type ChessOffer,
   type ChessResult,
   type TimeControlId,
-} from "@repo/protocol";
+} from "@funstranger/protocol";
 import type { ChessView } from "./use-stranger-chat";
 import { captureEvent } from "@/lib/analytics";
 import { BOT_LEVELS, type BotDifficulty, StockfishClient } from "@/lib/stockfish";

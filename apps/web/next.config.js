@@ -12,10 +12,10 @@ const nextConfig = {
   poweredByHeader: false,
   skipTrailingSlashRedirect: true,
   transpilePackages: [
-    "@repo/ui",
-    "@repo/protocol",
-    "@repo/chat-server",
-    "@repo/db",
+    "@funstranger/ui",
+    "@funstranger/protocol",
+    "@funstranger/chat-server",
+    "@funstranger/db",
   ],
   // Bundling breaks ws/pg native/optional helpers; load these from node_modules.
   serverExternalPackages: ["ws", "ioredis", "pg"],

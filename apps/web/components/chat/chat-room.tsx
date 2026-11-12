@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeft, Bot, ChessKnight, ShieldAlert, Trophy, Users } from "lucide-react";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import {
   FriendsDrawer,
@@ -20,7 +20,7 @@ import {
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { AD_SLOTS } from "@/lib/ads";
 import { BOT_LEVELS } from "@/lib/stockfish";
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "@funstranger/ui/lib/utils";
 import { ChessPanel } from "../chess/chess-panel";
 import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";

@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 import { CONSENT_CHANGE_EVENT, CONSENT_STORAGE_KEY } from "@/lib/analytics";
 import { ADSENSE_CLIENT } from "@/lib/ads";
 

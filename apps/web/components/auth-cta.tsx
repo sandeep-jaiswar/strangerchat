@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { ArrowRight, Zap } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 import { SignInButton } from "./sign-in-button";
 import { UserMenu } from "./user-menu";
 

@@ -8,7 +8,7 @@ import {
   SkipForward,
   UserPlus,
 } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { HeroAuthCta } from "@/components/auth-cta";
 import { JsonLd } from "@/components/json-ld";

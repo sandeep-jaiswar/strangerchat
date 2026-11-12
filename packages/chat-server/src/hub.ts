@@ -19,7 +19,7 @@ import {
   type ClientEvent,
   type PuzzleDuelPlayerState,
   type ServerEvent,
-} from "@repo/protocol";
+} from "@funstranger/protocol";
 import {
   blockUser,
   ensureUser,
@@ -29,7 +29,7 @@ import {
   recordChessGameAndUpdateElo,
   reportUser,
   requestOrAcceptFriend,
-} from "@repo/db";
+} from "@funstranger/db";
 import { captureServerEvent, closeServerAnalytics } from "./analytics.ts";
 import { moderateMessageText } from "./moderation.ts";
 import { TokenBucket } from "./rate-limit.ts";

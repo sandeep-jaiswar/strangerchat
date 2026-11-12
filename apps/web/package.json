@@ -11,10 +11,10 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@repo/chat-server": "workspace:*",
-    "@repo/db": "workspace:*",
-    "@repo/protocol": "workspace:*",
-    "@repo/ui": "workspace:*",
+    "@funstranger/chat-server": "workspace:*",
+    "@funstranger/db": "workspace:*",
+    "@funstranger/protocol": "workspace:*",
+    "@funstranger/ui": "workspace:*",
     "@vercel/functions": "^3.9.9",
     "chess.js": "^1.4.0",
     "lucide-react": "^1.48.0",
@@ -29,8 +29,8 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
+    "@funstranger/eslint-config": "workspace:*",
+    "@funstranger/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "26.4.1",
     "@types/react": "19.2.18",

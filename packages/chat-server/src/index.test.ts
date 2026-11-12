@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Chess } from "chess.js";
-import { CHESS_PUZZLES } from "@repo/protocol";
+import { CHESS_PUZZLES } from "@funstranger/protocol";
 import { redisPrefix } from "./index.ts";
 
 test("all shared chess puzzles have legal FENs and exact SAN solutions", () => {

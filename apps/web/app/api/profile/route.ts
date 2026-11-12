@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { ensureUser, hasDatabase, updateUserHandle } from "@repo/db";
+import { ensureUser, hasDatabase, updateUserHandle } from "@funstranger/db";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

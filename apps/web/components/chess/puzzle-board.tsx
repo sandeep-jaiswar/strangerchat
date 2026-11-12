@@ -4,10 +4,10 @@ import { type CSSProperties, useMemo, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { Chessboard } from "react-chessboard";
-import type { ChessPuzzle } from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
+import type { ChessPuzzle } from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
+import { cn } from "@funstranger/ui/lib/utils";
 import { playChessSound } from "./chess-sounds";
 
 interface PuzzleBoardProps {

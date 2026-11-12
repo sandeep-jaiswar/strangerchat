@@ -4,8 +4,8 @@ import {
   getHub,
   isAllowedOrigin,
   isValidSessionId,
-} from "@repo/chat-server";
-import { CloseCode } from "@repo/protocol";
+} from "@funstranger/chat-server";
+import { CloseCode } from "@funstranger/protocol";
 
 export const dynamic = "force-dynamic";
 // Vercel closes the socket when the function hits its max duration; the client then

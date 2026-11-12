@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { normalizeInviteCode } from "@repo/protocol";
+import { normalizeInviteCode } from "@funstranger/protocol";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { authOptions } from "@/lib/auth";
 

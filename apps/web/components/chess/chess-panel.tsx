@@ -27,10 +27,10 @@ import {
   getTimeControl,
   type ChessColor,
   type ChessOffer,
-} from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
+} from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
+import { cn } from "@funstranger/ui/lib/utils";
 import { type ChessView, describeResult } from "@/hooks/use-stranger-chat";
 import { analyzeGameMoves, type AnalyzedMove } from "@/lib/stockfish";
 import { playChessSound } from "./chess-sounds";

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
-import "@repo/ui/globals.css";
+import "@funstranger/ui/globals.css";
 import { Providers } from "@/components/providers";
 import { ConsentBanner } from "@/components/ads/consent-banner";
 import { ADSENSE_CLIENT } from "@/lib/ads";

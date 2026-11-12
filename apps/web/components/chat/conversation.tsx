@@ -22,18 +22,18 @@ import {
   getTimeControl,
   type PublicFriendProfile,
   type TimeControlId,
-} from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+} from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
-import { Textarea } from "@repo/ui/components/textarea";
-import { cn } from "@repo/ui/lib/utils";
+} from "@funstranger/ui/components/dropdown-menu";
+import { Textarea } from "@funstranger/ui/components/textarea";
+import { cn } from "@funstranger/ui/lib/utils";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { PuzzleDuelPanel } from "@/components/chess/puzzle-duel-panel";
 import type {

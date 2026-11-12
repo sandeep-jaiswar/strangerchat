@@ -39,7 +39,7 @@ import {
   CHESS_INITIAL_MS,
   DEFAULT_TIME_CONTROL,
   TIME_CONTROLS,
-} from "@repo/protocol";
+} from "@funstranger/protocol";
 
 const PARTNER_LEFT = JSON.stringify({ type: "partner_left" });
 

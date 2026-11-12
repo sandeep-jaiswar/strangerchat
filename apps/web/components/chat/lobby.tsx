@@ -23,10 +23,10 @@ import {
   getTimeControl,
   type ChatMode,
   type TimeControlId,
-} from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
+} from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
+import { cn } from "@funstranger/ui/lib/utils";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { PuzzleBoard } from "@/components/chess/puzzle-board";
 import { AD_SLOTS } from "@/lib/ads";

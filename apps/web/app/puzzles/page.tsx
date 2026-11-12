@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ChessKnight, ChevronRight } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { PuzzleTrainer } from "@/components/chess/puzzle-trainer";
 import { JsonLd } from "@/components/json-ld";
