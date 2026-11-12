@@ -40,7 +40,7 @@ export default function OpengraphImage() {
         <span style={{ color: "#8f84ff" }}>Play chess &amp; make friends.</span>
       </div>
       <div style={{ marginTop: 36, fontSize: 30, color: "#b8b5c9" }}>
-        funstranger.in · Free anonymous chat · Live 10+0 chess · Mutual friends
+        funstranger.in · Anonymous chat · 1+0, 3+2, 5+0 &amp; 10+0 Chess · Daily Puzzles
       </div>
     </div>,
     size,

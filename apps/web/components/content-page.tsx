@@ -71,8 +71,8 @@ export function ContentPage({
             Ready to meet someone new?
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Chat anonymously, play 10-minute chess, and make real friends on
-            Funstranger.
+            Chat anonymously, play 1+0 Bullet, 3+2/5+0 Blitz, or 10+0 Rapid
+            chess, and make real friends on Funstranger.
           </p>
           <Button asChild size="lg" className="mt-6">
             <Link href="/chat">

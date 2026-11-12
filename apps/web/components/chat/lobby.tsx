@@ -53,6 +53,7 @@ interface LobbyProps {
   online: number;
   inviteCode: string | null;
   inviteMode: ChatMode | null;
+  banner?: React.ReactNode;
   onTagsChange: (tags: string[]) => void;
   onTimeControlChange: (tc: TimeControlId) => void;
   onStart: (mode: ChatMode, tc?: TimeControlId) => void;
@@ -70,6 +71,7 @@ export function Lobby({
   online,
   inviteCode,
   inviteMode,
+  banner,
   onTagsChange,
   onTimeControlChange,
   onStart,
@@ -134,6 +136,7 @@ export function Lobby({
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
+      {!waiting && banner}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
         {!waiting && (
           <div className="relative mb-5 flex size-24 items-center justify-center sm:size-28">

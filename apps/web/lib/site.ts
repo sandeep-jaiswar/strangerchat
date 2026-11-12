@@ -11,7 +11,7 @@ export const SITE_TITLE =
   "Funstranger - Free Anonymous Chat with Strangers, Chess & Friends";
 
 export const SITE_DESCRIPTION =
-  "Talk to strangers online for free on Funstranger. Match 1-on-1 for anonymous chat, play live 10-minute chess while talking, and make friends safely.";
+  "Talk to strangers online for free on Funstranger. Match 1-on-1 for anonymous chat, play 1+0 Bullet, 3+2/5+0 Blitz, and 10+0 Rapid chess, solve daily tactics, and make friends safely.";
 
 export const SITE_KEYWORDS = [
   "funstranger",

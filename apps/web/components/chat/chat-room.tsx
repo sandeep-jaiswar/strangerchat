@@ -35,6 +35,7 @@ import { BOT_LEVELS } from "@/lib/stockfish";
 import { cn } from "@funstranger/ui/lib/utils";
 import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";
+import { OnboardingBanner } from "./onboarding-banner";
 
 export function ChatRoom({
   user,
@@ -302,6 +303,14 @@ export function ChatRoom({
               online={chat.online}
               inviteCode={chat.inviteCode}
               inviteMode={chat.inviteMode}
+              banner={
+                <OnboardingBanner
+                  profile={profile}
+                  tags={chat.tags}
+                  onTagsChange={chat.setTags}
+                  onProfileUpdated={setProfile}
+                />
+              }
               onTagsChange={chat.setTags}
               onTimeControlChange={chat.setTimeControl}
               onStart={(mode, tc) => {
