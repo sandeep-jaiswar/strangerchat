@@ -65,11 +65,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run @repo/chat-server unit tests
+      - name: Run @funstranger/chat-server unit tests
         env:
           REDIS_URL: redis://localhost:6379
           TEST_REDIS_URL: redis://localhost:6379
-        run: pnpm --filter @repo/chat-server test
+        run: pnpm --filter @funstranger/chat-server test
 
   docker-build:
     name: Docker Build Check (${{ matrix.service }})

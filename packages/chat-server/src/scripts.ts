@@ -37,22 +37,53 @@ import {
   CHESS_FIRST_MOVE_MS,
   CHESS_INCREMENT_MS,
   CHESS_INITIAL_MS,
-} from "@repo/protocol";
+  DEFAULT_TIME_CONTROL,
+  TIME_CONTROLS,
+} from "@funstranger/protocol";
 
 const PARTNER_LEFT = JSON.stringify({ type: "partner_left" });
+
+const TC_ENTRIES = Object.values(TIME_CONTROLS)
+  .map((tc) => `['${tc.id}'] = { ${tc.initialMs}, ${tc.incrementMs} }`)
+  .join(", ");
+const CHESS_MODES = Object.keys(TIME_CONTROLS)
+  .map((id) => `'chess:${id}'`)
+  .join(", ");
 
 const LIB = `
 local P, NOW = ARGV[1], tonumber(ARGV[2])
 local REMATCH_BLOCK, REMATCH_WINDOW = tonumber(ARGV[3]), tonumber(ARGV[4])
 local TAG_WAIT = math.min(5000, REMATCH_BLOCK)
 local INITIAL, INCREMENT, FIRST_MOVE = ${CHESS_INITIAL_MS}, ${CHESS_INCREMENT_MS}, ${CHESS_FIRST_MOVE_MS}
-local MODES = { 'chat', 'chess' }
+local DEFAULT_TC = '${DEFAULT_TIME_CONTROL}'
+local TIME_CONTROL_SPECS = { ${TC_ENTRIES} }
+local MODES = { 'chat', ${CHESS_MODES} }
+
+local function normalizeMode(raw)
+  if not raw or raw == 'chat' then return 'chat' end
+  if raw == 'chess' then return 'chess:' .. DEFAULT_TC end
+  return raw
+end
+
+local function publicModeOf(modeKey)
+  if string.sub(modeKey, 1, 5) == 'chess' then return 'chess' end
+  return 'chat'
+end
+
+local function tcOfMode(modeKey)
+  if string.sub(modeKey, 1, 6) == 'chess:' then
+    local tc = string.sub(modeKey, 7)
+    if TIME_CONTROL_SPECS[tc] then return tc end
+  end
+  return DEFAULT_TC
+end
 
 local function modeOf(sid)
-  return redis.call('HGET', P .. 'mode', sid) or 'chat'
+  return normalizeMode(redis.call('HGET', P .. 'mode', sid))
 end
 
 local function queueKey(mode)
+  mode = normalizeMode(mode)
   if mode == 'chat' then return P .. 'queue' end
   return P .. 'queue:' .. mode
 end
@@ -111,7 +142,7 @@ end
 local function gameEvent(sid)
   local gid = redis.call('GET', P .. 'game:' .. sid)
   if not gid then return false end
-  local g = redis.call('HMGET', gameKey(gid), 'w', 'status', 'result', 'reason', 'draw', 'rematch')
+  local g = redis.call('HMGET', gameKey(gid), 'w', 'status', 'result', 'reason', 'draw', 'rematch', 'tc')
   local function side(offeredBy)
     if not offeredBy then return cjson.null end
     if offeredBy == sid then return 'me' end
@@ -120,6 +151,7 @@ local function gameEvent(sid)
   local game = cjson.encode({
     id = gid,
     color = (g[1] == sid) and 'white' or 'black',
+    timeControl = g[7] or DEFAULT_TC,
     clock = clockOf(gid),
     status = g[2],
     result = g[3] or cjson.null,
@@ -135,10 +167,13 @@ local function gameEvent(sid)
     ',"moves":[' .. table.concat(moves, ',') .. ']}}'
 end
 
-local function startGame(white, black)
+local function startGame(white, black, tc)
+  tc = (tc and TIME_CONTROL_SPECS[tc]) and tc or DEFAULT_TC
+  local spec = TIME_CONTROL_SPECS[tc]
+  local initMs, incMs = spec[1], spec[2]
   local gid = tostring(redis.call('INCR', P .. 'gseq'))
-  redis.call('HSET', gameKey(gid), 'w', white, 'b', black, 'wt', INITIAL, 'bt', INITIAL,
-    'ply', 0, 'turnAt', NOW, 'status', 'playing')
+  redis.call('HSET', gameKey(gid), 'w', white, 'b', black, 'wt', initMs, 'bt', initMs,
+    'inc', incMs, 'tc', tc, 'ply', 0, 'turnAt', NOW, 'status', 'playing')
   redis.call('SET', P .. 'game:' .. white, gid)
   redis.call('SET', P .. 'game:' .. black, gid)
   redis.call('ZADD', P .. 'games', deadlineOf(gid), gid)
@@ -234,6 +269,14 @@ local function unpair(sid)
   end
 end
 
+local function clearInvite(sid)
+  local code = redis.call('GET', P .. 'myinv:' .. sid)
+  if code then
+    redis.call('DEL', P .. 'inv:' .. code)
+    redis.call('DEL', P .. 'myinv:' .. sid)
+  end
+end
+
 local function removeQueued(sid)
   redis.call('LREM', queueKey(modeOf(sid)), 0, sid)
   redis.call('HDEL', P .. 'scan', sid)
@@ -243,23 +286,28 @@ local function removeQueued(sid)
   redis.call('DEL', P .. 'tags:' .. sid)
 end
 
-local function makePair(a, b, mode)
+local function makePair(a, b, modeKey)
+  clearInvite(a)
+  clearInvite(b)
   local shared = redis.call('SINTER', P .. 'tags:' .. a, P .. 'tags:' .. b)
   removeQueued(a)
   removeQueued(b)
+  local pubMode = publicModeOf(modeKey)
+  local tc = tcOfMode(modeKey)
   redis.call('SET', P .. 'pair:' .. a, b)
   redis.call('SET', P .. 'pair:' .. b, a)
-  local matchedPayload = { type = 'matched', mode = mode }
+  local matchedPayload = { type = 'matched', mode = pubMode }
+  if pubMode == 'chess' then matchedPayload.timeControl = tc end
   if #shared > 0 then matchedPayload.sharedTags = shared end
   local matched = cjson.encode(matchedPayload)
   redis.call('PUBLISH', P .. 'to:' .. a, matched)
   redis.call('PUBLISH', P .. 'to:' .. b, matched)
-  if mode == 'chess' then
+  if pubMode == 'chess' then
     -- Alternate colours between games, starting from whoever was waiting longer.
     if tonumber(redis.call('GET', P .. 'gseq') or 0) % 2 == 0 then
-      startGame(b, a)
+      startGame(b, a, tc)
     else
-      startGame(a, b)
+      startGame(a, b, tc)
     end
   end
 end
@@ -357,6 +405,7 @@ end
 local function endSession(sid)
   unpair(sid)
   removeQueued(sid)
+  clearInvite(sid)
   redis.call('ZREM', P .. 'sess', sid)
   redis.call('HDEL', P .. 'owner', sid)
   redis.call('HDEL', P .. 'conn', sid)
@@ -410,6 +459,7 @@ end
 if redis.call('HGET', P .. 'conn', sid) ~= connectionId then return 0 end
 redis.call('HDEL', P .. 'conn', sid)
 removeQueued(sid)
+clearInvite(sid)
 return 1
 `;
 
@@ -425,8 +475,9 @@ return 1
  * ARGV[5..6]: sid, mode (default "chat"). Returns 1 when matched (both sides are told via pub/sub), 0 when waiting.
  */
 export const FIND = `${LIB}
-local sid, mode = ARGV[5], ARGV[6] or 'chat'
+local sid, mode = ARGV[5], normalizeMode(ARGV[6])
 removeQueued(sid)
+clearInvite(sid)
 unpair(sid)
 redis.call('HSET', P .. 'mode', sid, mode)
 local addedTags = 0
@@ -446,6 +497,7 @@ return 0
 export const LEAVE = `${LIB}
 local sid = ARGV[5]
 removeQueued(sid)
+clearInvite(sid)
 unpair(sid)
 return 1
 `;
@@ -541,7 +593,7 @@ export const MOVE = `${LIB}
 local sid, gid, ply, san, result, reason = ARGV[5], ARGV[6], tonumber(ARGV[7]), ARGV[8], ARGV[9], ARGV[10]
 if redis.call('GET', P .. 'game:' .. sid) ~= gid then return 0 end
 local key = gameKey(gid)
-local g = redis.call('HMGET', key, 'w', 'b', 'ply', 'status', 'wt', 'bt', 'turnAt', 'draw')
+local g = redis.call('HMGET', key, 'w', 'b', 'ply', 'status', 'wt', 'bt', 'turnAt', 'draw', 'inc')
 if g[4] ~= 'playing' or tonumber(g[3]) ~= ply then return 0 end
 local white = ply % 2 == 0
 if (white and g[1] or g[2]) ~= sid then return 0 end
@@ -551,8 +603,9 @@ if NOW >= deadlineOf(gid) then
 end
 if ply >= 2 then
   local field = white and 'wt' or 'bt'
+  local inc = tonumber(g[9] or INCREMENT)
   local left = tonumber(white and g[5] or g[6]) - (NOW - tonumber(g[7]))
-  redis.call('HSET', key, field, left + INCREMENT)
+  redis.call('HSET', key, field, left + inc)
 end
 redis.call('RPUSH', P .. 'gm:' .. gid, san)
 redis.call('HSET', key, 'ply', ply + 1, 'turnAt', NOW)
@@ -589,13 +642,14 @@ local sid, offer = ARGV[5], ARGV[6]
 local gid = redis.call('GET', P .. 'game:' .. sid)
 if not gid then return 0 end
 local key = gameKey(gid)
-local g = redis.call('HMGET', key, 'w', 'b', 'status', offer)
+local g = redis.call('HMGET', key, 'w', 'b', 'status', offer, 'tc')
 local partner = (g[1] == sid) and g[2] or g[1]
 if (offer == 'draw') ~= (g[3] == 'playing') or g[4] == sid then return 0 end
 if g[4] == partner then
   if offer == 'draw' then return endGame(gid, '1/2-1/2', 'agreement') and 1 or 0 end
+  local tc = g[5]
   redis.call('DEL', key, P .. 'gm:' .. gid)
-  startGame(g[2], g[1])
+  startGame(g[2], g[1], tc)
   return 1
 end
 redis.call('HSET', key, offer, sid)
@@ -615,19 +669,22 @@ export const SYNC = `${LIB}
 return gameEvent(ARGV[5]) or ''
 `;
 
-/** Invite the current chat partner to play chess inside the chat. ARGV[5]: sid */
+/** Invite the current chat partner to play chess inside the chat. ARGV[5..6]: sid, timeControl */
 export const CHESS_INVITE = `${LIB}
 local sid = ARGV[5]
+local tc = (ARGV[6] and TIME_CONTROL_SPECS[ARGV[6]]) and ARGV[6] or DEFAULT_TC
 local partner = redis.call('GET', P .. 'pair:' .. sid)
 if not partner or redis.call('EXISTS', P .. 'game:' .. sid) == 1 then return 0 end
-if redis.call('GET', P .. 'cinv:' .. partner) == sid then
+local pInv = redis.call('HMGET', P .. 'cinv:' .. partner, 'to', 'tc')
+if pInv[1] == sid then
   redis.call('DEL', P .. 'cinv:' .. partner)
-  startGame(partner, sid)
+  startGame(partner, sid, pInv[2] or tc)
   return 2
 end
-redis.call('SET', P .. 'cinv:' .. sid, partner, 'EX', 120)
-redis.call('PUBLISH', P .. 'to:' .. sid, cjson.encode({ type = 'chess_invite', from = 'me' }))
-redis.call('PUBLISH', P .. 'to:' .. partner, cjson.encode({ type = 'chess_invite', from = 'them' }))
+redis.call('HSET', P .. 'cinv:' .. sid, 'to', partner, 'tc', tc)
+redis.call('EXPIRE', P .. 'cinv:' .. sid, 120)
+redis.call('PUBLISH', P .. 'to:' .. sid, cjson.encode({ type = 'chess_invite', from = 'me', timeControl = tc }))
+redis.call('PUBLISH', P .. 'to:' .. partner, cjson.encode({ type = 'chess_invite', from = 'them', timeControl = tc }))
 return 1
 `;
 
@@ -635,14 +692,56 @@ return 1
 export const CHESS_INVITE_RESPOND = `${LIB}
 local sid, accept = ARGV[5], ARGV[6]
 local partner = redis.call('GET', P .. 'pair:' .. sid)
-if not partner or redis.call('GET', P .. 'cinv:' .. partner) ~= sid then return 0 end
+if not partner then return 0 end
+local pInv = redis.call('HMGET', P .. 'cinv:' .. partner, 'to', 'tc')
+if pInv[1] ~= sid then return 0 end
 redis.call('DEL', P .. 'cinv:' .. partner)
 if accept == '1' and redis.call('EXISTS', P .. 'game:' .. sid) == 0 then
-  startGame(partner, sid)
+  startGame(partner, sid, pInv[2])
   return 1
 end
 redis.call('PUBLISH', P .. 'to:' .. partner, cjson.encode({ type = 'chess_invite_declined' }))
 return 1
+`;
+
+/** Create a direct invite code for joining without queuing. ARGV[5..7]: sid, code, modeKey */
+export const CREATE_INVITE = `${LIB}
+local sid, code, mode = ARGV[5], ARGV[6], normalizeMode(ARGV[7])
+removeQueued(sid)
+clearInvite(sid)
+unpair(sid)
+redis.call('HSET', P .. 'inv:' .. code, 'sid', sid, 'mode', mode)
+redis.call('EXPIRE', P .. 'inv:' .. code, 3600)
+redis.call('SET', P .. 'myinv:' .. sid, code, 'EX', 3600)
+return 1
+`;
+
+/** Join a direct invite code. ARGV[5..6]: sid, code. Returns "ok" | "not_found" | "self" | "blocked". */
+export const JOIN_INVITE = `${LIB}
+local sid, code = ARGV[5], ARGV[6]
+local inv = redis.call('HMGET', P .. 'inv:' .. code, 'sid', 'mode')
+local creator = inv[1]
+if not creator or not isConnected(creator) then
+  return 'not_found'
+end
+local creatorUid = redis.call('HGET', P .. 'owner', creator)
+local joinerUid = redis.call('HGET', P .. 'owner', sid)
+if not creatorUid or not joinerUid then
+  return 'not_found'
+end
+if creatorUid == joinerUid then
+  return 'self'
+end
+if isBlockedPair(creatorUid, joinerUid) then
+  return 'blocked'
+end
+redis.call('DEL', P .. 'inv:' .. code)
+redis.call('DEL', P .. 'myinv:' .. creator)
+removeQueued(sid)
+clearInvite(sid)
+unpair(sid)
+makePair(creator, sid, inv[2] or 'chat')
+return 'ok'
 `;
 
 /** Returns { partnerSid, partnerUid } for the current chat, or {} if idle. ARGV[5]: sid */

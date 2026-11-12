@@ -5,7 +5,7 @@
  */
 import http from "node:http";
 import { WebSocketServer } from "ws";
-import { CHAT_SOCKET_PATH, CloseCode } from "@repo/protocol";
+import { CHAT_SOCKET_PATH, CloseCode } from "@funstranger/protocol";
 import {
   authenticate,
   getHub,

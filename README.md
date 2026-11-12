@@ -35,11 +35,11 @@ pnpm dev:deps
 1. Create a Google OAuth client (`Web application`) with authorized redirect URI `http://localhost:3000/api/auth/callback/google` and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET` (`openssl rand -base64 32`), `DATABASE_URL`, and `REDIS_URL` in `apps/web/.env.local`.
 2. Start local Postgres 17 & Redis 7 with `pnpm dev:deps` (`docker-compose.dev.yml`).
 3. Run `pnpm dev` (Next.js on `:3000` and WebSocket dev server on `:3001` via `NEXT_PUBLIC_WS_URL=ws://localhost:3001/api/ws`).
-4. Run unit tests (`pnpm --filter @repo/chat-server test`) or two-browser Playwright E2E tests (`pnpm test:e2e`).
+4. Run unit tests (`pnpm --filter @funstranger/chat-server test`) or two-browser Playwright E2E tests (`pnpm test:e2e`).
 
 ## Production Deployment (Oracle Cloud + GitHub Actions CI/CD)
 
 Production runs at **`https://funstranger.in`** via `docker-compose.yml` (Caddy + Next.js `web` + `chat-server` + PostgreSQL 17 + Redis 7) on Oracle Cloud Always Free ARM64 (`infra/oci/`). Legacy `strangerchat.vercel.app` redirects permanently (`308`) to `https://funstranger.in` via `apps/web/vercel.json`.
 
-- **Pull Requests (`.github/workflows/ci.yml`):** runs `pnpm check-types`, `pnpm lint`, `pnpm build`, `@repo/chat-server` Redis tests, and Docker build checks.
+- **Pull Requests (`.github/workflows/ci.yml`):** runs `pnpm check-types`, `pnpm lint`, `pnpm build`, `@funstranger/chat-server` Redis tests, and Docker build checks.
 - **Merges to `main` (`.github/workflows/deploy.yml`):** verifies checks & tests, syncs the repo to the Oracle VM (preserving server `.env` and Terraform state), rebuilds & restarts containers, checks `/healthz` and live HTTPS routes, and submits `sitemap.xml` URLs to IndexNow (`scripts/submit-indexnow.mjs`).

@@ -1,5 +1,5 @@
 {
-  "name": "@repo/chat-server",
+  "name": "@funstranger/chat-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/db": "workspace:*",
-    "@repo/protocol": "workspace:*",
+    "@funstranger/db": "workspace:*",
+    "@funstranger/protocol": "workspace:*",
     "chess.js": "^1.4.0",
     "ioredis": "^6.0.0",
     "next-auth": "^4.24.15",
@@ -23,7 +23,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
+    "@funstranger/typescript-config": "workspace:*",
     "@types/node": "26.4.1",
     "@types/ws": "^8.18.1",
     "typescript": "7.0.2"

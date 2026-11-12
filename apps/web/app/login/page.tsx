@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@funstranger/ui/components/card";
 import { Logo } from "@/components/logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { authOptions } from "@/lib/auth";

@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { getOnlineUserIds, redisPrefix, syncBlockedUser } from "@repo/chat-server";
+import { getOnlineUserIds, redisPrefix, syncBlockedUser } from "@funstranger/chat-server";
 import {
   blockUser,
   ensureUser,
@@ -8,7 +8,7 @@ import {
   listFriendsAndRequests,
   removeFriend,
   respondFriendRequest,
-} from "@repo/db";
+} from "@funstranger/db";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@funstranger/ui/components/button";
 
 export function SignInButton({
   callbackUrl = "/chat",

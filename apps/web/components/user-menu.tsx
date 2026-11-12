@@ -6,8 +6,8 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@repo/ui/components/avatar";
-import { Button } from "@repo/ui/components/button";
+} from "@funstranger/ui/components/avatar";
+import { Button } from "@funstranger/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+} from "@funstranger/ui/components/dropdown-menu";
 
 export interface UserSummary {
   name?: string | null;

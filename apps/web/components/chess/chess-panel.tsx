@@ -9,18 +9,30 @@ import {
 } from "react";
 import { Chess, type Square } from "chess.js";
 import {
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
   Flag,
   Handshake,
+  Loader2,
   RotateCcw,
+  Sparkles,
   UserRound,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { Chessboard, defaultPieces } from "react-chessboard";
-import type { ChessColor, ChessOffer } from "@repo/protocol";
-import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
+import {
+  getTimeControl,
+  type ChessColor,
+  type ChessOffer,
+} from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
+import { cn } from "@funstranger/ui/lib/utils";
 import { type ChessView, describeResult } from "@/hooks/use-stranger-chat";
+import { analyzeGameMoves, type AnalyzedMove } from "@/lib/stockfish";
 import { playChessSound } from "./chess-sounds";
 
 interface ChessPanelProps {
@@ -28,6 +40,7 @@ interface ChessPanelProps {
   /** The stranger left; the game is over and can't be rematched. */
   partnerGone: boolean;
   connected: boolean;
+  opponentLabel?: string;
   /** Height of the visible viewport, to fit the board next to the chat. */
   viewportHeight?: number;
   onMove: (from: string, to: string, promotion?: string) => boolean;
@@ -42,12 +55,47 @@ export function ChessPanel({
   game,
   partnerGone,
   connected,
+  opponentLabel = "Stranger",
   viewportHeight,
   onMove,
   onResign,
   onOffer,
   onFlag,
 }: ChessPanelProps) {
+  const [reviewState, setReviewState] = useState<{
+    gameId: string;
+    ply: number;
+    analysis: AnalyzedMove[] | null;
+    analyzing: boolean;
+    error: string | null;
+  }>({
+    gameId: game.id,
+    ply: game.moves.length,
+    analysis: null,
+    analyzing: false,
+    error: null,
+  });
+
+  const activeReview =
+    game.status === "over" && reviewState.gameId === game.id
+      ? reviewState
+      : null;
+  const viewPly = activeReview
+    ? Math.max(0, Math.min(game.moves.length, activeReview.ply))
+    : game.moves.length;
+  const viewingHistory =
+    game.status === "over" && viewPly < game.moves.length;
+
+  const displayChess = useMemo(() => {
+    if (!viewingHistory) return new Chess(game.fen);
+    const c = new Chess();
+    for (let i = 0; i < viewPly; i++) {
+      const san = game.moves[i];
+      if (san) c.move(san);
+    }
+    return c;
+  }, [game.fen, game.moves, viewPly, viewingHistory]);
+
   const chess = useMemo(() => new Chess(game.fen), [game.fen]);
   const [muted, setMuted] = useState(false);
   const prevMoveCount = useRef(game.moves.length);
@@ -71,11 +119,12 @@ export function ChessPanel({
     prevStatus.current = game.status;
   }, [game.moves, game.status, muted]);
 
-  const material = useMemo(() => computeMaterialLead(chess), [chess]);
+  const material = useMemo(() => computeMaterialLead(displayChess), [displayChess]);
   const playing = game.status === "playing";
   const turn: ChessColor = chess.turn() === "w" ? "white" : "black";
   const myTurn = playing && connected && turn === game.color;
   const opponent: ChessColor = game.color === "white" ? "black" : "white";
+  const tcSpec = getTimeControl(game.timeControl);
 
   // A half-made move (selected piece, pending promotion) only holds for the position it
   // was started in; anything that changes the board drops it.
@@ -84,11 +133,36 @@ export function ChessPanel({
     selected?: Square;
     promotion?: { from: Square; to: Square };
   }>();
+  const [premoveState, setPremoveState] = useState<{
+    gameId: string;
+    from: Square;
+    to: Square;
+  } | null>(null);
+  const premove =
+    playing && premoveState?.gameId === game.id ? premoveState : null;
+
   const current = pending?.fen === game.fen ? pending : undefined;
   const selected = current?.selected ?? null;
   const promotion = current?.promotion;
   const setSelected = (square: Square | null) =>
     setPending(square ? { fen: game.fen, selected: square } : undefined);
+
+  // Execute a staged premove as soon as our turn begins, or drop it if no longer legal.
+  useEffect(() => {
+    if (!myTurn || !premove) return;
+    const timer = setTimeout(() => {
+      const probe = new Chess(game.fen);
+      const legal = probe
+        .moves({ square: premove.from, verbose: true })
+        .find((m) => m.to === premove.to);
+      setPremoveState(null);
+      setPending(undefined);
+      if (legal) {
+        onMove(premove.from, premove.to, legal.isPromotion() ? "q" : undefined);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [myTurn, premove, game.fen, onMove]);
 
   const now = useNow(playing);
   const elapsed = Math.max(0, now - game.clockAt);
@@ -117,13 +191,20 @@ export function ChessPanel({
 
   const targets = useMemo(
     () =>
-      selected
+      myTurn && selected
         ? chess.moves({ square: selected, verbose: true }).map((m) => m.to)
         : [],
-    [chess, selected],
+    [chess, myTurn, selected],
   );
 
   const tryMove = (from: Square, to: Square) => {
+    if (!playing) return false;
+    if (!myTurn) {
+      if (!isMine(from) || from === to || isMine(to)) return false;
+      setSelected(null);
+      setPremoveState({ gameId: game.id, from, to });
+      return true;
+    }
     const moves = chess.moves({ square: from, verbose: true });
     const move = moves.find((m) => m.to === to);
     if (!move) return false;
@@ -135,13 +216,26 @@ export function ChessPanel({
     return onMove(from, to);
   };
 
+  const displayLastMove = useMemo(() => {
+    if (!viewingHistory) return game.lastMove;
+    if (viewPly === 0) return null;
+    const h = displayChess.history({ verbose: true }).at(-1);
+    return h ? { from: h.from, to: h.to } : null;
+  }, [viewingHistory, game.lastMove, viewPly, displayChess]);
+
   const squareStyles: Record<string, CSSProperties> = {};
-  if (game.lastMove) {
-    squareStyles[game.lastMove.from] = LAST_MOVE;
-    squareStyles[game.lastMove.to] = LAST_MOVE;
+  if (displayLastMove) {
+    squareStyles[displayLastMove.from] = LAST_MOVE;
+    squareStyles[displayLastMove.to] = LAST_MOVE;
   }
-  if (chess.inCheck()) {
-    const king = chess.findPiece({ type: "k", color: chess.turn() }).at(0);
+  if (premove) {
+    squareStyles[premove.from] = PREMOVE;
+    squareStyles[premove.to] = PREMOVE;
+  }
+  if (displayChess.inCheck()) {
+    const king = displayChess
+      .findPiece({ type: "k", color: displayChess.turn() })
+      .at(0);
     if (king) squareStyles[king] = CHECK;
   }
   if (selected) squareStyles[selected] = SELECTED;
@@ -152,11 +246,36 @@ export function ChessPanel({
     };
   }
 
+  const runAnalysis = async () => {
+    if (reviewState.analyzing && reviewState.gameId === game.id) return;
+    setReviewState({
+      gameId: game.id,
+      ply: viewPly,
+      analysis: null,
+      analyzing: true,
+      error: null,
+    });
+    try {
+      const analysis = await analyzeGameMoves(game.moves);
+      setReviewState((prev) =>
+        prev.gameId === game.id
+          ? { ...prev, analysis, analyzing: false }
+          : prev,
+      );
+    } catch {
+      setReviewState((prev) =>
+        prev.gameId === game.id
+          ? { ...prev, analyzing: false, error: "Engine unavailable." }
+          : prev,
+      );
+    }
+  };
+
   const height = viewportHeight ? `${viewportHeight}px` : "100dvh";
   const sizing = {
     // Phones keep room for the chat below; desktops fill the column.
-    "--board-sm": `max(10rem, calc(${height} - 23rem))`,
-    "--board-lg": `min(40rem, calc(${height} - 14.5rem))`,
+    "--board-sm": `max(10rem, calc(${height} - 25rem))`,
+    "--board-lg": `min(40rem, calc(${height} - 16.5rem))`,
   } as CSSProperties;
 
   return (
@@ -165,11 +284,12 @@ export function ChessPanel({
       style={sizing}
     >
       <PlayerBar
-        label="Stranger"
+        label={opponentLabel}
         color={opponent}
         ms={timeLeft(opponent)}
         advantage={material[opponent]}
         active={playing && turn === opponent}
+        badge={tcSpec.label}
         status={
           partnerGone
             ? "Left"
@@ -185,22 +305,37 @@ export function ChessPanel({
         <Chessboard
           options={{
             id: `game-${game.id}`,
-            position: game.fen,
+            position: displayChess.fen(),
             boardOrientation: game.color,
             squareStyles,
             darkSquareStyle: { backgroundColor: "#7c94b4" },
             lightSquareStyle: { backgroundColor: "#e6ebf2" },
             animationDurationInMs: 150,
             allowDrawingArrows: false,
-            allowDragging: myTurn,
+            allowDragging: playing && connected,
             canDragPiece: ({ square }) =>
-              myTurn && square !== null && isMine(square as Square),
+              playing && connected && square !== null && isMine(square as Square),
             onPieceDrop: ({ sourceSquare, targetSquare }) =>
               !!targetSquare &&
               tryMove(sourceSquare as Square, targetSquare as Square),
+            onSquareRightClick: () => {
+              setSelected(null);
+              setPremoveState(null);
+            },
             onSquareClick: ({ square }) => {
-              if (!myTurn) return;
+              if (!playing || !connected) return;
               const target = square as Square;
+              if (!myTurn) {
+                if (selected && target !== selected && !isMine(target)) {
+                  tryMove(selected, target);
+                } else {
+                  setPremoveState(null);
+                  setSelected(
+                    isMine(target) && target !== selected ? target : null,
+                  );
+                }
+                return;
+              }
               if (selected && targets.includes(target)) {
                 tryMove(selected, target);
               } else {
@@ -250,9 +385,11 @@ export function ChessPanel({
         status={
           firstMoveLeft !== null && turn === game.color
             ? `First move: ${Math.ceil(firstMoveLeft / 1000)}s`
-            : myTurn
-              ? "Your move"
-              : undefined
+            : premove
+              ? `Premove: ${premove.from}→${premove.to}`
+              : myTurn
+                ? "Your move"
+                : undefined
         }
       />
 
@@ -265,6 +402,135 @@ export function ChessPanel({
         onResign={onResign}
         onOffer={onOffer}
       />
+
+      {game.status === "over" && game.moves.length > 0 && (
+        <MoveReviewBar
+          moves={game.moves}
+          ply={viewPly}
+          analysis={activeReview?.analysis ?? null}
+          analyzing={activeReview?.analyzing ?? false}
+          error={activeReview?.error ?? null}
+          onStep={(nextPly) =>
+            setReviewState((prev) => ({
+              gameId: game.id,
+              ply: Math.max(0, Math.min(game.moves.length, nextPly)),
+              analysis: prev.gameId === game.id ? prev.analysis : null,
+              analyzing: prev.gameId === game.id ? prev.analyzing : false,
+              error: prev.gameId === game.id ? prev.error : null,
+            }))
+          }
+          onAnalyze={() => void runAnalysis()}
+        />
+      )}
+    </div>
+  );
+}
+
+function MoveReviewBar({
+  moves,
+  ply,
+  analysis,
+  analyzing,
+  error,
+  onStep,
+  onAnalyze,
+}: {
+  moves: string[];
+  ply: number;
+  analysis: AnalyzedMove[] | null;
+  analyzing: boolean;
+  error: string | null;
+  onStep: (ply: number) => void;
+  onAnalyze: () => void;
+}) {
+  const currentMove = ply > 0 ? analysis?.[ply - 1] : undefined;
+  const evalLabel = currentMove
+    ? currentMove.mateAfterWhite !== null
+      ? `M${Math.abs(currentMove.mateAfterWhite)}`
+      : `${currentMove.cpAfterWhite >= 0 ? "+" : ""}${(currentMove.cpAfterWhite / 100).toFixed(1)}`
+    : null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card/60 px-2.5 py-1.5 text-xs">
+      <div className="flex items-center gap-1">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          disabled={ply <= 0}
+          onClick={() => onStep(0)}
+          aria-label="First position"
+        >
+          <ChevronFirst className="size-3.5" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          disabled={ply <= 0}
+          onClick={() => onStep(ply - 1)}
+          aria-label="Previous move"
+        >
+          <ChevronLeft className="size-3.5" />
+        </Button>
+        <span className="min-w-16 text-center font-mono tabular-nums text-muted-foreground">
+          {ply === 0
+            ? "Start"
+            : `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"} ${moves[ply - 1]}`}
+        </span>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          disabled={ply >= moves.length}
+          onClick={() => onStep(ply + 1)}
+          aria-label="Next move"
+        >
+          <ChevronRight className="size-3.5" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          disabled={ply >= moves.length}
+          onClick={() => onStep(moves.length)}
+          aria-label="Latest position"
+        >
+          <ChevronLast className="size-3.5" />
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        {currentMove && (
+          <Badge
+            variant={
+              currentMove.tag === "blunder" || currentMove.tag === "mistake"
+                ? "destructive"
+                : "secondary"
+            }
+            className="text-[10px]"
+          >
+            {evalLabel} · {currentMove.tag}
+            {currentMove.tag !== "best" &&
+              currentMove.tag !== "good" &&
+              currentMove.bestMoveSan &&
+              ` (best ${currentMove.bestMoveSan})`}
+          </Badge>
+        )}
+        {!analysis && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-7 px-2 text-xs"
+            disabled={analyzing}
+            onClick={onAnalyze}
+          >
+            {analyzing ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Sparkles className="size-3" />
+            )}
+            {analyzing ? "Reviewing…" : "Review"}
+          </Button>
+        )}
+        {error && <span className="text-destructive">{error}</span>}
+      </div>
     </div>
   );
 }
@@ -380,6 +646,7 @@ function PlayerBar({
   ms,
   advantage,
   active,
+  badge,
   status,
 }: {
   label: string;
@@ -387,6 +654,7 @@ function PlayerBar({
   ms: number;
   advantage: number;
   active: boolean;
+  badge?: string;
   status?: string;
 }) {
   const low = ms < 30_000;
@@ -404,7 +672,12 @@ function PlayerBar({
         >
           <UserRound className="size-3.5" />
         </span>
-        <span className="text-sm font-medium">{label}</span>
+        <span className="truncate text-sm font-medium">{label}</span>
+        {badge && (
+          <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+            {badge}
+          </Badge>
+        )}
         {advantage > 0 && (
           <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
             +{advantage}
@@ -480,6 +753,9 @@ const PIECE_NAMES = { q: "Queen", r: "Rook", b: "Bishop", n: "Knight" };
 
 const LAST_MOVE: CSSProperties = {
   backgroundColor: "rgba(250, 204, 21, 0.45)",
+};
+const PREMOVE: CSSProperties = {
+  backgroundColor: "rgba(56, 189, 248, 0.5)",
 };
 const SELECTED: CSSProperties = { backgroundColor: "rgba(250, 204, 21, 0.6)" };
 const CHECK: CSSProperties = {

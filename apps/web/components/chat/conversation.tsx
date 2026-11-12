@@ -10,27 +10,37 @@ import {
   SendHorizontal,
   ShieldBan,
   SkipForward,
+  Swords,
   UserCheck,
   UserPlus,
   UserRound,
   X,
 } from "lucide-react";
-import { MAX_MESSAGE_LENGTH, type PublicFriendProfile } from "@repo/protocol";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+import {
+  MAX_MESSAGE_LENGTH,
+  TIME_CONTROLS,
+  getTimeControl,
+  type PublicFriendProfile,
+  type TimeControlId,
+} from "@funstranger/protocol";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
-import { Textarea } from "@repo/ui/components/textarea";
-import { cn } from "@repo/ui/lib/utils";
+} from "@funstranger/ui/components/dropdown-menu";
+import { Textarea } from "@funstranger/ui/components/textarea";
+import { cn } from "@funstranger/ui/lib/utils";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { PuzzleDuelPanel } from "@/components/chess/puzzle-duel-panel";
 import type {
   ChatItem,
   ChatPhase,
   FriendHandshakeStatus,
+  PuzzleDuelView,
 } from "@/hooks/use-stranger-chat";
 import { AD_SLOTS } from "@/lib/ads";
 
@@ -42,6 +52,9 @@ interface ConversationProps {
   partnerTyping: boolean;
   hasGame: boolean;
   chessInvite: "me" | "them" | null;
+  chessInviteTimeControl: TimeControlId | null;
+  puzzleDuelInvite: "me" | "them" | null;
+  puzzleDuel: PuzzleDuelView | null;
   friendStatus: FriendHandshakeStatus;
   friendPartner: PublicFriendProfile | null;
   sharedTags: string[];
@@ -51,8 +64,17 @@ interface ConversationProps {
   onTyping: () => void;
   onNext: () => void;
   onLeave: () => void;
-  onInviteChess: () => void;
+  onInviteChess: (timeControl?: TimeControlId) => void;
   onRespondChessInvite: (accept: boolean) => void;
+  onInvitePuzzleDuel: () => void;
+  onRespondPuzzleDuel: (accept: boolean) => void;
+  onPuzzleDuelProgress: (
+    duelId: string,
+    solved: number,
+    mistakes: number,
+    finished: boolean,
+  ) => void;
+  onDismissPuzzleDuel: () => void;
   onAddFriend: () => void;
   onSafetyAction: (action: "block" | "report", reason?: string) => void;
 }
@@ -66,6 +88,9 @@ export function Conversation({
   partnerTyping,
   hasGame,
   chessInvite,
+  chessInviteTimeControl,
+  puzzleDuelInvite,
+  puzzleDuel,
   friendStatus,
   friendPartner,
   sharedTags,
@@ -76,6 +101,10 @@ export function Conversation({
   onLeave,
   onInviteChess,
   onRespondChessInvite,
+  onInvitePuzzleDuel,
+  onRespondPuzzleDuel,
+  onPuzzleDuelProgress,
+  onDismissPuzzleDuel,
   onAddFriend,
   onSafetyAction,
 }: ConversationProps) {
@@ -153,18 +182,54 @@ export function Conversation({
         {!ended && (
           <div className="flex shrink-0 items-center gap-1.5">
             {!hasGame && (
-              <Button
-                size="sm"
-                variant={chessInvite === "me" ? "secondary" : "outline"}
-                disabled={!connected || chessInvite !== null}
-                onClick={onInviteChess}
-                title="Play chess while talking"
-              >
-                <ChessKnight className="size-4" />
-                <span className="hidden sm:inline">
-                  {chessInvite === "me" ? "Invited…" : "Play chess"}
-                </span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={
+                      chessInvite === "me" || puzzleDuelInvite === "me"
+                        ? "secondary"
+                        : "outline"
+                    }
+                    disabled={
+                      !connected ||
+                      (chessInvite !== null && puzzleDuelInvite !== null)
+                    }
+                    title="Challenge to chess or puzzle duel"
+                  >
+                    <ChessKnight className="size-4" />
+                    <span className="hidden sm:inline">
+                      {chessInvite === "me" || puzzleDuelInvite === "me"
+                        ? "Invited…"
+                        : "Play chess"}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {Object.values(TIME_CONTROLS).map((tc) => (
+                    <DropdownMenuItem
+                      key={tc.id}
+                      disabled={chessInvite !== null}
+                      onClick={() => onInviteChess(tc.id)}
+                    >
+                      <ChessKnight className="size-4" />
+                      {tc.label} {tc.category} Chess
+                    </DropdownMenuItem>
+                  ))}
+                  {!puzzleDuel && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        disabled={puzzleDuelInvite !== null}
+                        onClick={onInvitePuzzleDuel}
+                      >
+                        <Swords className="size-4 text-primary" />
+                        90s Puzzle Duel
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
             <Button
@@ -233,7 +298,8 @@ export function Conversation({
         <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-accent/60 px-4 py-2 text-sm">
           <span className="flex items-center gap-2 font-medium">
             <ChessKnight className="size-4 text-primary" />
-            Stranger wants to play a 10+0 chess game!
+            Stranger wants to play{" "}
+            {getTimeControl(chessInviteTimeControl ?? undefined).label} chess!
           </span>
           <div className="flex items-center gap-1.5">
             <Button size="sm" onClick={() => onRespondChessInvite(true)}>
@@ -250,6 +316,37 @@ export function Conversation({
             </Button>
           </div>
         </div>
+      )}
+
+      {!ended && puzzleDuelInvite === "them" && !puzzleDuel && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-accent/60 px-4 py-2 text-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <Swords className="size-4 text-primary" />
+            Stranger challenged you to a 90s Puzzle Duel!
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" onClick={() => onRespondPuzzleDuel(true)}>
+              <Check className="size-3.5" />
+              Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onRespondPuzzleDuel(false)}
+            >
+              <X className="size-3.5" />
+              Decline
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {puzzleDuel && (
+        <PuzzleDuelPanel
+          duel={puzzleDuel}
+          onProgress={onPuzzleDuelProgress}
+          onDismiss={onDismissPuzzleDuel}
+        />
       )}
 
       <MessageList

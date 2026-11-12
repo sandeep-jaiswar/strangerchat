@@ -16,10 +16,10 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
-import { Textarea } from "@repo/ui/components/textarea";
-import { cn } from "@repo/ui/lib/utils";
+import { Badge } from "@funstranger/ui/components/badge";
+import { Button } from "@funstranger/ui/components/button";
+import { Textarea } from "@funstranger/ui/components/textarea";
+import { cn } from "@funstranger/ui/lib/utils";
 
 export interface ProfileData {
   id: string;

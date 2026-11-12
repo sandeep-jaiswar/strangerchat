@@ -9,7 +9,7 @@ COPY packages/chat-server/package.json ./packages/chat-server/
 COPY packages/db/package.json ./packages/db/
 COPY packages/protocol/package.json ./packages/protocol/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
-RUN pnpm install --frozen-lockfile --filter @repo/chat-server...
+RUN pnpm install --frozen-lockfile --filter @funstranger/chat-server...
 
 FROM base AS runner
 ENV NODE_ENV=production \
@@ -28,4 +28,4 @@ COPY --chown=chatserver:nodejs packages/chat-server ./packages/chat-server
 
 USER chatserver
 EXPOSE 3001
-CMD ["pnpm", "--filter", "@repo/chat-server", "start"]
+CMD ["pnpm", "--filter", "@funstranger/chat-server", "start"]

@@ -5,7 +5,7 @@
  */
 import http from "node:http";
 import { WebSocketServer } from "ws";
-import { CHAT_SOCKET_PATH, CloseCode } from "@repo/protocol";
+import { CHAT_SOCKET_PATH, CloseCode } from "@funstranger/protocol";
 import { authenticate, getHub, isValidSessionId } from "./index.ts";
 
 const PORT = Number(process.env.WS_DEV_PORT ?? 3001);
