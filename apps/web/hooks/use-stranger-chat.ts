@@ -58,6 +58,12 @@ export interface PuzzleDuelView {
   winner: "me" | "them" | "draw" | null;
 }
 
+export interface IncomingFriendChallenge {
+  challengeId: string;
+  from: PublicFriendProfile;
+  timeControl: TimeControlId;
+}
+
 interface State {
   connection: ConnectionStatus;
   phase: ChatPhase;
@@ -76,6 +82,7 @@ interface State {
   inviteMode: ChatMode | null;
   puzzleDuelInvite: "me" | "them" | null;
   puzzleDuel: PuzzleDuelView | null;
+  incomingChallenge: IncomingFriendChallenge | null;
   friendStatus: FriendHandshakeStatus;
   friendPartner: PublicFriendProfile | null;
 }
@@ -95,6 +102,7 @@ type Action =
   | { type: "localMove"; san: string }
   | { type: "localOffer"; offer: ChessOffer }
   | { type: "dismissPuzzleDuel" }
+  | { type: "clearChallenge" }
   | { type: "partnerTypingTimeout" }
   | { type: "left" };
 
@@ -115,6 +123,7 @@ const initialState: State = {
   inviteMode: null,
   puzzleDuelInvite: null,
   puzzleDuel: null,
+  incomingChallenge: null,
   friendStatus: "none",
   friendPartner: null,
 };
@@ -238,6 +247,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, tags: action.tags };
     case "dismissPuzzleDuel":
       return { ...state, puzzleDuel: null };
+    case "clearChallenge":
+      return { ...state, incomingChallenge: null };
     case "localMove": {
       const game = state.game && withMove(state.game, action.san);
       return game ? { ...state, game } : state;
@@ -559,6 +570,19 @@ function reducer(state: State, action: Action): State {
               systemItem("Stranger has left the chat."),
             ],
           };
+        case "friend_challenge":
+          return {
+            ...state,
+            incomingChallenge: {
+              challengeId: event.challengeId,
+              from: event.from,
+              timeControl: event.timeControl,
+            },
+          };
+        case "friend_challenge_sent":
+        case "friend_challenge_declined":
+        case "friend_challenge_failed":
+          return state;
         case "friend_status": {
           const acceptedText =
             event.status === "accepted"
@@ -677,6 +701,26 @@ export function useStrangerchat(initialInviteCode?: string | null) {
         const event = JSON.parse(String(message.data)) as ServerEvent;
         if (event.type === "error") {
           toast.error(event.message);
+        } else if (event.type === "friend_challenge_sent") {
+          toast.success(
+            `Sent ${getTimeControl(event.timeControl).label} chess challenge!`,
+          );
+        } else if (event.type === "friend_challenge_declined") {
+          toast.info(
+            `${event.byHandle ?? "Your friend"} declined the chess challenge.`,
+          );
+        } else if (event.type === "friend_challenge_failed") {
+          const msg =
+            event.reason === "offline"
+              ? "Your friend is offline right now."
+              : event.reason === "not_friends"
+                ? "You can only challenge mutual friends."
+                : event.reason === "expired"
+                  ? "That challenge expired."
+                  : "Unable to send chess challenge.";
+          toast.info(msg);
+        } else if (event.type === "matched") {
+          dispatch({ type: "clearChallenge" });
         } else if (event.type === "invite_failed") {
           toast.info(
             event.reason === "self"
@@ -949,6 +993,31 @@ export function useStrangerchat(initialInviteCode?: string | null) {
     if (send({ type: "leave" })) dispatch({ type: "left" });
   }, [send, stopTyping]);
 
+  const challengeFriend = useCallback(
+    (friendId: string, timeControl: TimeControlId = timeControlRef.current) => {
+      if (send({ type: "friend_challenge", friendId, timeControl })) {
+        captureEvent("friend_challenge_sent", { time_control: timeControl });
+      }
+    },
+    [send],
+  );
+
+  const respondFriendChallenge = useCallback(
+    (challengeId: string, accept: boolean) => {
+      dispatch({ type: "clearChallenge" });
+      if (
+        send({
+          type: "friend_challenge_response",
+          challengeId,
+          accept,
+        })
+      ) {
+        captureEvent("friend_challenge_responded", { accepted: accept });
+      }
+    },
+    [send],
+  );
+
   return {
     ...state,
     findStranger,
@@ -970,6 +1039,8 @@ export function useStrangerchat(initialInviteCode?: string | null) {
     offer,
     claimFlag,
     sendFriendRequest,
+    challengeFriend,
+    respondFriendChallenge,
     safetyAction,
   };
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 const links = [
   { href: "/play-chess-with-strangers", label: "Play chess" },
   { href: "/puzzles", label: "Chess puzzles" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/make-friends-online", label: "Make friends" },
   { href: "/omegle-alternative", label: "Omegle alternative" },
   { href: "/safety", label: "Safety tips" },

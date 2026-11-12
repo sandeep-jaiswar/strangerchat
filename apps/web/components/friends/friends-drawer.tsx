@@ -5,21 +5,29 @@ import {
   ArrowLeft,
   Check,
   ChessKnight,
+  Flame,
   MessageSquare,
   Pencil,
   SendHorizontal,
   ShieldBan,
-  Trophy,
   UserMinus,
   UserPlus,
   Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TIME_CONTROLS, type TimeControlId } from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@funstranger/ui/components/dropdown-menu";
 import { Textarea } from "@funstranger/ui/components/textarea";
 import { cn } from "@funstranger/ui/lib/utils";
+import { RankBadge } from "@/components/chess/rank-badge";
 
 export interface ProfileData {
   id: string;
@@ -29,6 +37,9 @@ export interface ProfileData {
   chessWins: number;
   chessLosses: number;
   chessDraws: number;
+  puzzleRating?: number;
+  dailyStreak?: number;
+  bestStreak?: number;
 }
 
 export interface FriendEntry {
@@ -52,6 +63,7 @@ interface FriendsDrawerProps {
   onClose: () => void;
   profile: ProfileData | null;
   onProfileUpdated: (profile: ProfileData) => void;
+  onChallengeFriend?: (friendId: string, timeControl: TimeControlId) => void;
 }
 
 export function FriendsDrawer({
@@ -59,6 +71,7 @@ export function FriendsDrawer({
   onClose,
   profile,
   onProfileUpdated,
+  onChallengeFriend,
 }: FriendsDrawerProps) {
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [incoming, setIncoming] = useState<FriendEntry[]>([]);
@@ -334,14 +347,22 @@ export function FriendsDrawer({
                       </div>
                     )}
                   </div>
-                  <Badge variant="secondary" className="gap-1">
-                    <Trophy className="size-3 text-amber-500" />
-                    Elo {profile.chessRating}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <RankBadge rating={profile.chessRating} />
+                    {(profile.dailyStreak ?? 0) > 0 && (
+                      <Badge variant="outline" className="gap-1 text-[10px]">
+                        <Flame className="size-3 text-amber-500" />
+                        {profile.dailyStreak}d streak
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Chess record: {profile.chessWins}W · {profile.chessLosses}L ·{" "}
+                  Chess: {profile.chessWins}W · {profile.chessLosses}L ·{" "}
                   {profile.chessDraws}D
+                  {profile.puzzleRating
+                    ? ` · Puzzle Elo ${profile.puzzleRating}`
+                    : ""}
                 </p>
               </section>
             )}
@@ -426,20 +447,50 @@ export function FriendsDrawer({
                             {friend.handle}
                           </p>
                         </div>
-                        <p className="pl-4 text-xs text-muted-foreground">
-                          <ChessKnight className="mr-1 inline size-3" />
-                          Elo {friend.chessRating} ·{" "}
-                          {friend.online ? "Online" : "Offline"}
+                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 pl-4 text-xs text-muted-foreground">
+                          <RankBadge
+                            rating={friend.chessRating}
+                            className="px-1.5 py-0 text-[10px]"
+                          />
+                          <span>{friend.online ? "Online" : "Offline"}</span>
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
+                        {friend.online && onChallengeFriend && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                title="Challenge friend to chess"
+                              >
+                                <ChessKnight className="size-3.5" />
+                                Play
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {Object.values(TIME_CONTROLS).map((tc) => (
+                                <DropdownMenuItem
+                                  key={tc.id}
+                                  onClick={() => {
+                                    onChallengeFriend(friend.id, tc.id);
+                                    onClose();
+                                  }}
+                                >
+                                  <ChessKnight className="size-4" />
+                                  {tc.label} {tc.category}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                         <Button
                           size="sm"
                           variant="secondary"
                           onClick={() => setActiveFriend(friend)}
                         >
                           <MessageSquare className="size-3.5" />
-                          Message
+                          {friend.online && onChallengeFriend ? "" : "Message"}
                         </Button>
                         <Button
                           size="icon-sm"

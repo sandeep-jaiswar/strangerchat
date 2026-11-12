@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Bot, ChessKnight, ShieldAlert, Trophy, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  Check,
+  ChessKnight,
+  Flame,
+  ShieldAlert,
+  Users,
+  X,
+} from "lucide-react";
+import { getTimeControl } from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { ChessPanel } from "@/components/chess/chess-panel";
+import { RankBadge } from "@/components/chess/rank-badge";
 import {
   FriendsDrawer,
   type ProfileData,
@@ -21,7 +33,6 @@ import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { AD_SLOTS } from "@/lib/ads";
 import { BOT_LEVELS } from "@/lib/stockfish";
 import { cn } from "@funstranger/ui/lib/utils";
-import { ChessPanel } from "../chess/chess-panel";
 import { Conversation } from "./conversation";
 import { Lobby } from "./lobby";
 
@@ -83,10 +94,15 @@ export function ChatRoom({
           <div className="flex items-center gap-1.5">
             <StatusBadge connection={chat.connection} online={chat.online} />
             {profile && (
-              <Badge variant="outline" className="hidden gap-1 sm:inline-flex">
-                <Trophy className="size-3 text-amber-500" />
-                {profile.chessRating}
-              </Badge>
+              <div className="hidden items-center gap-1 sm:flex">
+                <RankBadge rating={profile.chessRating} />
+                {(profile.dailyStreak ?? 0) > 0 && (
+                  <Badge variant="outline" className="gap-1">
+                    <Flame className="size-3 text-amber-500" />
+                    {profile.dailyStreak}d
+                  </Badge>
+                )}
+              </div>
             )}
             <Button
               size="sm"
@@ -107,6 +123,50 @@ export function ChatRoom({
           </div>
         </div>
       </header>
+
+      {chat.incomingChallenge && (
+        <div
+          role="alert"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-primary/10 px-4 py-2 text-sm"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <ChessKnight className="size-4 text-primary" />
+            <span>
+              <strong>{chat.incomingChallenge.from.handle}</strong> (Elo{" "}
+              {chat.incomingChallenge.from.chessRating}) challenged you to{" "}
+              {getTimeControl(chat.incomingChallenge.timeControl).label} chess!
+            </span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              onClick={() => {
+                aiChess.stopAiGame();
+                chat.respondFriendChallenge(
+                  chat.incomingChallenge!.challengeId,
+                  true,
+                );
+              }}
+            >
+              <Check className="size-3.5" />
+              Accept &amp; Play
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                chat.respondFriendChallenge(
+                  chat.incomingChallenge!.challengeId,
+                  false,
+                )
+              }
+            >
+              <X className="size-3.5" />
+              Decline
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col lg:flex-row">
@@ -294,6 +354,7 @@ export function ChatRoom({
         onClose={() => setFriendsOpen(false)}
         profile={profile}
         onProfileUpdated={setProfile}
+        onChallengeFriend={chat.challengeFriend}
       />
     </div>
   );
