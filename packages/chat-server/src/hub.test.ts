@@ -109,7 +109,7 @@ test("matches and relays between instances", async () => {
   alice.deliver({ type: "message", text: "  hi bob  " });
   await until(() => last(bob) === "message", "bob receives message");
   assert.deepEqual(bob.types().slice(-2), ["typing", "message"]);
-  const message = bob.events.at(-1);
+  const message = bob.events.filter((e) => e.type === "message").at(-1);
   assert.equal(message?.type === "message" && message.text, "hi bob");
 });
 
@@ -552,4 +552,82 @@ test("a reconnecting player gets the game back on another instance", async () =>
   assert.deepEqual(game.moves, ["e4", "c5", "Nf3"]);
   assert.equal(game.color, "black");
   assert.equal(game.clock.running, true);
+});
+
+test("text chatters can invite each other to play chess mid-chat", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "chess_invite" });
+  await until(
+    () =>
+      alice.types().includes("chess_invite") &&
+      bob.types().includes("chess_invite"),
+    "both receive chess_invite",
+  );
+
+  bob.deliver({ type: "chess_invite_response", accept: true });
+  await until(
+    () =>
+      alice.types().includes("chess_game") &&
+      bob.types().includes("chess_game"),
+    "mid-chat chess game starts",
+  );
+});
+
+test("prefers matching strangers with overlapping interest tags", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  const carol = await connect(hubA, "carol");
+
+  alice.deliver({ type: "find", tags: ["music"] });
+  await until(() => last(alice) === "searching", "alice waiting");
+  bob.deliver({ type: "find", tags: ["chess"] });
+  await until(() => last(bob) === "searching", "bob waiting");
+
+  // Carol shares "chess" with Bob, even though Alice was waiting earlier.
+  carol.deliver({ type: "find", tags: ["chess"] });
+  await until(
+    () => last(bob) === "matched" && last(carol) === "matched",
+    "bob and carol match by shared tag",
+  );
+  const matchedEvent = bob.events.find((e) => e.type === "matched");
+  assert.deepEqual(matchedEvent?.type === "matched" && matchedEvent.sharedTags, [
+    "chess",
+  ]);
+  assert.equal(last(alice), "searching");
+});
+
+test("censors profanity in relayed messages", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "message", text: "what the fuck is this" });
+  await until(() => last(bob) === "message", "bob receives moderated message");
+  const msg = bob.events.at(-1);
+  assert.equal(msg?.type === "message" && !msg.text.includes("fuck"), true);
+});
+
+test("blocking prevents matching with that user again", async () => {
+  const [hubA, hubB] = cluster();
+  const alice = await connect(hubA, "alice");
+  const bob = await connect(hubB, "bob");
+  await chatting(alice, bob);
+
+  alice.deliver({ type: "safety_action", action: "block" });
+  await until(
+    () => alice.types().includes("safety_ack") && last(bob) === "partner_left",
+    "block ends chat",
+  );
+
+  alice.deliver({ type: "find" });
+  bob.deliver({ type: "find" });
+  await sleep(REMATCH_BLOCK_MS + 120);
+  assert.equal(last(alice), "searching");
+  assert.equal(last(bob), "searching");
 });

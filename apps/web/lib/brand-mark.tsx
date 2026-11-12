@@ -6,7 +6,7 @@ export function BrandMark({
   size: number;
   rounded?: boolean;
 }) {
-  const glyph = Math.round(size * 0.56);
+  const glyph = Math.round(size * 0.62);
   return (
     <div
       style={{
@@ -15,23 +15,29 @@ export function BrandMark({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #6d5ff5 0%, #4a3bd1 100%)",
-        borderRadius: rounded ? size * 0.22 : 0,
+        background:
+          "linear-gradient(135deg, #6d5ff5 0%, #4a3bd1 60%, #0ea5e9 100%)",
+        borderRadius: rounded ? size * 0.24 : 0,
       }}
     >
-      {/* lucide "messages-square" */}
+      {/* Funstranger mark: speech bubble framing a chess crown */}
       <svg
         width={glyph}
         height={glyph}
         viewBox="0 0 24 24"
         fill="none"
         stroke="white"
-        strokeWidth={2}
+        strokeWidth={1.9}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-        <path d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1" />
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        <path
+          d="M8.5 14.5h7l-.7-4-2 1.7-1.3-2.5-1.3 2.5-2-1.7-.7 4z"
+          fill="white"
+          stroke="white"
+          strokeWidth={1.2}
+        />
       </svg>
     </div>
   );

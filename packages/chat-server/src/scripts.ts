@@ -44,6 +44,7 @@ const PARTNER_LEFT = JSON.stringify({ type: "partner_left" });
 const LIB = `
 local P, NOW = ARGV[1], tonumber(ARGV[2])
 local REMATCH_BLOCK, REMATCH_WINDOW = tonumber(ARGV[3]), tonumber(ARGV[4])
+local TAG_WAIT = math.min(5000, REMATCH_BLOCK)
 local INITIAL, INCREMENT, FIRST_MOVE = ${CHESS_INITIAL_MS}, ${CHESS_INCREMENT_MS}, ${CHESS_FIRST_MOVE_MS}
 local MODES = { 'chat', 'chess' }
 
@@ -54,6 +55,11 @@ end
 local function queueKey(mode)
   if mode == 'chat' then return P .. 'queue' end
   return P .. 'queue:' .. mode
+end
+
+local function isBlockedPair(u, v)
+  return redis.call('SISMEMBER', P .. 'blocked:' .. u, v) == 1
+    or redis.call('SISMEMBER', P .. 'blocked:' .. v, u) == 1
 end
 
 local function endedKey(u, v)
@@ -145,10 +151,27 @@ local function endGame(gid, result, reason)
   local key = gameKey(gid)
   if redis.call('HGET', key, 'status') ~= 'playing' then return false end
   local clock = clockOf(gid)
+  local ply = tonumber(redis.call('HGET', key, 'ply') or 0)
   redis.call('HSET', key, 'status', 'over', 'result', result, 'reason', reason,
     'wt', clock.white, 'bt', clock.black)
   redis.call('HDEL', key, 'draw')
   redis.call('ZREM', P .. 'games', gid)
+  if result ~= 'aborted' and ply >= 2 then
+    local wb = redis.call('HMGET', key, 'w', 'b')
+    local wu = wb[1] and redis.call('HGET', P .. 'owner', wb[1])
+    local bu = wb[2] and redis.call('HGET', P .. 'owner', wb[2])
+    if wu and bu and wu ~= bu then
+      local moves = redis.call('LRANGE', P .. 'gm:' .. gid, 0, -1)
+      redis.call('RPUSH', P .. 'ended_games', cjson.encode({
+        whiteId = wu,
+        blackId = bu,
+        result = result,
+        reason = reason,
+        moves = moves,
+      }))
+      redis.call('LTRIM', P .. 'ended_games', -100, -1)
+    end
+  end
   clock.running = false
   clock.firstMoveMs = cjson.null
   publishToPlayers(gid, cjson.encode({ type = 'chess_over', result = result, reason = reason, clock = clock }))
@@ -195,7 +218,9 @@ end
 -- records when the two users stopped chatting.
 local function unpair(sid)
   local partner = redis.call('GET', P .. 'pair:' .. sid)
+  redis.call('DEL', P .. 'cinv:' .. sid)
   if not partner then return end
+  redis.call('DEL', P .. 'cinv:' .. partner)
   local gid = redis.call('GET', P .. 'game:' .. sid)
   if gid then dropGame(gid, sid) end
   redis.call('DEL', P .. 'pair:' .. sid)
@@ -213,14 +238,20 @@ local function removeQueued(sid)
   redis.call('LREM', queueKey(modeOf(sid)), 0, sid)
   redis.call('HDEL', P .. 'scan', sid)
   redis.call('HDEL', P .. 'fallback', sid)
+  redis.call('HDEL', P .. 'anyfresh', sid)
+  redis.call('HDEL', P .. 'tagat', sid)
+  redis.call('DEL', P .. 'tags:' .. sid)
 end
 
 local function makePair(a, b, mode)
+  local shared = redis.call('SINTER', P .. 'tags:' .. a, P .. 'tags:' .. b)
   removeQueued(a)
   removeQueued(b)
   redis.call('SET', P .. 'pair:' .. a, b)
   redis.call('SET', P .. 'pair:' .. b, a)
-  local matched = cjson.encode({ type = 'matched', mode = mode })
+  local matchedPayload = { type = 'matched', mode = mode }
+  if #shared > 0 then matchedPayload.sharedTags = shared end
+  local matched = cjson.encode(matchedPayload)
   redis.call('PUBLISH', P .. 'to:' .. a, matched)
   redis.call('PUBLISH', P .. 'to:' .. b, matched)
   if mode == 'chess' then
@@ -234,10 +265,9 @@ local function makePair(a, b, mode)
 end
 
 -- Pairs a queued session with the longest-waiting eligible session in its mode's queue. Eligible: connected,
--- a different user, and not someone this user stopped chatting with less than
--- REMATCH_BLOCK ago. Within REMATCH_WINDOW a previous partner is only chosen when nobody
--- new is waiting. Scans at most 100 candidates per call, continuing on the next retry.
--- A previous partner is only picked after reaching the end. Returns true when paired.
+-- a different user, not blocked, and not someone this user stopped chatting with less than
+-- REMATCH_BLOCK ago. Prefers overlapping interest tags when present, falls back to any fresh
+-- user, and within REMATCH_WINDOW picks a previous partner only when nobody new is waiting.
 local function matchOne(sid)
   local uid = redis.call('HGET', P .. 'owner', sid)
   if not uid or not isConnected(sid) then
@@ -248,6 +278,10 @@ local function matchOne(sid)
   local queue = queueKey(mode)
   local size = redis.call('LLEN', queue)
   local offset = tonumber(redis.call('HGET', P .. 'scan', sid)) or 0
+  local hasTags = redis.call('SCARD', P .. 'tags:' .. sid) > 0
+  local tagAt = tonumber(redis.call('HGET', P .. 'tagat', sid))
+  local allowTagFallback = not tagAt or (NOW - tagAt >= TAG_WAIT)
+  local anyFresh = redis.call('HGET', P .. 'anyfresh', sid)
   local fallback = redis.call('HGET', P .. 'fallback', sid)
   local candidates = redis.call('LRANGE', queue, offset, offset + 99)
   local removed = 0
@@ -257,13 +291,20 @@ local function matchOne(sid)
       if not other or not isConnected(candidate) then
         removeQueued(candidate)
         removed = removed + 1
-      elseif other ~= uid then
+      elseif other ~= uid and not isBlockedPair(uid, other) then
         local ended = redis.call('GET', endedKey(uid, other))
         if not ended then
-          makePair(sid, candidate, mode)
-          return true
-        end
-        if not fallback and NOW - tonumber(ended) >= REMATCH_BLOCK then
+          local sharedCount = hasTags and #redis.call('SINTER', P .. 'tags:' .. sid, P .. 'tags:' .. candidate) or 0
+          local candTagAt = tonumber(redis.call('HGET', P .. 'tagat', candidate))
+          local candWaitingTag = candTagAt and (NOW - candTagAt < TAG_WAIT)
+          if (not hasTags and not candWaitingTag) or sharedCount > 0 then
+            makePair(sid, candidate, mode)
+            return true
+          end
+          if not anyFresh and (allowTagFallback and not candWaitingTag) then
+            anyFresh = candidate
+          end
+        elseif not fallback and NOW - tonumber(ended) >= REMATCH_BLOCK then
           fallback = candidate
         end
       end
@@ -271,15 +312,24 @@ local function matchOne(sid)
   end
   if offset + #candidates < size then
     redis.call('HSET', P .. 'scan', sid, offset + #candidates - removed)
+    if anyFresh then redis.call('HSET', P .. 'anyfresh', sid, anyFresh) end
     if fallback then redis.call('HSET', P .. 'fallback', sid, fallback) end
     return false
   end
   redis.call('HDEL', P .. 'scan', sid)
+  redis.call('HDEL', P .. 'anyfresh', sid)
   redis.call('HDEL', P .. 'fallback', sid)
+  if anyFresh and isConnected(anyFresh) and redis.call('LPOS', queue, anyFresh) then
+    local other = redis.call('HGET', P .. 'owner', anyFresh)
+    if other and other ~= uid and not isBlockedPair(uid, other) then
+      makePair(sid, anyFresh, mode)
+      return true
+    end
+  end
   -- The fallback may have left or matched while we scanned later pages.
   if fallback and isConnected(fallback) and redis.call('LPOS', queue, fallback) then
     local other = redis.call('HGET', P .. 'owner', fallback)
-    if other and other ~= uid then
+    if other and other ~= uid and not isBlockedPair(uid, other) then
       local ended = redis.call('GET', endedKey(uid, other))
       if not ended or NOW - tonumber(ended) >= REMATCH_BLOCK then
         makePair(sid, fallback, mode)
@@ -379,6 +429,14 @@ local sid, mode = ARGV[5], ARGV[6] or 'chat'
 removeQueued(sid)
 unpair(sid)
 redis.call('HSET', P .. 'mode', sid, mode)
+local addedTags = 0
+for i = 7, #ARGV do
+  if ARGV[i] ~= '' then
+    redis.call('SADD', P .. 'tags:' .. sid, ARGV[i])
+    addedTags = addedTags + 1
+  end
+end
+if addedTags > 0 then redis.call('HSET', P .. 'tagat', sid, NOW) end
 redis.call('RPUSH', queueKey(mode), sid)
 if matchOne(sid) then return 1 end
 return 0
@@ -555,4 +613,43 @@ return 1
 /** The session's game as a chess_game event, or "" when it has none. ARGV[5]: sid */
 export const SYNC = `${LIB}
 return gameEvent(ARGV[5]) or ''
+`;
+
+/** Invite the current chat partner to play chess inside the chat. ARGV[5]: sid */
+export const CHESS_INVITE = `${LIB}
+local sid = ARGV[5]
+local partner = redis.call('GET', P .. 'pair:' .. sid)
+if not partner or redis.call('EXISTS', P .. 'game:' .. sid) == 1 then return 0 end
+if redis.call('GET', P .. 'cinv:' .. partner) == sid then
+  redis.call('DEL', P .. 'cinv:' .. partner)
+  startGame(partner, sid)
+  return 2
+end
+redis.call('SET', P .. 'cinv:' .. sid, partner, 'EX', 120)
+redis.call('PUBLISH', P .. 'to:' .. sid, cjson.encode({ type = 'chess_invite', from = 'me' }))
+redis.call('PUBLISH', P .. 'to:' .. partner, cjson.encode({ type = 'chess_invite', from = 'them' }))
+return 1
+`;
+
+/** Accept ('1') or decline ('0') an incoming mid-chat chess invite. ARGV[5..6]: sid, accept */
+export const CHESS_INVITE_RESPOND = `${LIB}
+local sid, accept = ARGV[5], ARGV[6]
+local partner = redis.call('GET', P .. 'pair:' .. sid)
+if not partner or redis.call('GET', P .. 'cinv:' .. partner) ~= sid then return 0 end
+redis.call('DEL', P .. 'cinv:' .. partner)
+if accept == '1' and redis.call('EXISTS', P .. 'game:' .. sid) == 0 then
+  startGame(partner, sid)
+  return 1
+end
+redis.call('PUBLISH', P .. 'to:' .. partner, cjson.encode({ type = 'chess_invite_declined' }))
+return 1
+`;
+
+/** Returns { partnerSid, partnerUid } for the current chat, or {} if idle. ARGV[5]: sid */
+export const PARTNER = `${LIB}
+local partner = redis.call('GET', P .. 'pair:' .. ARGV[5])
+if not partner then return {} end
+local uid = redis.call('HGET', P .. 'owner', partner)
+if not uid then return {} end
+return { partner, uid }
 `;

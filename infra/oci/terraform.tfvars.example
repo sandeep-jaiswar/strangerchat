@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars if deploying locally via OpenTofu/Terraform CLI.
+# (Not needed if uploading to OCI Resource Manager in the Oracle Cloud Console.)
+
+compartment_ocid = "ocid1.compartment.oc1..replace_with_your_compartment_or_tenancy_ocid"
+region           = "ap-mumbai-1"
+
+# Leave these 4 empty if using ~/.oci/config (`oci setup config`), or fill them in:
+# tenancy_ocid     = ""
+# user_ocid        = ""
+# fingerprint      = ""
+# private_key_path = "~/.oci/oci_api_key.pem"
+
+project_name              = "strangerchat"
+availability_domain_index = 0
+instance_ocpus            = 4
+instance_memory_in_gbs    = 24
+boot_volume_size_in_gbs   = 100
+
+ssh_public_key   = "ssh-ed25519 AAAA... replace_with_your_public_key"
+ssh_allowed_cidr = "0.0.0.0/0"

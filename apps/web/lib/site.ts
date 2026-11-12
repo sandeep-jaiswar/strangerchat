@@ -2,27 +2,29 @@ import type { Metadata } from "next";
 
 /** Canonical origin used for metadata, sitemap and structured data. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://Strangerchat.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://funstranger.in"
 ).replace(/\/$/, "");
 
-export const SITE_NAME = "Strangerchat";
+export const SITE_NAME = "Funstranger";
 
-export const SITE_TITLE = "Strangerchat - Free Anonymous Chat with Strangers";
+export const SITE_TITLE =
+  "Funstranger - Free Anonymous Chat with Strangers, Chess & Friends";
 
 export const SITE_DESCRIPTION =
-  "Talk to strangers online for free. Strangerchat instantly matches you with a random person for an anonymous one-on-one text chat — no bots, no profiles, no messages stored. A safer Omegle alternative.";
+  "Talk to strangers online for free on Funstranger. Match 1-on-1 for anonymous chat, play live 10-minute chess while talking, and make friends safely.";
 
 export const SITE_KEYWORDS = [
+  "funstranger",
+  "funstranger.in",
   "stranger chat",
   "chat with strangers",
   "talk to strangers",
+  "play chess with strangers",
+  "make friends online",
   "random chat",
   "anonymous chat",
-  "free chat rooms",
-  "online chat with strangers",
-  "random text chat",
   "Omegle alternative",
-  "chat with random people",
+  "chess chat",
   "meet new people online",
 ];
 
@@ -30,7 +32,7 @@ const OG_IMAGE = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: "Strangerchat - free anonymous chat with strangers",
+  alt: "Funstranger - free anonymous chat with strangers and live chess",
 };
 
 /**

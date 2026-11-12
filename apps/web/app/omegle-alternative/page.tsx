@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/site";
 
 const title = "The Best Free Omegle Alternative for Anonymous Chat";
 const description =
-  "Omegle is gone, but random chat isn't. Strangerchat is a free Omegle alternative with instant one-on-one matching, no bots, no chat logs and a one-tap skip.";
+  "Omegle is gone, but random chat isn't. Funstranger is a free Omegle alternative with instant one-on-one matching, live chess, no bots and a one-tap skip.";
 
 export const metadata: Metadata = pageMetadata({
   path: "/omegle-alternative",
@@ -19,7 +19,7 @@ export default function OmegleAlternativePage() {
     <ContentPage
       title={title}
       path="/omegle-alternative"
-      lead="Omegle shut down in November 2023 after 14 years. If you miss the thrill of talking to a random stranger, Strangerchat brings back the simple part — instant, anonymous, one-on-one chat — and fixes the parts that made Omegle frustrating."
+      lead="Omegle shut down in November 2023 after 14 years. If you miss the thrill of talking to a random stranger, Funstranger brings back the simple part — instant, anonymous, one-on-one chat — and fixes the parts that made Omegle frustrating."
     >
       <h2>What made Omegle great</h2>
       <p>
@@ -29,7 +29,7 @@ export default function OmegleAlternativePage() {
         conversation that could be funny, strange or genuinely meaningful.
       </p>
       <p>
-        Strangerchat keeps that exact loop. Tap <strong>Start</strong>, get
+        Funstranger keeps that exact loop. Tap <strong>Start</strong>, get
         matched with a random person who&apos;s online right now, and chat. When
         you&apos;re done, tap <strong>Next</strong> (or press Esc) and
         you&apos;re instantly talking to someone new.
@@ -39,38 +39,38 @@ export default function OmegleAlternativePage() {
       <h3>Real people, not bots</h3>
       <p>
         Omegle&apos;s biggest problem was spam: bots pasting links, scripted ads
-        and throwaway trolls. Strangerchat requires a Google sign-in before you
+        and throwaway trolls. Funstranger requires a Google sign-in before you
         enter the queue, which makes mass-created bot accounts impractical. Your
         Google name, email and photo are never shown to anyone you chat with.
       </p>
-      <h3>No chat logs</h3>
+      <h3>No stranger chat logs</h3>
       <p>
-        Messages are relayed in real time between you and your partner and are
-        not stored on our servers once delivered. There&apos;s no chat history
-        to leak, sell or screenshot from our side. See our{" "}
+        Stranger chat messages are relayed in real time between you and your
+        partner and are not stored on our servers once delivered. Only direct
+        messages between mutual friends are saved. See our{" "}
         <Link href="/privacy">privacy policy</Link> for details.
       </p>
       <h3>Text only, by design</h3>
       <p>
-        Strangerchat is a text chat. No webcam means no pressure to show your
+        Funstranger is a text chat. No webcam means no pressure to show your
         face and far less room for the unwanted content that made video chat
         sites risky. Conversation is the whole point.
       </p>
       <h3>Adults only</h3>
       <p>
-        Strangerchat is for people aged 18 and over, and our{" "}
+        Funstranger is for people aged 18 and over, and our{" "}
         <Link href="/terms">terms</Link> ban harassment, hate and sexual
         content. Anyone who makes you uncomfortable is one tap away from being
         gone.
       </p>
 
-      <h2>Strangerchat vs. Omegle at a glance</h2>
+      <h2>Funstranger vs. Omegle at a glance</h2>
       <div className="overflow-x-auto rounded-xl border">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted text-foreground">
             <tr>
               <th className="px-4 py-3 font-semibold">Feature</th>
-              <th className="px-4 py-3 font-semibold">Strangerchat</th>
+              <th className="px-4 py-3 font-semibold">Funstranger</th>
               <th className="px-4 py-3 font-semibold">Omegle</th>
             </tr>
           </thead>
@@ -116,7 +116,7 @@ export default function OmegleAlternativePage() {
 
       <h2>How to get started</h2>
       <ol>
-        <li>Open Strangerchat on your phone or computer — no download.</li>
+        <li>Open Funstranger on your phone or computer — no download.</li>
         <li>Continue with Google. Strangers never see your account details.</li>
         <li>Tap Start. You&apos;ll be matched with someone in seconds.</li>
         <li>Chat, or skip to the next person whenever you like.</li>

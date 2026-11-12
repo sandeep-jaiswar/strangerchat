@@ -2,6 +2,8 @@ import { Hub } from "./hub.ts";
 
 export { Hub, type HubOptions } from "./hub.ts";
 export { authenticate, isAllowedOrigin, isValidSessionId } from "./auth.ts";
+export { moderateMessageText } from "./moderation.ts";
+export { getOnlineUserIds, syncBlockedUser } from "./presence.ts";
 
 let hub: Hub | undefined;
 

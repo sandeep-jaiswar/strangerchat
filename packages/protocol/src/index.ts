@@ -4,6 +4,8 @@
  */
 
 export const MAX_MESSAGE_LENGTH = 1000;
+export const MAX_TAGS = 3;
+export const MAX_TAG_LENGTH = 24;
 
 /** Path of the WebSocket endpoint, relative to the site origin. */
 export const CHAT_SOCKET_PATH = "/api/ws";
@@ -48,6 +50,13 @@ export type ChessEndReason =
   | "agreement";
 export type ChessOffer = "draw" | "rematch";
 
+export interface PublicFriendProfile {
+  id: string;
+  handle: string;
+  avatarSeed: string;
+  chessRating: number;
+}
+
 /** Remaining time on each clock (ms) as of when the event was sent. */
 export interface ChessClock {
   white: number;
@@ -74,7 +83,7 @@ export interface ChessGame {
 
 export type ClientEvent =
   /** Join the matchmaking queue for `mode` (default "chat"), leaving any current chat. */
-  | { type: "find"; mode?: ChatMode }
+  | { type: "find"; mode?: ChatMode; tags?: string[] }
   /** Send a chat message to the current partner. */
   | { type: "message"; text: string }
   | { type: "typing"; isTyping: boolean }
@@ -82,22 +91,31 @@ export type ClientEvent =
   | { type: "leave" }
   /** The tab is closing: end this session now instead of after the reconnect grace period. */
   | { type: "bye" }
+  /** Invite the current text-chat partner to play a chess game right inside the chat. */
+  | { type: "chess_invite" }
+  | { type: "chess_invite_response"; accept: boolean }
   | { type: "chess_move"; from: string; to: string; promotion?: string }
   | { type: "chess_resign" }
   /** Offer a draw or rematch, or accept the partner's standing offer. */
   | { type: "chess_offer"; offer: ChessOffer }
   /** A clock looks like it ran out; asks the server to check and end the game. */
-  | { type: "chess_flag" };
+  | { type: "chess_flag" }
+  /** Send or accept a mutual friend request with the current partner. */
+  | { type: "friend_request" }
+  /** Block or report the current partner. */
+  | { type: "safety_action"; action: "block" | "report"; reason?: string };
 
 export type ServerEvent =
   /** Sent on every (re)connect so the client can resume where the server left off. */
   | { type: "state"; phase: ChatPhase }
   | { type: "online"; count: number }
   | { type: "searching" }
-  | { type: "matched"; mode: ChatMode }
+  | { type: "matched"; mode: ChatMode; sharedTags?: string[] }
   | { type: "message"; id: string; text: string; sentAt: number }
   | { type: "typing"; isTyping: boolean }
   | { type: "partner_left" }
+  | { type: "chess_invite"; from: "me" | "them" }
+  | { type: "chess_invite_declined" }
   /** The full game: on start, on reconnect and after a rejected move. */
   | { type: "chess_game"; game: ChessGame }
   /** A move was played (by either side); `ply` is its 1-based number. */
@@ -110,7 +128,17 @@ export type ServerEvent =
     }
   /** The partner made an offer. */
   | { type: "chess_offer"; offer: ChessOffer }
+  | {
+      type: "friend_status";
+      status: "pending_me" | "pending_them" | "accepted" | "unavailable";
+      partner?: PublicFriendProfile;
+    }
+  | { type: "safety_ack"; action: "block" | "report"; message: string }
   | { type: "error"; code: ErrorCode; message: string };
 
 export type ErrorCode =
-  "rate_limited" | "invalid_message" | "not_in_chat" | "invalid_move";
+  | "rate_limited"
+  | "invalid_message"
+  | "not_in_chat"
+  | "invalid_move"
+  | "banned";

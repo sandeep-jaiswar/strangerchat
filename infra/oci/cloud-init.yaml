@@ -1,0 +1,39 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - iptables-persistent
+  - jq
+  - unattended-upgrades
+
+runcmd:
+  # 1. Install Docker Engine + Compose v2 plugin (official Docker ARM64 apt repo)
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - usermod -aG docker ubuntu
+  - systemctl enable --now docker
+
+  # 2. Fix Oracle Ubuntu's default iptables REJECT rule so HTTP (80) & HTTPS/QUIC (443) work
+  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+  - iptables -I INPUT 6 -m state --state NEW -p udp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+
+  # 3. Prepare application directory for the ubuntu user
+  - mkdir -p /opt/strangerchat
+  - chown -R ubuntu:ubuntu /opt/strangerchat
+
+  # 4. Enable automatic security updates
+  - dpkg-reconfigure -f noninteractive unattended-upgrades
+
+final_message: "Strangerchat OCI Always Free server bootstrap complete!"

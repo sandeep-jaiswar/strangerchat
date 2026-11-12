@@ -8,12 +8,20 @@ import {
   useState,
 } from "react";
 import { Chess, type Square } from "chess.js";
-import { Flag, Handshake, RotateCcw, UserRound } from "lucide-react";
+import {
+  Flag,
+  Handshake,
+  RotateCcw,
+  UserRound,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { Chessboard, defaultPieces } from "react-chessboard";
 import type { ChessColor, ChessOffer } from "@repo/protocol";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 import { type ChessView, describeResult } from "@/hooks/use-stranger-chat";
+import { playChessSound } from "./chess-sounds";
 
 interface ChessPanelProps {
   game: ChessView;
@@ -41,6 +49,29 @@ export function ChessPanel({
   onFlag,
 }: ChessPanelProps) {
   const chess = useMemo(() => new Chess(game.fen), [game.fen]);
+  const [muted, setMuted] = useState(false);
+  const prevMoveCount = useRef(game.moves.length);
+  const prevStatus = useRef(game.status);
+
+  useEffect(() => {
+    if (muted) {
+      prevMoveCount.current = game.moves.length;
+      prevStatus.current = game.status;
+      return;
+    }
+    if (game.status === "over" && prevStatus.current === "playing") {
+      playChessSound("gameover");
+    } else if (game.moves.length > prevMoveCount.current) {
+      const lastSan = game.moves.at(-1) ?? "";
+      if (lastSan.includes("+") || lastSan.includes("#")) playChessSound("check");
+      else if (lastSan.includes("x")) playChessSound("capture");
+      else playChessSound("move");
+    }
+    prevMoveCount.current = game.moves.length;
+    prevStatus.current = game.status;
+  }, [game.moves, game.status, muted]);
+
+  const material = useMemo(() => computeMaterialLead(chess), [chess]);
   const playing = game.status === "playing";
   const turn: ChessColor = chess.turn() === "w" ? "white" : "black";
   const myTurn = playing && connected && turn === game.color;
@@ -137,6 +168,7 @@ export function ChessPanel({
         label="Stranger"
         color={opponent}
         ms={timeLeft(opponent)}
+        advantage={material[opponent]}
         active={playing && turn === opponent}
         status={
           partnerGone
@@ -213,6 +245,7 @@ export function ChessPanel({
         label="You"
         color={game.color}
         ms={timeLeft(game.color)}
+        advantage={material[game.color]}
         active={playing && turn === game.color}
         status={
           firstMoveLeft !== null && turn === game.color
@@ -227,6 +260,8 @@ export function ChessPanel({
         game={game}
         partnerGone={partnerGone}
         connected={connected}
+        muted={muted}
+        onToggleMute={() => setMuted((v) => !v)}
         onResign={onResign}
         onOffer={onOffer}
       />
@@ -238,12 +273,14 @@ function Actions({
   game,
   partnerGone,
   connected,
+  muted,
+  onToggleMute,
   onResign,
   onOffer,
 }: Pick<
   ChessPanelProps,
   "game" | "partnerGone" | "connected" | "onResign" | "onOffer"
->) {
+> & { muted: boolean; onToggleMute: () => void }) {
   // Resigning needs a second press within a few seconds so it can't happen by accident.
   const [confirmingResign, setConfirmingResign] = useState(false);
   useEffect(() => {
@@ -259,21 +296,31 @@ function Actions({
         <p className="text-sm font-medium" aria-live="polite">
           {describeResult(game)}
         </p>
-        {!partnerGone && (
+        <div className="flex items-center gap-1.5">
           <Button
-            size="sm"
-            variant={rematch === "them" ? "default" : "outline"}
-            disabled={!connected || rematch === "me"}
-            onClick={() => onOffer("rematch")}
+            size="icon-sm"
+            variant="ghost"
+            onClick={onToggleMute}
+            aria-label={muted ? "Unmute chess sounds" : "Mute chess sounds"}
           >
-            <RotateCcw />
-            {rematch === "them"
-              ? "Accept rematch"
-              : rematch === "me"
-                ? "Rematch offered"
-                : "Rematch"}
+            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </Button>
-        )}
+          {!partnerGone && (
+            <Button
+              size="sm"
+              variant={rematch === "them" ? "default" : "outline"}
+              disabled={!connected || rematch === "me"}
+              onClick={() => onOffer("rematch")}
+            >
+              <RotateCcw />
+              {rematch === "them"
+                ? "Accept rematch"
+                : rematch === "me"
+                  ? "Rematch offered"
+                  : "Rematch"}
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
@@ -281,7 +328,16 @@ function Actions({
   const draw = game.offers.draw;
   const started = game.moves.length >= 2;
   return (
-    <div className="flex min-h-10 items-center justify-end gap-2">
+    <div className="flex min-h-10 items-center justify-between gap-2">
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={onToggleMute}
+        aria-label={muted ? "Unmute chess sounds" : "Mute chess sounds"}
+      >
+        {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+      </Button>
+      <div className="flex items-center gap-2">
       {started && (
         <Button
           size="sm"
@@ -313,6 +369,7 @@ function Actions({
         <Flag />
         {!started ? "Abort" : confirmingResign ? "Sure?" : "Resign"}
       </Button>
+      </div>
     </div>
   );
 }
@@ -321,12 +378,14 @@ function PlayerBar({
   label,
   color,
   ms,
+  advantage,
   active,
   status,
 }: {
   label: string;
   color: ChessColor;
   ms: number;
+  advantage: number;
   active: boolean;
   status?: string;
 }) {
@@ -346,6 +405,11 @@ function PlayerBar({
           <UserRound className="size-3.5" />
         </span>
         <span className="text-sm font-medium">{label}</span>
+        {advantage > 0 && (
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+            +{advantage}
+          </span>
+        )}
         {status && (
           <span className="truncate text-xs text-muted-foreground">
             {status}
@@ -385,6 +449,31 @@ function formatClock(ms: number) {
   if (seconds < 10) return seconds.toFixed(1);
   const whole = Math.ceil(seconds);
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+const PIECE_VALUES: Record<string, number> = {
+  p: 1,
+  n: 3,
+  b: 3,
+  r: 5,
+  q: 9,
+};
+
+function computeMaterialLead(chess: Chess): Record<ChessColor, number> {
+  let w = 0;
+  let b = 0;
+  for (const row of chess.board()) {
+    for (const cell of row) {
+      if (!cell) continue;
+      const val = PIECE_VALUES[cell.type] ?? 0;
+      if (cell.color === "w") w += val;
+      else b += val;
+    }
+  }
+  return {
+    white: Math.max(0, w - b),
+    black: Math.max(0, b - w),
+  };
 }
 
 const PIECE_NAMES = { q: "Queen", r: "Rook", b: "Bishop", n: "Knight" };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@repo/ui/lib/utils";
 import { ADSENSE_CLIENT } from "@/lib/ads";
 
@@ -17,19 +17,37 @@ interface AdSlotProps {
   className?: string;
 }
 
+const NUMERIC_SLOT = /^\d+$/;
+
 export function AdSlot({ slot, format = "auto", className }: AdSlotProps) {
   const ref = useRef<HTMLModElement>(null);
-  const enabled = Boolean(ADSENSE_CLIENT && slot);
+  const [unfilled, setUnfilled] = useState(false);
+  const validSlot = NUMERIC_SLOT.test(slot);
+  const enabled = Boolean(ADSENSE_CLIENT && validSlot);
 
   useEffect(() => {
     const ins = ref.current;
+    if (!enabled || !ins) return;
+
+    const observer = new MutationObserver(() => {
+      if (ins.dataset.adStatus === "unfilled") setUnfilled(true);
+      else if (ins.dataset.adStatus === "filled") setUnfilled(false);
+    });
+    observer.observe(ins, {
+      attributes: true,
+      attributeFilter: ["data-ad-status"],
+    });
+
     // AdSense marks a filled unit with data-adsbygoogle-status; pushing twice throws.
-    if (!enabled || !ins || ins.dataset.adsbygoogleStatus) return;
-    try {
-      (window.adsbygoogle = window.adsbygoogle ?? []).push({});
-    } catch {
-      // Ad blockers and not-yet-approved sites land here; the page should still work.
+    if (!ins.dataset.adsbygoogleStatus) {
+      try {
+        (window.adsbygoogle = window.adsbygoogle ?? []).push({});
+      } catch {
+        // Ad blockers and not-yet-approved sites land here; the page should still work.
+      }
     }
+
+    return () => observer.disconnect();
   }, [enabled]);
 
   if (!enabled) {
@@ -37,14 +55,18 @@ export function AdSlot({ slot, format = "auto", className }: AdSlotProps) {
     return (
       <div
         className={cn(
-          "flex min-h-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground",
+          "flex min-h-24 items-center justify-center rounded-lg border border-dashed px-3 text-center text-xs text-muted-foreground",
           className,
         )}
       >
-        Ad placeholder ({format})
+        {slot && !validSlot
+          ? `Invalid AdSense slot "${slot}" (use numeric Display unit ID, not ca-app-pub-…)`
+          : `Ad placeholder (${format})`}
       </div>
     );
   }
+
+  if (unfilled) return null;
 
   return (
     <div className={cn("w-full overflow-hidden", className)}>

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/lib/brand-mark";
 
-export const alt = "Strangerchat - free anonymous chat with strangers";
+export const alt = "Funstranger - chat with strangers, make friends & play chess";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -23,12 +23,12 @@ export default function OpengraphImage() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <BrandMark size={96} rounded />
-        <div style={{ fontSize: 48, fontWeight: 700 }}>Strangerchat</div>
+        <div style={{ fontSize: 48, fontWeight: 700 }}>Funstranger</div>
       </div>
       <div
         style={{
           marginTop: 56,
-          fontSize: 76,
+          fontSize: 72,
           fontWeight: 800,
           lineHeight: 1.1,
           letterSpacing: -2,
@@ -37,10 +37,10 @@ export default function OpengraphImage() {
         }}
       >
         <span>Talk to a stranger.</span>
-        <span style={{ color: "#8f84ff" }}>Instantly.</span>
+        <span style={{ color: "#8f84ff" }}>Play chess &amp; make friends.</span>
       </div>
-      <div style={{ marginTop: 36, fontSize: 32, color: "#b8b5c9" }}>
-        Free, anonymous one-on-one chat · No bots · Nothing stored
+      <div style={{ marginTop: 36, fontSize: 30, color: "#b8b5c9" }}>
+        funstranger.in · Free anonymous chat · Live 10+0 chess · Mutual friends
       </div>
     </div>,
     size,

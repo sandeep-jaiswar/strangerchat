@@ -3,15 +3,36 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Check,
+  ChessKnight,
+  Flag,
+  MoreVertical,
   SendHorizontal,
+  ShieldBan,
   SkipForward,
+  UserCheck,
+  UserPlus,
   UserRound,
+  X,
 } from "lucide-react";
-import { MAX_MESSAGE_LENGTH } from "@repo/protocol";
+import { MAX_MESSAGE_LENGTH, type PublicFriendProfile } from "@repo/protocol";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
 import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
-import type { ChatItem, ChatPhase } from "@/hooks/use-stranger-chat";
+import { AdSlot } from "@/components/ads/ad-slot";
+import type {
+  ChatItem,
+  ChatPhase,
+  FriendHandshakeStatus,
+} from "@/hooks/use-stranger-chat";
+import { AD_SLOTS } from "@/lib/ads";
 
 interface ConversationProps {
   phase: Extract<ChatPhase, "chatting" | "ended">;
@@ -19,12 +40,21 @@ interface ConversationProps {
   connected: boolean;
   messages: ChatItem[];
   partnerTyping: boolean;
+  hasGame: boolean;
+  chessInvite: "me" | "them" | null;
+  friendStatus: FriendHandshakeStatus;
+  friendPartner: PublicFriendProfile | null;
+  sharedTags: string[];
   /** Label of the button that finds someone new once the chat has ended. */
   nextLabel?: string;
   onSend: (text: string) => boolean;
   onTyping: () => void;
   onNext: () => void;
   onLeave: () => void;
+  onInviteChess: () => void;
+  onRespondChessInvite: (accept: boolean) => void;
+  onAddFriend: () => void;
+  onSafetyAction: (action: "block" | "report", reason?: string) => void;
 }
 
 const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
@@ -34,11 +64,20 @@ export function Conversation({
   connected,
   messages,
   partnerTyping,
+  hasGame,
+  chessInvite,
+  friendStatus,
+  friendPartner,
+  sharedTags,
   nextLabel = "Find a new stranger",
   onSend,
   onTyping,
   onNext,
   onLeave,
+  onInviteChess,
+  onRespondChessInvite,
+  onAddFriend,
+  onSafetyAction,
 }: ConversationProps) {
   const ended = phase === "ended";
 
@@ -73,33 +112,145 @@ export function Conversation({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-2.5">
-        <span className="relative flex size-9 items-center justify-center rounded-full bg-accent text-accent-foreground">
-          <UserRound className="size-4" />
-          <span
-            className={cn(
-              "absolute right-0 bottom-0 size-2.5 rounded-full ring-2 ring-background",
-              ended
-                ? "bg-muted-foreground"
-                : connected
-                  ? "bg-success"
-                  : "animate-pulse bg-amber-500",
-            )}
-          />
-        </span>
-        <div className="min-w-0 leading-tight">
-          <p className="text-sm font-medium">Stranger</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {ended
-              ? "Left the chat"
-              : !connected
-                ? "Reconnecting…"
-                : partnerTyping
-                  ? "Typing…"
-                  : "Online"}
-          </p>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+            <UserRound className="size-4" />
+            <span
+              className={cn(
+                "absolute right-0 bottom-0 size-2.5 rounded-full ring-2 ring-background",
+                ended
+                  ? "bg-muted-foreground"
+                  : connected
+                    ? "bg-success"
+                    : "animate-pulse bg-amber-500",
+              )}
+            />
+          </span>
+          <div className="min-w-0 leading-tight">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium">
+                {friendPartner ? friendPartner.handle : "Stranger"}
+              </p>
+              {sharedTags.length > 0 && (
+                <Badge variant="secondary" className="hidden text-[10px] sm:inline-flex">
+                  #{sharedTags[0]}
+                </Badge>
+              )}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {ended
+                ? "Left the chat"
+                : !connected
+                  ? "Reconnecting…"
+                  : partnerTyping
+                    ? "Typing…"
+                    : "Online"}
+            </p>
+          </div>
         </div>
+
+        {!ended && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!hasGame && (
+              <Button
+                size="sm"
+                variant={chessInvite === "me" ? "secondary" : "outline"}
+                disabled={!connected || chessInvite !== null}
+                onClick={onInviteChess}
+                title="Play chess while talking"
+              >
+                <ChessKnight className="size-4" />
+                <span className="hidden sm:inline">
+                  {chessInvite === "me" ? "Invited…" : "Play chess"}
+                </span>
+              </Button>
+            )}
+
+            <Button
+              size="sm"
+              variant={
+                friendStatus === "accepted"
+                  ? "secondary"
+                  : friendStatus === "pending_them"
+                    ? "default"
+                    : "outline"
+              }
+              disabled={
+                !connected ||
+                friendStatus === "pending_me" ||
+                friendStatus === "accepted"
+              }
+              onClick={onAddFriend}
+              title="Add friend"
+            >
+              {friendStatus === "accepted" ? (
+                <UserCheck className="size-4 text-success" />
+              ) : (
+                <UserPlus className="size-4" />
+              )}
+              <span className="hidden sm:inline">
+                {friendStatus === "accepted"
+                  ? "Friends"
+                  : friendStatus === "pending_me"
+                    ? "Requested"
+                    : friendStatus === "pending_them"
+                      ? "Accept friend"
+                      : "Add friend"}
+              </span>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={!connected}
+                  aria-label="Safety options"
+                >
+                  <MoreVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onSafetyAction("block")}>
+                  <ShieldBan className="size-4" />
+                  Block & skip stranger
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onSafetyAction("report", "harassment_or_spam")}
+                >
+                  <Flag className="size-4" />
+                  Report & block
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
+
+      {!ended && chessInvite === "them" && !hasGame && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-accent/60 px-4 py-2 text-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <ChessKnight className="size-4 text-primary" />
+            Stranger wants to play a 10+0 chess game!
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" onClick={() => onRespondChessInvite(true)}>
+              <Check className="size-3.5" />
+              Play
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onRespondChessInvite(false)}
+            >
+              <X className="size-3.5" />
+              Decline
+            </Button>
+          </div>
+        </div>
+      )}
 
       <MessageList
         messages={messages}
@@ -109,20 +260,23 @@ export function Conversation({
       <div className="shrink-0 border-t bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4">
         <div className="mx-auto max-w-3xl">
           {ended ? (
-            <div className="flex gap-2">
-              <Button variant="outline" size="lg" onClick={onLeave}>
-                <ArrowLeft />
-                <span className="sr-only sm:not-sr-only">Lobby</span>
-              </Button>
-              <Button
-                size="lg"
-                className="flex-1"
-                disabled={!connected}
-                onClick={onNext}
-              >
-                <SkipForward />
-                {nextLabel}
-              </Button>
+            <div className="space-y-3">
+              <AdSlot slot={AD_SLOTS.banner} format="horizontal" />
+              <div className="flex gap-2">
+                <Button variant="outline" size="lg" onClick={onLeave}>
+                  <ArrowLeft />
+                  <span className="sr-only sm:not-sr-only">Lobby</span>
+                </Button>
+                <Button
+                  size="lg"
+                  className="flex-1"
+                  disabled={!connected}
+                  onClick={onNext}
+                >
+                  <SkipForward />
+                  {nextLabel}
+                </Button>
+              </div>
             </div>
           ) : (
             <Composer
@@ -259,7 +413,7 @@ function MessageList({
       }}
     >
       <ol
-        className="mx-auto flex max-w-3xl flex-col gap-1.5 px-3 py-4 sm:px-4"
+        className="ph-no-capture mx-auto flex max-w-3xl flex-col gap-1.5 px-3 py-4 sm:px-4"
         aria-live="polite"
       >
         {messages.map((message, index) => {

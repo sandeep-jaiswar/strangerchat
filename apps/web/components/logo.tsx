@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { MessagesSquare } from "lucide-react";
 
 export function Logo() {
   return (
@@ -7,10 +6,32 @@ export function Logo() {
       href="/"
       className="flex items-center gap-2 font-semibold tracking-tight"
     >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <MessagesSquare className="size-4" />
+      <span
+        className="flex size-8 items-center justify-center rounded-lg text-white shadow-sm"
+        style={{
+          background:
+            "linear-gradient(135deg, #6d5ff5 0%, #4a3bd1 60%, #0ea5e9 100%)",
+        }}
+      >
+        <svg
+          className="size-4.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+          <path
+            d="M8.5 14.5h7l-.7-4-2 1.7-1.3-2.5-1.3 2.5-2-1.7-.7 4z"
+            fill="currentColor"
+            strokeWidth={1.2}
+          />
+        </svg>
       </span>
-      <span className="text-base">Strangerchat</span>
+      <span className="text-base">Funstranger</span>
     </Link>
   );
 }

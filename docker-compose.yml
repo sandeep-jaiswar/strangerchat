@@ -1,0 +1,125 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HOST_BIND_IP:-0.0.0.0}:80:80"
+      - "${HOST_BIND_IP:-0.0.0.0}:443:443"
+      - "${HOST_BIND_IP:-0.0.0.0}:443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-:80}
+      WWW_REDIRECT_SITE: ${WWW_REDIRECT_SITE:-http://127.0.0.1:8088}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./infra/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+      chat-server:
+        condition: service_healthy
+    logging: *default-logging
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost}
+        NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_BANNER: ${NEXT_PUBLIC_ADSENSE_SLOT_BANNER:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR: ${NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR:-}
+        NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:-}
+        NEXT_PUBLIC_BING_SITE_VERIFICATION: ${NEXT_PUBLIC_BING_SITE_VERIFICATION:-}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://${POSTGRES_USER:-strangerchat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-strangerchat}
+      CHAT_REDIS_PREFIX: ${CHAT_REDIS_PREFIX:-sc:}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-3e2f6e540f92b5b78001f37dd4bd261a}
+      POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+
+  chat-server:
+    build:
+      context: .
+      dockerfile: packages/chat-server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      WS_PORT: 3001
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://${POSTGRES_USER:-strangerchat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-strangerchat}
+      CHAT_REDIS_PREFIX: ${CHAT_REDIS_PREFIX:-sc:}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-3e2f6e540f92b5b78001f37dd4bd261a}
+      POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-strangerchat}
+      # Requires POSTGRES_PASSWORD to be set and non-empty in .env
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-strangerchat}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-strangerchat} -d ${POSTGRES_DB:-strangerchat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "1gb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:

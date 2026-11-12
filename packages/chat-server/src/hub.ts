@@ -5,15 +5,31 @@ import type { WebSocket } from "ws";
 import {
   CloseCode,
   MAX_MESSAGE_LENGTH,
+  MAX_TAGS,
+  MAX_TAG_LENGTH,
   type ChatPhase,
   type ChessEndReason,
   type ChessResult,
   type ClientEvent,
   type ServerEvent,
 } from "@repo/protocol";
+import {
+  blockUser,
+  ensureUser,
+  getBlockedRelationIds,
+  hasDatabase,
+  isUserBanned,
+  recordChessGameAndUpdateElo,
+  reportUser,
+  requestOrAcceptFriend,
+} from "@repo/db";
+import { captureServerEvent, closeServerAnalytics } from "./analytics.ts";
+import { moderateMessageText } from "./moderation.ts";
 import { TokenBucket } from "./rate-limit.ts";
 import {
   BYE,
+  CHESS_INVITE,
+  CHESS_INVITE_RESPOND,
   CLAIM,
   DETACH,
   FIND,
@@ -22,6 +38,7 @@ import {
   LEAVE,
   MOVE,
   OFFER,
+  PARTNER,
   RELAY,
   RESIGN,
   SYNC,
@@ -75,6 +92,9 @@ interface ChatCommands {
   scOffer(...args: Args): Promise<number>;
   scFlag(...args: Args): Promise<number>;
   scSync(...args: Args): Promise<string>;
+  scChessInvite(...args: Args): Promise<number>;
+  scChessInviteRespond(...args: Args): Promise<number>;
+  scPartner(...args: Args): Promise<[string?, string?]>;
 }
 
 /**
@@ -118,6 +138,9 @@ export class Hub {
       scOffer: OFFER,
       scFlag: FLAG,
       scSync: SYNC,
+      scChessInvite: CHESS_INVITE,
+      scChessInviteRespond: CHESS_INVITE_RESPOND,
+      scPartner: PARTNER,
     };
     for (const [name, lua] of Object.entries(scripts)) {
       this.redis.defineCommand(name, { numberOfKeys: 0, lua });
@@ -134,6 +157,31 @@ export class Hub {
   }
 
   async attach(ws: WebSocket, userId: string, sid: string): Promise<void> {
+    if (hasDatabase()) {
+      try {
+        if (await isUserBanned(userId)) {
+          this.sendRaw(
+            { ws } as Connection,
+            JSON.stringify({
+              type: "error",
+              code: "banned",
+              message:
+                "Your account is temporarily suspended due to safety reports.",
+            } satisfies ServerEvent),
+          );
+          ws.close(CloseCode.Unauthorized, "Suspended");
+          return;
+        }
+        await ensureUser(userId);
+        const blocked = await getBlockedRelationIds(userId);
+        const blockKey = `${this.prefix}blocked:${userId}`;
+        await this.redis.del(blockKey);
+        if (blocked.length > 0) await this.redis.sadd(blockKey, ...blocked);
+      } catch (error: unknown) {
+        console.error("chat-server: db sync on attach failed", error);
+      }
+    }
+
     const channel = this.channel(sid);
     const previous = this.connections.get(sid);
     // Subscribe before claiming so nothing sent to this session in between is lost.
@@ -206,7 +254,11 @@ export class Hub {
     for (const connection of this.connections.values())
       connection.ws.terminate();
     this.connections.clear();
-    await Promise.all([this.redis.quit(), this.subscriber.quit()]);
+    await Promise.all([
+      this.redis.quit(),
+      this.subscriber.quit(),
+      closeServerAnalytics(),
+    ]);
   }
 
   /** Leading arguments every script takes (see ./scripts.ts). */
@@ -255,12 +307,21 @@ export class Hub {
     const common = this.common(Date.now());
     switch (event.type) {
       case "find": {
+        const tags = normalizeTags(event.tags);
         const matched = await this.redis.scFind(
           ...common,
           sid,
           event.mode ?? "chat",
+          ...tags,
         );
-        if (!matched) this.send(connection, { type: "searching" });
+        if (matched) {
+          captureServerEvent(connection.userId, "chat_matched", {
+            mode: event.mode ?? "chat",
+            tags_count: tags.length,
+          });
+        } else {
+          this.send(connection, { type: "searching" });
+        }
         return;
       }
       case "leave":
@@ -275,8 +336,8 @@ export class Hub {
         await this.redis.scRelay(...common, sid, JSON.stringify(event), 0);
         return;
       case "message": {
-        const text = event.text.trim();
-        if (!text || text.length > MAX_MESSAGE_LENGTH) {
+        const rawText = event.text.trim();
+        if (!rawText || rawText.length > MAX_MESSAGE_LENGTH) {
           this.send(connection, {
             type: "error",
             code: "invalid_message",
@@ -284,6 +345,7 @@ export class Hub {
           });
           return;
         }
+        const { text } = moderateMessageText(rawText);
         const message: ServerEvent = {
           type: "message",
           id: randomUUID(),
@@ -305,17 +367,37 @@ export class Hub {
         }
         return;
       }
+      case "chess_invite":
+        await this.redis.scChessInvite(...common, sid);
+        return;
+      case "chess_invite_response":
+        await this.redis.scChessInviteRespond(
+          ...common,
+          sid,
+          event.accept ? "1" : "0",
+        );
+        return;
       case "chess_move":
         await this.move(connection, event);
+        void this.flushEndedGames();
         return;
       case "chess_resign":
         await this.redis.scResign(...common, sid);
+        void this.flushEndedGames();
         return;
       case "chess_offer":
         await this.redis.scOffer(...common, sid, event.offer);
+        void this.flushEndedGames();
         return;
       case "chess_flag":
         await this.redis.scFlag(...common, sid);
+        void this.flushEndedGames();
+        return;
+      case "friend_request":
+        await this.handleFriendRequest(connection);
+        return;
+      case "safety_action":
+        await this.handleSafetyAction(connection, event.action, event.reason);
         return;
     }
   }
@@ -417,10 +499,152 @@ export class Hub {
 
     if (this.closed) return;
     const online = await this.redis.scTick(...this.common(now));
+    void this.flushEndedGames();
     if (online !== this.online) {
       this.online = online;
       for (const connection of this.connections.values()) {
         this.send(connection, { type: "online", count: online });
+      }
+    }
+  }
+
+  private async handleFriendRequest(connection: Connection) {
+    const [partnerSid, partnerUid] = await this.redis.scPartner(
+      ...this.common(Date.now()),
+      connection.sid,
+    );
+    if (!partnerSid || !partnerUid) {
+      this.send(connection, {
+        type: "error",
+        code: "not_in_chat",
+        message: "You're not chatting with anyone right now.",
+      });
+      return;
+    }
+    if (!hasDatabase()) {
+      this.send(connection, { type: "friend_status", status: "unavailable" });
+      return;
+    }
+    const result = await requestOrAcceptFriend(connection.userId, partnerUid);
+    if (result.status === "pending") {
+      this.send(connection, { type: "friend_status", status: "pending_me" });
+      await this.redis.publish(
+        this.channel(partnerSid),
+        JSON.stringify({
+          type: "friend_status",
+          status: "pending_them",
+        } satisfies ServerEvent),
+      );
+      return;
+    }
+    if (result.status === "accepted") {
+      const [me, them] = await Promise.all([
+        ensureUser(connection.userId),
+        ensureUser(partnerUid),
+      ]);
+      this.send(connection, {
+        type: "friend_status",
+        status: "accepted",
+        partner: them
+          ? {
+              id: them.id,
+              handle: them.handle,
+              avatarSeed: them.avatarSeed,
+              chessRating: them.chessRating,
+            }
+          : undefined,
+      });
+      await this.redis.publish(
+        this.channel(partnerSid),
+        JSON.stringify({
+          type: "friend_status",
+          status: "accepted",
+          partner: me
+            ? {
+                id: me.id,
+                handle: me.handle,
+                avatarSeed: me.avatarSeed,
+                chessRating: me.chessRating,
+              }
+            : undefined,
+        } satisfies ServerEvent),
+      );
+      captureServerEvent(connection.userId, "friendship_accepted");
+      captureServerEvent(partnerUid, "friendship_accepted");
+      return;
+    }
+    this.send(connection, { type: "friend_status", status: "unavailable" });
+  }
+
+  private async handleSafetyAction(
+    connection: Connection,
+    action: "block" | "report",
+    reason?: string,
+  ) {
+    const now = Date.now();
+    const [partnerSid, partnerUid] = await this.redis.scPartner(
+      ...this.common(now),
+      connection.sid,
+    );
+    if (!partnerSid || !partnerUid) return;
+
+    if (hasDatabase()) {
+      await blockUser(connection.userId, partnerUid);
+      if (action === "report") {
+        await reportUser(
+          connection.userId,
+          partnerUid,
+          reason ?? "inappropriate",
+        );
+      }
+    }
+    await this.redis.sadd(`${this.prefix}blocked:${connection.userId}`, partnerUid);
+    await this.redis.scLeave(...this.common(now), connection.sid);
+    captureServerEvent(
+      connection.userId,
+      action === "report" ? "user_reported" : "user_blocked",
+      { reason: reason ?? null },
+    );
+
+    this.send(connection, {
+      type: "safety_ack",
+      action,
+      message:
+        action === "report"
+          ? "Report submitted and user blocked."
+          : "User blocked. You won't be matched again.",
+    });
+  }
+
+  private async flushEndedGames() {
+    if (!hasDatabase()) return;
+    const key = `${this.prefix}ended_games`;
+    for (let i = 0; i < 10; i++) {
+      const raw = await this.redis.lpop(key);
+      if (!raw) break;
+      try {
+        const game = JSON.parse(raw) as {
+          whiteId: string;
+          blackId: string;
+          result: ChessResult;
+          reason: string;
+          moves: string[];
+        };
+        await recordChessGameAndUpdateElo(game);
+        captureServerEvent(game.whiteId, "chess_game_ended", {
+          result: game.result,
+          reason: game.reason,
+          moves_count: game.moves.length,
+          color: "white",
+        });
+        captureServerEvent(game.blackId, "chess_game_ended", {
+          result: game.result,
+          reason: game.reason,
+          moves_count: game.moves.length,
+          color: "black",
+        });
+      } catch (error: unknown) {
+        console.error("chat-server: failed to record chess game", error);
       }
     }
   }
@@ -445,10 +669,20 @@ function parseEvent(raw: string): ClientEvent | undefined {
       return typeof event.text === "string"
         ? { type: "message", text: event.text }
         : undefined;
-    case "find":
+    case "find": {
+      const tags = Array.isArray(event.tags)
+        ? event.tags.filter((t): t is string => typeof t === "string")
+        : undefined;
       return event.mode === "chess"
-        ? { type: "find", mode: "chess" }
-        : { type: "find" };
+        ? { type: "find", mode: "chess", tags }
+        : { type: "find", tags };
+    }
+    case "chess_invite":
+      return { type: "chess_invite" };
+    case "chess_invite_response":
+      return typeof event.accept === "boolean"
+        ? { type: "chess_invite_response", accept: event.accept }
+        : undefined;
     case "chess_move":
       return typeof event.from === "string" &&
         typeof event.to === "string" &&
@@ -467,9 +701,34 @@ function parseEvent(raw: string): ClientEvent | undefined {
       return event.offer === "draw" || event.offer === "rematch"
         ? { type: "chess_offer", offer: event.offer }
         : undefined;
+    case "friend_request":
+      return { type: "friend_request" };
+    case "safety_action":
+      return event.action === "block" || event.action === "report"
+        ? {
+            type: "safety_action",
+            action: event.action,
+            reason: typeof event.reason === "string" ? event.reason : undefined,
+          }
+        : undefined;
     default:
       return undefined;
   }
+}
+
+function normalizeTags(raw?: string[]): string[] {
+  if (!raw || raw.length === 0) return [];
+  const unique = new Set<string>();
+  for (const tag of raw) {
+    const clean = tag
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .slice(0, MAX_TAG_LENGTH);
+    if (clean) unique.add(clean);
+    if (unique.size >= MAX_TAGS) break;
+  }
+  return [...unique];
 }
 
 /** How a game ends after the last move, if it does. */

@@ -1,5 +1,6 @@
-/** AdSense publisher id, e.g. "ca-pub-1234567890123456". Ads are disabled when empty. */
-export const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "";
+/** AdSense publisher id, e.g. "ca-pub-1234567890123456". */
+export const ADSENSE_CLIENT =
+  process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "ca-pub-3834685478743012";
 
 export const AD_SLOTS = {
   /** Responsive horizontal unit used on the landing page and mobile lobby. */
