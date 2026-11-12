@@ -442,7 +442,7 @@ function reducer(state: State, action: Action): State {
           };
         }
         case "chess_over": {
-          if (!state.game) return state;
+          if (!state.game || state.game.status !== "playing") return state;
           const game = gameOver(
             state.game,
             event.result,
@@ -572,6 +572,7 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
+            puzzleDuel: null,
             messages: appendMessage(
               state.messages,
               systemItem("Stranger has left the chat."),
@@ -614,6 +615,7 @@ function reducer(state: State, action: Action): State {
             chessInvite: null,
             chessInviteTimeControl: null,
             puzzleDuelInvite: null,
+            puzzleDuel: null,
             messages: appendMessage(state.messages, systemItem(event.message)),
           };
         case "error":
@@ -764,7 +766,7 @@ export function useStrangerchat(initialInviteCode?: string | null) {
             JSON.stringify({
               type: "find",
               mode: modeRef.current,
-              tags: tagsRef.current,
+              tags: modeRef.current === "chess" ? undefined : tagsRef.current,
               timeControl: timeControlRef.current,
             } satisfies ClientEvent),
           );
@@ -859,7 +861,14 @@ export function useStrangerchat(initialInviteCode?: string | null) {
       timeControl: TimeControlId = timeControlRef.current,
     ) => {
       stopTyping();
-      if (send({ type: "find", mode, tags, timeControl })) {
+      if (
+        send({
+          type: "find",
+          mode,
+          tags: mode === "chess" ? undefined : tags,
+          timeControl,
+        })
+      ) {
         modeRef.current = mode;
         tagsRef.current = tags;
         timeControlRef.current = timeControl;
@@ -867,7 +876,7 @@ export function useStrangerchat(initialInviteCode?: string | null) {
         captureEvent("match_search_started", {
           mode,
           time_control: mode === "chess" ? timeControl : null,
-          tags_count: tags.length,
+          tags_count: mode === "chess" ? 0 : tags.length,
         });
       }
     },

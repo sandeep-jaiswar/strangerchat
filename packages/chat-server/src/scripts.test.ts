@@ -2,7 +2,18 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test, type TestContext } from "node:test";
 import { Redis } from "ioredis";
-import { BYE, CLAIM, DETACH, FIND, MOVE, TICK } from "./scripts.ts";
+import {
+  BYE,
+  CHESS_INVITE,
+  CHESS_INVITE_RESPOND,
+  CLAIM,
+  DETACH,
+  FIND,
+  MOVE,
+  PAIR_DIRECT,
+  RESIGN,
+  TICK,
+} from "./scripts.ts";
 import {
   closePresenceRedis,
   filterOnlineUserIds,
@@ -225,4 +236,156 @@ test("online_users set tracks presence incrementally in O(1) and filters subsets
 
   const allOnline = await getOnlineUserIds(redisUrl, prefix);
   assert.deepEqual([...allOnline], ["bob"]);
+});
+
+test("rematch fallback respects candidate TAG_WAIT window", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await redis.set(`${prefix}ended:alice:bob`, 1_000);
+
+  // Bob queues with a tag at t=16_000 (REMATCH_BLOCK elapsed, TAG_WAIT active until 21_000).
+  assert.equal(await run(FIND, 16_000, "bob", "chat", "chess"), 0);
+  // Alice queues untagged 100ms later: she must not hijack Bob during his TAG_WAIT as a fallback.
+  assert.equal(await run(FIND, 16_100, "alice", "chat"), 0);
+  assert.equal(await redis.get(`${prefix}pair:bob`), null);
+
+  // Another #chess user arriving before 21_000 still gets Bob.
+  await claim("carol");
+  assert.equal(await run(FIND, 16_200, "carol", "chat", "chess"), 1);
+  assert.equal(await redis.get(`${prefix}pair:bob`), "carol");
+});
+
+test("tagged search paginates saturated tagq (>50 entries) without matching untagged fallback early", async (t) => {
+  const { redis, prefix, run, claim, queue } = await fixture(t);
+  // Queue 55 same-user #chess sessions plus an untagged rematch fallback for alice.
+  await queue("prev");
+  await redis.set(`${prefix}ended:alice:prev`, 1_000);
+  for (let i = 0; i < 55; i++) {
+    await claim(`alice-dup-${i}`, "alice", `c-${i}`);
+    const seq = await redis.incr(`${prefix}qseq`);
+    await redis.sadd(`${prefix}tags:alice-dup-${i}`, "chess");
+    await redis.hset(`${prefix}tagat`, `alice-dup-${i}`, 16_000);
+    await redis.zadd(`${prefix}tagq:chat:chess`, seq, `alice-dup-${i}`);
+    await redis.zadd(`${prefix}queue`, seq, `alice-dup-${i}`);
+  }
+  await claim("bob");
+  const bobSeq = await redis.incr(`${prefix}qseq`);
+  await redis.sadd(`${prefix}tags:bob`, "chess");
+  await redis.hset(`${prefix}tagat`, "bob", 16_000);
+  await redis.zadd(`${prefix}tagq:chat:chess`, bobSeq, "bob");
+  await redis.zadd(`${prefix}queue`, bobSeq, "bob");
+
+  await claim("alice");
+  // First call scans first 50 entries of tagq; must NOT match untagged `prev` during TAG_WAIT.
+  assert.equal(await run(FIND, 16_000, "alice", "chat", "chess"), 0);
+  assert.equal(await redis.get(`${prefix}pair:alice`), null);
+  // Next TICK runs `alice`, advancing her tagscan past the first 50 and matching bob at position 56.
+  const bobQScore = await redis.zscore(`${prefix}queue`, "bob");
+  await redis.set(`${prefix}retry`, bobQScore!);
+  await run(TICK, 16_500);
+  assert.equal(await redis.get(`${prefix}pair:alice`), "bob");
+});
+
+test("stale page-1 anyFresh does not shadow live page-2 candidates", async (t) => {
+  const { redis, prefix, run, claim, queue } = await fixture(t);
+  await queue("stale");
+  for (let i = 0; i < 105; i++) await queue(`blocker-${i}`, "alice");
+  await queue("live");
+  await claim("alice");
+
+  assert.equal(await run(FIND, 1_000, "alice", "chat", "music"), 0);
+  // Simulate TAG_WAIT having elapsed for alice, then run TICK starting at alice (`retry = score(live)`).
+  const liveScore = await redis.zscore(`${prefix}queue`, "live");
+  await redis.set(`${prefix}retry`, liveScore!);
+  await run(TICK, 6_000);
+  assert.equal(await redis.hget(`${prefix}anyfresh`, "alice"), "stale");
+
+  // `stale` disconnects before page 2 runs; page 2 must pick up `live` instead of failing on `stale`.
+  await run(DETACH, 6_100, "stale", "stale");
+  await redis.set(`${prefix}retry`, liveScore!);
+  await run(TICK, 6_200);
+  assert.equal(await redis.get(`${prefix}pair:alice`), "live");
+});
+
+test("tagged search scans older pages before pairing a newer candidate from another tag", async (t) => {
+  const { redis, prefix, run, claim, queue } = await fixture(t);
+  for (let i = 0; i < 50; i++) {
+    const sid = `alice-dup-${i}`;
+    await queue(sid, "alice");
+    await redis.sadd(`${prefix}tags:${sid}`, "chess");
+    await redis.zadd(`${prefix}tagq:chat:chess`, i + 1, sid);
+  }
+  await queue("older");
+  await redis.sadd(`${prefix}tags:older`, "chess");
+  await redis.zadd(`${prefix}tagq:chat:chess`, 51, "older");
+  await queue("newer");
+  await redis.sadd(`${prefix}tags:newer`, "music");
+  await redis.zadd(`${prefix}tagq:chat:music`, 52, "newer");
+  await claim("alice");
+
+  assert.equal(await run(FIND, 16_000, "alice", "chat", "chess", "music"), 0);
+  assert.equal(await redis.get(`${prefix}pair:alice`), null);
+  assert.equal(await redis.hget(`${prefix}tagscan`, "alice"), "50");
+  const newerScore = await redis.zscore(`${prefix}queue`, "newer");
+  await redis.set(`${prefix}retry`, newerScore!);
+  await run(TICK, 16_000);
+  assert.equal(await redis.get(`${prefix}pair:alice`), "older");
+});
+
+test("mid-chat chess_invite allows starting a new game after the prior game ends", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await run(FIND, 1_000, "alice", "chat");
+  await run(FIND, 1_000, "bob", "chat");
+
+  assert.equal(await run(CHESS_INVITE, 1_100, "alice", "bullet_1_0"), 1);
+  assert.equal(await run(CHESS_INVITE_RESPOND, 1_200, "bob", "1"), 1);
+  const gid1 = await redis.get(`${prefix}game:alice`);
+  assert.ok(gid1);
+
+  assert.equal(await run(RESIGN, 1_300, "alice"), 1);
+  assert.equal(await redis.hget(`${prefix}g:${gid1}`, "status"), "over");
+
+  // Starting a fresh game with a new time control must succeed after game 1 ended.
+  assert.equal(await run(CHESS_INVITE, 1_400, "alice", "blitz_5_0"), 1);
+  assert.equal(await run(CHESS_INVITE_RESPOND, 1_500, "bob", "1"), 1);
+  const gid2 = await redis.get(`${prefix}game:alice`);
+  assert.ok(gid2 && gid2 !== gid1);
+  assert.equal(await redis.hget(`${prefix}g:${gid2}`, "tc"), "blitz_5_0");
+  assert.equal(await redis.exists(`${prefix}g:${gid1}`), 0);
+});
+
+test("PAIR_DIRECT does not yank an already-paired challenger out of their active chat", async (t) => {
+  const { redis, prefix, run, claim } = await fixture(t);
+  await claim("alice");
+  await claim("bob");
+  await claim("carol");
+  await run(FIND, 1_000, "alice", "chat");
+  await run(FIND, 1_000, "carol", "chat");
+  assert.equal(await redis.get(`${prefix}pair:alice`), "carol");
+
+  assert.equal(await run(PAIR_DIRECT, 2_000, "alice", "bob", "rapid_10_0"), "unavailable");
+  assert.equal(await redis.get(`${prefix}pair:alice`), "carol");
+});
+
+test("CLAIM delivers held chess_over when partner abandoned during brief disconnect", async (t) => {
+  const { run, claim } = await fixture(t);
+  await claim("alice", "alice", "c-a");
+  await claim("bob", "bob", "c-b");
+  await run(FIND, 1_000, "alice", "chess");
+  await run(FIND, 1_000, "bob", "chess");
+
+  // Bob disconnects into grace period; Alice leaves, dropping the game.
+  await run(DETACH, 2_000, "bob", "c-b");
+  await run(FIND, 3_000, "alice", "chat");
+
+  const resumed = (await claim("bob", "bob", "c-b2")) as (string | number)[];
+  assert.equal(resumed[0], "idle");
+  assert.equal(resumed[2], "");
+  const held = resumed
+    .slice(3)
+    .map((raw) => JSON.parse(String(raw)) as { type: string; reason?: string });
+  assert.ok(held.some((e) => e.type === "chess_over" && e.reason === "aborted"));
 });
