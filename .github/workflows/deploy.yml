@@ -53,6 +53,9 @@ jobs:
     name: Deploy Production Stack
     needs: verify
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://funstranger.in
     steps:
       - uses: actions/checkout@v4
 

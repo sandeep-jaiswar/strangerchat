@@ -1,72 +1,45 @@
-# Strangerchat
+# Funstranger (`https://funstranger.in`)
 
-Sign in with Google and chat one-on-one with a random stranger. Works on phones and desktops.
+Sign in with Google and chat one-on-one with a random stranger, match by interest tags, play live 10+0 chess while talking, solve tactical puzzles, and stay connected with mutual friends using anonymous handles. Works on desktop and mobile.
 
 ## Structure
 
 | Path | What |
 | --- | --- |
-| `apps/web` | Next.js app: landing page, Google sign-in (NextAuth), chat UI, AdSense, and the chat socket at `/api/ws` |
-| `packages/chat-server` | Matchmaking and message relay over WebSockets, with shared state in Redis |
+| `apps/web` | Next.js App Router site: landing/SEO pages, chess puzzle trainer, Google sign-in (NextAuth), chat/chess UI, friends drawer, AdSense, and PostHog proxy (`/ingest`) |
+| `packages/chat-server` | Long-lived Node WebSocket server (`/api/ws`): Redis matchmaking, profanity moderation (`obscenity`), chess referee, Elo updates, and `posthog-node` events |
+| `packages/db` | PostgreSQL schema and queries via `drizzle-orm` (`users`, `friendships`, `direct_messages`, `user_blocks`, `user_reports`, `chess_games`) |
 | `packages/ui` | shadcn/ui components and the shared Tailwind v4 theme |
-| `packages/protocol` | Message types shared by the client and the server |
+| `packages/protocol` | Shared WebSocket protocol types and limits |
+| `infra/oci` | OpenTofu / Terraform Oracle Cloud Infrastructure (Always Free ARM64 VM + VCN) config |
+| `infra/docker` | Caddy reverse proxy config with automatic Let's Encrypt HTTPS and security headers |
 
-The chat socket runs as a Vercel Function (`apps/web/app/api/ws/route.ts`) and authenticates with the NextAuth session cookie. Function instances share the queue, pairs and presence through Redis, and deliver events to each other with Redis pub/sub. Messages are relayed live when the partner is connected; messages sent while the partner is disconnected are temporarily queued in Redis for delivery after reconnect.
+### Chat & Chess rules
 
-### Chat rules
+The matchmaking, relay, and chess state transitions live in `packages/chat-server/src/scripts.ts` as atomic Redis Lua scripts:
 
-The rules live in `packages/chat-server/src/scripts.ts` as Lua scripts, so each change is atomic across function instances.
+- **Online:** distinct Google accounts with at least one connected tab.
+- **Sessions & Reconnect:** each tab has a session ID; dropped sockets are preserved briefly so users can resume chats/games cleanly after network blips.
+- **Interest Tags:** optional up to 3 tags with a 5-second shared-interest preference window before falling back to open matching.
+- **Chess Club & Mid-chat Chess:** 10+0 rapid games validated server-side with `chess.js` (`react-chessboard` MIT client board), server-enforced clocks, draws/rematches, and persistent Elo ratings in PostgreSQL.
+- **Friends & Safety:** mutual friend requests reveal customizable anonymous handles and unlock persistent DMs; blocking prevents future rematching across both Redis and PostgreSQL.
 
-- **Online** = distinct Google accounts with at least one connected tab. Several tabs count once, and a closed tab stops counting immediately.
-- **Sessions:** each tab has a session. When a socket drops (Vercel recycles sockets every 5 minutes on Hobby, or the network blips), the session is kept for ~20 seconds so the tab can reconnect and continue its chat. Messages sent in the meantime are temporarily queued for delivery after reconnect. On `pagehide`, the client attempts to send `bye` only if its socket is open. The session ends immediately only if the server receives `bye` from the current connection; otherwise, a dropped socket leaves the session available during the reconnect grace period.
-- **Matching** considers connected, waiting tabs in queue order, using bounded scans that continue on later retries. A user is never matched with themselves.
-- **Rematching:** two people who just stopped chatting can't be matched again for 15 seconds. For the next 10 minutes, someone new is preferred, and the previous partner is only picked if nobody else is waiting.
-- **Waiting users are re-checked in bounded batches every 5 seconds**, so the 15-second block lifting (or anything else changing) is picked up without anyone pressing Start. Scans continue across the queue over successive passes, so large queues can take multiple ticks to revisit every session.
-- **A dropped socket** takes its tab out of the queue; the tab re-joins when it reconnects.
-
-### Chess Club
-
-"Play chess with a stranger" matches people from a separate queue (`queue:chess`) and gives them a casual 10+0 game next to the chat. The game state (moves, clocks, offers) lives in Redis next to the pair, and the same scripts manage it.
-
-- **The server is the referee.** Each move is replayed with [chess.js](https://github.com/jhlywa/chess.js) on the server before a Lua script applies it. That script refuses the move if the game has moved on, so two function instances can't both play a move. The board is [react-chessboard](https://github.com/Clariity/react-chessboard) (MIT). Chessground is avoided because it is GPL.
-- **Clocks are server-side** and stored as "time left as of the last move", so socket recycling and reconnects don't pause or reset them. Each side must make its first move within 30 seconds or the game is aborted. After that the side to move is on the clock. The tick ends games whose clock ran out, and a client whose clock reaches zero asks the server to check right away.
-- **Leaving ends the game.** Next, Lobby, closing the tab, or a reconnect grace period that lapses all count. After both first moves the leaver loses by abandonment; before that the game is aborted. A reconnecting player gets the whole game back.
-- **Draws and rematches** are offers that the other player accepts by making the same offer. A move declines the opponent's draw offer. A rematch swaps colours.
-
-## Setup
+## Local Setup
 
 ```sh
 pnpm install
 cp apps/web/.env.example apps/web/.env.local
-docker run -d --name Strangerchat-redis -p 6379:6379 redis:7-alpine
+pnpm dev:deps
 ```
 
-1. Create an OAuth client at <https://console.cloud.google.com/apis/credentials> (type "Web application") with the redirect URI `http://localhost:3000/api/auth/callback/google`, and put its id and secret in `apps/web/.env.local`.
-2. Generate `NEXTAUTH_SECRET` with `openssl rand -base64 32`.
-3. `pnpm dev` starts the web app on :3000 and the chat dev server on :3001. Vercel's WebSocket upgrade only exists on Vercel, so locally the browser connects to the dev server instead (`NEXT_PUBLIC_WS_URL`); it runs the same code from `packages/chat-server`.
+1. Create a Google OAuth client (`Web application`) with authorized redirect URI `http://localhost:3000/api/auth/callback/google` and set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET` (`openssl rand -base64 32`), `DATABASE_URL`, and `REDIS_URL` in `apps/web/.env.local`.
+2. Start local Postgres 17 & Redis 7 with `pnpm dev:deps` (`docker-compose.dev.yml`).
+3. Run `pnpm dev` (Next.js on `:3000` and WebSocket dev server on `:3001` via `NEXT_PUBLIC_WS_URL=ws://localhost:3001/api/ws`).
+4. Run unit tests (`pnpm --filter @repo/chat-server test`) or two-browser Playwright E2E tests (`pnpm test:e2e`).
 
-Run the chat server tests (they need the local Redis) with `pnpm --filter @repo/chat-server test`.
+## Production Deployment (Oracle Cloud + GitHub Actions CI/CD)
 
-## Adding shadcn components
+Production runs at **`https://funstranger.in`** via `docker-compose.yml` (Caddy + Next.js `web` + `chat-server` + PostgreSQL 17 + Redis 7) on Oracle Cloud Always Free ARM64 (`infra/oci/`). Legacy `strangerchat.vercel.app` redirects permanently (`308`) to `https://funstranger.in` via `apps/web/vercel.json`.
 
-```sh
-cd apps/web && pnpm dlx shadcn@latest add <component>
-```
-
-Components land in `packages/ui/src/components` and are imported as `@repo/ui/components/<name>`. The CLI sometimes rewrites the `cn` import to `from "cn"`; change it back to `@repo/ui/lib/utils`.
-
-## AdSense
-
-Set `NEXT_PUBLIC_ADSENSE_CLIENT` (`ca-pub-…`) and create two ad units in AdSense for `NEXT_PUBLIC_ADSENSE_SLOT_BANNER` (responsive) and `NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR` (vertical). `/ads.txt` is generated from the client id. Without these variables no ad code loads; in development dashed placeholders mark where ads go.
-
-Ads appear on the landing page, the lobby (on mobile), and the chat sidebar (on desktop). They are kept away from the message composer on purpose — AdSense penalises placements that invite accidental clicks.
-
-## Deploying to Vercel
-
-1. Import the repo into Vercel with **Root Directory** `apps/web`. Fluid compute must be on (the default for new projects); WebSockets are in beta on Vercel.
-2. Add Redis from the Vercel Marketplace (project → Storage), e.g. Upstash, and connect it to the project. It sets `REDIS_URL` (or `KV_URL`, which also works). Pick the region your functions run in.
-3. Preview deployments keep their chat state under `sc:preview:`, separate from production's `sc:`, so they can share the Redis without testers showing up as online (or getting matched) on the live site. To share a Redis between other environments, give each its own `CHAT_REDIS_PREFIX`.
-4. Set `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and the AdSense variables. Do **not** set `NEXT_PUBLIC_WS_URL` in production — the socket is served from the same domain.
-5. Add `https://<your-domain>/api/auth/callback/google` as a redirect URI on the Google OAuth client, then deploy.
-
-On a Pro plan you can raise `maxDuration` in `app/api/ws/route.ts` to 800 seconds, so sockets are recycled less often.
+- **Pull Requests (`.github/workflows/ci.yml`):** runs `pnpm check-types`, `pnpm lint`, `pnpm build`, `@repo/chat-server` Redis tests, and Docker build checks.
+- **Merges to `main` (`.github/workflows/deploy.yml`):** verifies checks & tests, syncs the repo to the Oracle VM (preserving server `.env` and Terraform state), rebuilds & restarts containers, checks `/healthz` and live HTTPS routes, and submits `sitemap.xml` URLs to IndexNow (`scripts/submit-indexnow.mjs`).
