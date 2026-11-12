@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ChessKnight, Flame, TrendingUp, Trophy } from "lucide-react";
-import { getLeaderboard, type LeaderboardEntry } from "@funstranger/db";
+import { getLeaderboard, listRecentGames, type LeaderboardEntry } from "@funstranger/db";
+import { getTimeControl, type TimeControlId } from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
 import {
@@ -76,7 +77,10 @@ function PlayerRow({
 }
 
 export default async function LeaderboardPage() {
-  const board = await getLeaderboard(15);
+  const [board, recentGames] = await Promise.all([
+    getLeaderboard(15),
+    listRecentGames(9),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -198,6 +202,40 @@ export default async function LeaderboardPage() {
             </CardContent>
           </Card>
         </section>
+
+        {recentGames.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight">
+              Recent Rated Matches
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {recentGames.map((g) => (
+                <Link
+                  key={g.id}
+                  href={`/game/${g.id}`}
+                  className="rounded-xl border bg-card p-3.5 transition-colors hover:border-primary/60 hover:bg-accent/40"
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {getTimeControl(g.timeControl as TimeControlId).label} ·{" "}
+                      {g.moveCount} plies
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">
+                      {g.result}
+                    </Badge>
+                  </div>
+                  <p className="mt-1.5 truncate text-sm font-semibold">
+                    {g.whiteHandle} ({g.whiteRating}) vs {g.blackHandle} (
+                    {g.blackRating})
+                  </p>
+                  <p className="mt-1 text-xs text-primary">
+                    Watch replay &amp; review →
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <AdSlot slot={AD_SLOTS.banner} format="horizontal" />
       </main>

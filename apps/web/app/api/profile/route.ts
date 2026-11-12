@@ -4,6 +4,7 @@ import {
   ensureUser,
   getPuzzleStats,
   hasDatabase,
+  listUserGames,
   updateUserHandle,
 } from "@funstranger/db";
 import { authOptions } from "@/lib/auth";
@@ -17,12 +18,15 @@ export async function GET() {
   if (!hasDatabase()) {
     return NextResponse.json({ profile: null });
   }
-  const [profile, stats] = await Promise.all([
+  const [profile, stats, recentGames] = await Promise.all([
     ensureUser(userId),
     getPuzzleStats(userId),
+    listUserGames(userId, 6),
   ]);
   return NextResponse.json({
-    profile: profile ? { ...profile, dailyStreak: stats.dailyStreak } : null,
+    profile: profile
+      ? { ...profile, dailyStreak: stats.dailyStreak, recentGames }
+      : null,
   });
 }
 

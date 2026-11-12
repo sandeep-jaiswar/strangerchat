@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import {
@@ -24,6 +25,29 @@ export interface UserSummary {
 }
 
 export function UserMenu({ user }: { user: UserSummary }) {
+  const handleSignOut = async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        const sub = await reg?.pushManager.getSubscription();
+        if (sub) {
+          const res = await fetch("/api/push", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+          if (!res.ok) throw new Error("Unable to remove push alerts");
+          await sub.unsubscribe();
+        }
+      }
+      await signOut({ callbackUrl: "/" });
+    } catch {
+      toast.error(
+        "Unable to sign out. Please retry so push alerts can be removed.",
+      );
+    }
+  };
+
   const initials = (user.name ?? user.email ?? "?")
     .split(" ")
     .map((part) => part[0])
@@ -58,7 +82,7 @@ export function UserMenu({ user }: { user: UserSummary }) {
           <p className="truncate text-xs text-muted-foreground">{user.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void signOut({ callbackUrl: "/" })}>
+        <DropdownMenuItem onSelect={() => void handleSignOut()}>
           <LogOut />
           Sign out
         </DropdownMenuItem>

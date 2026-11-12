@@ -72,6 +72,23 @@ export interface LeaderboardData {
   topStreaks: LeaderboardEntry[];
 }
 
+export interface PublicChessGameSummary {
+  id: string;
+  whiteHandle: string;
+  whiteRating: number;
+  blackHandle: string;
+  blackRating: number;
+  result: string;
+  reason: string;
+  timeControl: string;
+  moveCount: number;
+  createdAt: number;
+}
+
+export interface PublicChessGame extends PublicChessGameSummary {
+  moves: string[];
+}
+
 export interface DirectMessageItem {
   id: string;
   senderId: string;
@@ -499,6 +516,7 @@ export async function recordChessGameAndUpdateElo(input: {
   blackId: string;
   result: "1-0" | "0-1" | "1/2-1/2" | "aborted";
   reason: string;
+  timeControl?: string;
   moves: string[];
 }): Promise<void> {
   if (
@@ -524,6 +542,7 @@ export async function recordChessGameAndUpdateElo(input: {
       blackId: input.blackId,
       result: input.result,
       reason: input.reason,
+      timeControl: input.timeControl ?? "rapid_10_0",
       moves: JSON.stringify(input.moves),
     });
 
@@ -776,6 +795,118 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardData> {
   ]);
 
   return { weekKey, topElo, topWeeklyGainers, topStreaks };
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function parseMovesJson(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((m): m is string => typeof m === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+async function hydrateGames(
+  rows: (typeof chessGames.$inferSelect)[],
+): Promise<PublicChessGame[]> {
+  const db = await getDb();
+  if (!db || rows.length === 0) return [];
+  const uids = Array.from(
+    new Set(rows.flatMap((r) => [r.whiteId, r.blackId])),
+  );
+  const profiles = await db
+    .select({
+      id: users.id,
+      handle: users.handle,
+      chessRating: users.chessRating,
+    })
+    .from(users)
+    .where(inArray(users.id, uids));
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+
+  return rows.map((row) => {
+    const moves = parseMovesJson(row.moves);
+    const white = byId.get(row.whiteId);
+    const black = byId.get(row.blackId);
+    return {
+      id: row.id,
+      whiteHandle: white?.handle ?? "Player",
+      whiteRating: white?.chessRating ?? 1200,
+      blackHandle: black?.handle ?? "Player",
+      blackRating: black?.chessRating ?? 1200,
+      result: row.result,
+      reason: row.reason,
+      timeControl: row.timeControl,
+      moveCount: moves.length,
+      moves,
+      createdAt: row.createdAt.getTime(),
+    };
+  });
+}
+
+export async function getChessGameById(
+  gameId: string,
+): Promise<PublicChessGame | null> {
+  if (!UUID_RE.test(gameId)) return null;
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(chessGames)
+    .where(eq(chessGames.id, gameId))
+    .limit(1);
+  const hydrated = await hydrateGames(rows);
+  return hydrated[0] ?? null;
+}
+
+function toGameSummary(game: PublicChessGame): PublicChessGameSummary {
+  return {
+    id: game.id,
+    whiteHandle: game.whiteHandle,
+    whiteRating: game.whiteRating,
+    blackHandle: game.blackHandle,
+    blackRating: game.blackRating,
+    result: game.result,
+    reason: game.reason,
+    timeControl: game.timeControl,
+    moveCount: game.moveCount,
+    createdAt: game.createdAt,
+  };
+}
+
+export async function listRecentGames(
+  limit = 10,
+): Promise<PublicChessGameSummary[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select()
+    .from(chessGames)
+    .orderBy(desc(chessGames.createdAt))
+    .limit(limit);
+  return (await hydrateGames(rows)).map(toGameSummary);
+}
+
+export async function listUserGames(
+  userId: string,
+  limit = 10,
+): Promise<PublicChessGameSummary[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select()
+    .from(chessGames)
+    .where(
+      or(eq(chessGames.whiteId, userId), eq(chessGames.blackId, userId)),
+    )
+    .orderBy(desc(chessGames.createdAt))
+    .limit(limit);
+  return (await hydrateGames(rows)).map(toGameSummary);
 }
 
 export { asc };

@@ -26,6 +26,7 @@
         "INDEXNOW_KEY",
         "POSTHOG_KEY",
         "POSTHOG_HOST",
+        "VAPID_*",
         "NEXT_PUBLIC_*"
       ]
     },
@@ -47,7 +48,8 @@
         "NEXTAUTH_SECRET",
         "REDIS_URL",
         "DATABASE_URL",
-        "WS_DEV_PORT"
+        "WS_DEV_PORT",
+        "VAPID_*"
       ]
     },
     "test": {

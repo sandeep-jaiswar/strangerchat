@@ -32,6 +32,7 @@ import {
   recordChessGameAndUpdateElo,
   reportUser,
   requestOrAcceptFriend,
+  sendUserPush,
 } from "@funstranger/db";
 import { captureServerEvent, closeServerAnalytics } from "./analytics.ts";
 import { moderateMessageText } from "./moderation.ts";
@@ -743,6 +744,13 @@ export class Hub {
     await Promise.all(
       liveSids.map((sid) => this.redis.publish(this.channel(sid), incomingPayload)),
     );
+    if (hasDatabase()) {
+      void sendUserPush(friendId, {
+        title: "Funstranger Chess Challenge",
+        body: `${me?.handle ?? "A friend"} challenged you to ${getTimeControl(timeControl).label} chess!`,
+        url: "/chat",
+      }).catch(() => undefined);
+    }
     this.send(connection, {
       type: "friend_challenge_sent",
       challengeId,
@@ -1067,6 +1075,7 @@ export class Hub {
           blackId: string;
           result: ChessResult;
           reason: string;
+          timeControl?: string;
           moves: string[];
         };
         await recordChessGameAndUpdateElo(game);

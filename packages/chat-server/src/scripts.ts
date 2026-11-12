@@ -197,11 +197,13 @@ local function endGame(gid, result, reason)
     local bu = wb[2] and redis.call('HGET', P .. 'owner', wb[2])
     if wu and bu and wu ~= bu then
       local moves = redis.call('LRANGE', P .. 'gm:' .. gid, 0, -1)
+      local tc = redis.call('HGET', key, 'tc') or DEFAULT_TC
       redis.call('RPUSH', P .. 'ended_games', cjson.encode({
         whiteId = wu,
         blackId = bu,
         result = result,
         reason = reason,
+        timeControl = tc,
         moves = moves,
       }))
       redis.call('LTRIM', P .. 'ended_games', -100, -1)

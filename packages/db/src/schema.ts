@@ -80,7 +80,11 @@ export const directMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("dm_pair_time_idx").on(table.senderId, table.recipientId, table.createdAt),
+    index("dm_pair_time_idx").on(
+      table.senderId,
+      table.recipientId,
+      table.createdAt,
+    ),
   ],
 );
 
@@ -111,16 +115,50 @@ export const userReports = pgTable("user_reports", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const chessGames = pgTable("chess_games", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  whiteId: text("white_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  blackId: text("black_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  result: text("result").notNull(),
-  reason: text("reason").notNull(),
-  moves: text("moves").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const chessGames = pgTable(
+  "chess_games",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    whiteId: text("white_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blackId: text("black_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    result: text("result").notNull(),
+    reason: text("reason").notNull(),
+    timeControl: text("time_control").notNull().default("rapid_10_0"),
+    moves: text("moves").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("chess_games_created_at_idx").on(table.createdAt.desc()),
+    index("chess_games_white_time_idx").on(
+      table.whiteId,
+      table.createdAt.desc(),
+    ),
+    index("chess_games_black_time_idx").on(
+      table.blackId,
+      table.createdAt.desc(),
+    ),
+  ],
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("push_subscriptions_user_idx").on(table.userId)],
+);

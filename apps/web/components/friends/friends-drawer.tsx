@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
+  Bell,
+  BellOff,
   Check,
   ChessKnight,
+  ExternalLink,
   Flame,
   MessageSquare,
   Pencil,
@@ -16,7 +20,11 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TIME_CONTROLS, type TimeControlId } from "@funstranger/protocol";
+import {
+  TIME_CONTROLS,
+  getTimeControl,
+  type TimeControlId,
+} from "@funstranger/protocol";
 import { Badge } from "@funstranger/ui/components/badge";
 import { Button } from "@funstranger/ui/components/button";
 import {
@@ -29,6 +37,19 @@ import { Textarea } from "@funstranger/ui/components/textarea";
 import { cn } from "@funstranger/ui/lib/utils";
 import { RankBadge } from "@/components/chess/rank-badge";
 
+export interface RecentGameEntry {
+  id: string;
+  whiteHandle: string;
+  whiteRating: number;
+  blackHandle: string;
+  blackRating: number;
+  result: string;
+  reason: string;
+  timeControl: string;
+  moveCount: number;
+  createdAt: number;
+}
+
 export interface ProfileData {
   id: string;
   handle: string;
@@ -40,6 +61,7 @@ export interface ProfileData {
   puzzleRating?: number;
   dailyStreak?: number;
   bestStreak?: number;
+  recentGames?: RecentGameEntry[];
 }
 
 export interface FriendEntry {
@@ -87,6 +109,16 @@ export function FriendsDrawer({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
+  const [pushConfig, setPushConfig] = useState<{
+    supported: boolean;
+    publicKey: string | null;
+    subscribed: boolean;
+    accountId?: string;
+  }>({ supported: false, publicKey: null, subscribed: false });
+  const subscribed =
+    pushConfig.accountId === profile?.id && pushConfig.subscribed;
+  const [togglingPush, setTogglingPush] = useState(false);
+
   const loadFriends = useCallback(async () => {
     setLoading(true);
     try {
@@ -120,6 +152,106 @@ export function FriendsDrawer({
     const timer = setInterval(() => void loadFriends(), 15_000);
     return () => clearInterval(timer);
   }, [open, loadFriends]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      return;
+    }
+    let active = true;
+    void (async () => {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        const existing = await reg?.pushManager.getSubscription();
+        const res = await fetch(
+          `/api/push?endpoint=${encodeURIComponent(existing?.endpoint ?? "")}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok || !active) return;
+        const data = (await res.json()) as {
+          supported: boolean;
+          publicKey: string | null;
+          subscribed: boolean;
+        };
+        if (!active || !data.supported || !data.publicKey) return;
+        if (active) {
+          setPushConfig({
+            accountId: profile?.id,
+            supported: true,
+            publicKey: data.publicKey,
+            subscribed: Boolean(existing) && data.subscribed,
+          });
+        }
+      } catch {
+        // Ignore push check errors in restricted browsers.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [open, profile?.id]);
+
+  const togglePushAlerts = async () => {
+    if (!pushConfig.supported || !pushConfig.publicKey || togglingPush) return;
+    setTogglingPush(true);
+    try {
+      await navigator.serviceWorker.register("/sw.js");
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing && subscribed) {
+        const res = await fetch("/api/push", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+        });
+        if (!res.ok) throw new Error("Unable to remove subscription");
+        await existing.unsubscribe();
+        setPushConfig((prev) => ({ ...prev, subscribed: false }));
+        toast.info("Push alerts disabled.");
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        toast.info(
+          "Allow browser notifications to receive challenge and DM alerts.",
+        );
+        return;
+      }
+      const sub =
+        existing ??
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(pushConfig.publicKey),
+        }));
+      try {
+        const json = sub.toJSON();
+        const res = await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        });
+        if (!res.ok) throw new Error("Unable to enable push alerts");
+      } catch (error) {
+        if (!existing) await sub.unsubscribe();
+        throw error;
+      }
+      setPushConfig((prev) => ({
+        ...prev,
+        accountId: profile?.id,
+        subscribed: true,
+      }));
+      toast.success("Push alerts enabled for friend challenges & DMs!");
+    } catch {
+      toast.error("Unable to configure push alerts in this browser.");
+    } finally {
+      setTogglingPush(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || !activeFriend) return;
@@ -357,13 +489,31 @@ export function FriendsDrawer({
                     )}
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Chess: {profile.chessWins}W · {profile.chessLosses}L ·{" "}
-                  {profile.chessDraws}D
-                  {profile.puzzleRating
-                    ? ` · Puzzle Elo ${profile.puzzleRating}`
-                    : ""}
-                </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Chess: {profile.chessWins}W · {profile.chessLosses}L ·{" "}
+                    {profile.chessDraws}D
+                    {profile.puzzleRating
+                      ? ` · Puzzle Elo ${profile.puzzleRating}`
+                      : ""}
+                  </p>
+                  {pushConfig.supported && (
+                    <Button
+                      size="sm"
+                      variant={subscribed ? "secondary" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      disabled={togglingPush}
+                      onClick={() => void togglePushAlerts()}
+                    >
+                      {subscribed ? (
+                        <Bell className="size-3.5 text-success" />
+                      ) : (
+                        <BellOff className="size-3.5" />
+                      )}
+                      {subscribed ? "Alerts On" : "Enable Alerts"}
+                    </Button>
+                  )}
+                </div>
               </section>
             )}
 
@@ -533,9 +683,47 @@ export function FriendsDrawer({
                 </div>
               </section>
             )}
+
+            {profile?.recentGames && profile.recentGames.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Recent Matches ({profile.recentGames.length})
+                </h3>
+                <div className="space-y-1.5">
+                  {profile.recentGames.map((g) => (
+                    <Link
+                      key={g.id}
+                      href={`/game/${g.id}`}
+                      onClick={onClose}
+                      className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-xs transition-colors hover:bg-accent"
+                    >
+                      <span className="truncate font-medium">
+                        {g.whiteHandle} vs {g.blackHandle} (
+                        {getTimeControl(g.timeControl as TimeControlId).label})
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1 text-primary">
+                        {g.result}
+                        <ExternalLink className="size-3" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(new ArrayBuffer(rawData.length));
+  for (let i = 0; i < rawData.length; i++) {
+    output[i] = rawData.charCodeAt(i);
+  }
+  return output;
 }
