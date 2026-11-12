@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { after, test } from "node:test";
 import type { WebSocket } from "ws";
+import { hasDatabase } from "@funstranger/db";
 import { CloseCode, type ServerEvent } from "@funstranger/protocol";
 import { Hub } from "./hub.ts";
 
@@ -744,21 +745,23 @@ test("online friends can challenge each other directly to a chess match", async 
   const alice = await connect(hubA, aliceId);
   const bob = await connect(hubB, bobId);
 
-  // Become mutual friends via the normal chat handshake (satisfies DB friendship check when enabled).
-  await chatting(alice, bob);
-  alice.deliver({ type: "friend_request" });
-  await until(
-    () => lastOf(bob, "friend_status")?.status === "pending_them",
-    "bob gets friend request",
-  );
-  bob.deliver({ type: "friend_request" });
-  await until(
-    () => lastOf(alice, "friend_status")?.status === "accepted",
-    "both become friends",
-  );
-  alice.deliver({ type: "leave" });
-  bob.deliver({ type: "leave" });
-  await sleep(50);
+  if (hasDatabase()) {
+    // Become mutual friends via the normal chat handshake (satisfies DB friendship check when enabled).
+    await chatting(alice, bob);
+    alice.deliver({ type: "friend_request" });
+    await until(
+      () => lastOf(bob, "friend_status")?.status === "pending_them",
+      "bob gets friend request",
+    );
+    bob.deliver({ type: "friend_request" });
+    await until(
+      () => lastOf(alice, "friend_status")?.status === "accepted",
+      "both become friends",
+    );
+    alice.deliver({ type: "leave" });
+    bob.deliver({ type: "leave" });
+    await sleep(50);
+  }
 
   // Offline friend fails gracefully.
   const carolId = `fc-c-${randomUUID()}`;
