@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { BrandMark } from "@/lib/brand-mark";
+import { BrandMark, BrandWordmark } from "@/lib/brand-mark";
 
 export const alt = "Funstranger - chat with strangers, make friends & play chess";
 export const size = { width: 1200, height: 630 };
@@ -23,7 +23,7 @@ export default function OpengraphImage() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <BrandMark size={96} rounded />
-        <div style={{ fontSize: 48, fontWeight: 700 }}>Funstranger</div>
+        <BrandWordmark fontSize={48} />
       </div>
       <div
         style={{

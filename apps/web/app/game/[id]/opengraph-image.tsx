@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getChessGameById } from "@funstranger/db";
 import { getTimeControl, type TimeControlId } from "@funstranger/protocol";
-import { BrandMark } from "@/lib/brand-mark";
+import { BrandMark, BrandWordmark } from "@/lib/brand-mark";
 
 export const alt = "Funstranger Chess Match Replay";
 export const size = { width: 1200, height: 630 };
@@ -32,7 +32,7 @@ export default async function GameOpengraphImage({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <BrandMark size={80} rounded />
-          <div style={{ fontSize: 44, fontWeight: 700 }}>Funstranger Chess</div>
+          <BrandWordmark fontSize={44} suffix=" Chess" />
         </div>
         <div style={{ marginTop: 32, fontSize: 56, fontWeight: 800 }}>
           Match Replay &amp; Analysis
@@ -67,7 +67,7 @@ export default async function GameOpengraphImage({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <BrandMark size={72} rounded />
-          <div style={{ fontSize: 38, fontWeight: 700 }}>Funstranger</div>
+          <BrandWordmark fontSize={38} />
         </div>
         <div
           style={{
