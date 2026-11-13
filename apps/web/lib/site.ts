@@ -7,11 +7,12 @@ export const SITE_URL = (
 
 export const SITE_NAME = "Funstranger";
 
+// Kept within common SERP display limits (~60 chars title, ~160 chars description).
 export const SITE_TITLE =
-  "Funstranger - Free Anonymous Chat with Strangers, Chess & Friends";
+  "Funstranger - Free Anonymous Chat with Strangers & Chess";
 
 export const SITE_DESCRIPTION =
-  "Talk to strangers online for free on Funstranger. Match 1-on-1 for anonymous chat, play 1+0 Bullet, 3+2/5+0 Blitz, and 10+0 Rapid chess, solve daily tactics, and make friends safely.";
+  "Chat with strangers anonymously for free on Funstranger. Play 1-on-1 chess (Bullet, Blitz, Rapid), solve daily puzzles, and make friends safely.";
 
 export const SITE_KEYWORDS = [
   "funstranger",
