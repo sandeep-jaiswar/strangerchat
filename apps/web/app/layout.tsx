@@ -126,9 +126,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Loaded after the page finishes, so it doesn't compete with the first paint. */}
         {ADSENSE_CLIENT ? (
-          <script
-            async
+          <Script
+            id="adsense-loader"
+            strategy="lazyOnload"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
             crossOrigin="anonymous"
           />
