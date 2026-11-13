@@ -23,10 +23,11 @@ const routes: {
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  // No lastModified: a per-request `new Date()` is a false freshness signal,
+  // and a single shared date is just as misleading. Add real dates per route
+  // once content has an actual edit timestamp.
   return routes.map(({ path, priority, changeFrequency }) => ({
     url: `${SITE_URL}${path}`,
-    lastModified,
     changeFrequency,
     priority,
   }));

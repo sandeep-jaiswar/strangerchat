@@ -6,10 +6,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // The chat room and sign-in flow are behind auth and have nothing to index.
-      disallow: ["/api/", "/chat", "/login"],
+      // The chat room is behind auth and has nothing to index. /login is NOT
+      // disallowed: it must stay crawlable so its `noindex` tag can be seen.
+      disallow: ["/api/", "/chat"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
   };
 }
